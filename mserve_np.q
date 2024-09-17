@@ -33,8 +33,6 @@ All the communication between client-master, master-servant, servant-master and 
 3 Store combination of client handle,query id,query and call back function in queries table
 4 Do not automatically send new query to least busy servant, instead only send new query when a servant is free
 
-\
-
 \c 10 150
 
 /list of the port numbers the servants will listen on
@@ -43,9 +41,8 @@ p:(value"\\p")+1+til"J"$.z.x 0
 /Start up the multiple servant processes
 {system"q -p ",(string x)}each p
 
-
 / unix (comment out for windows)
-/\sleep 1
+\sleep 1
 
 / connect to servants. h is a list of asynch handles
 h:neg hopen each p;
@@ -53,6 +50,10 @@ h:neg hopen each p;
 h@\:".z.pc:{exit 0}";
 /servant loads in script
 h@\:"\\l ",.z.x[1];
+\
+
+p:`:backup:5001`:backup:5002 ;
+h:neg hopen each p;
 
 /map each servant asynch handle to an empty list and assign resultant dictionary back to h
 /The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
