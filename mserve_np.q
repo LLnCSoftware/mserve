@@ -3,7 +3,7 @@ Nathan Perrem
 First Derivatives
 2013-05.22
 
-Eric Lazarus 2024-09-18 Added support for servants on multiple hosts
+Eric Lazarus 2024-09-18 Added support for servants on multiple hosts (requires "launcher.q" running on each remote host).
 
 This is a heavily modified version of Arthur Whitney's mserve solution which can be found at code.kx:
 https://code.kx.com/trac/wiki/Cookbook/LoadBalancing
@@ -35,29 +35,11 @@ All the communication between client-master, master-servant, servant-master and 
 2 assign unique id to each new query
 3 Store combination of client handle,query id,query and call back function in queries table
 4 Do not automatically send new query to least busy servant, instead only send new query when a servant is free
-
-\c 10 150
-
-/list of the port numbers the servants will listen on
-p:(value"\\p")+1+til"J"$.z.x 0
-
-/Start up the multiple servant processes
-{system"q -p ",(string x)}each p
-
-/ unix (comment out for windows)
-\sleep 1
-
-/ connect to servants. h is a list of asynch handles
-h:neg hopen each p;
-/servant will terminate if disconnected from master
-h@\:".z.pc:{exit 0}";
-/servant loads in script
-h@\:"\\l ",.z.x[1];
 \
 
 / get servant addresses from arguments
 port: system "p" ;
-hosts: 2_ .z.x ;
+hosts: {$[x~"localhost"; ""; x]} each 2_ .z.x ;
 if[0=count hosts; hosts: enlist ""] ;
 
 servant: port+ {1+ x-first x} each (count hosts; 0N)# til "J"$ .z.x 0 ;
@@ -67,15 +49,17 @@ servant: raze {(enlist first x),/: enlist each string 1_ x} each (enlist each ho
 -1 "" ;
 
 / launch servants 
-/ expect "launcher" listening on port 5999 on each host.
+/ expect "launcher" listening on port 5999 on each host other than "localhost".
 mycode: .z.x 1 ;
 myq: .z.X 0 ;
 mys: string system "s" ;
+launch:{value 0N!"system \"", (.z.X 0), " ", x, " &\"" ;} ;
 
 \c 10 600
 
 h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
   cmd: mycode, " -s ", mys, " -p ", (x 1) ;  
+  if[""~(x 0); launch cmd; :0N] ;
   hh:hopen `$":",(x 0), ":5999" ; 
   (neg hh) cmd; (neg hh)[]; 
   hh 
@@ -83,7 +67,7 @@ h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1);
 
 -1 "Wait 5 seconds" ;
 system "sleep 5"
-hclose each h ;
+hclose each h where not null h ;
 h:() ;
 
 / hopen handle to each servant
