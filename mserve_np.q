@@ -12,8 +12,9 @@ The servants will then send the results back to the master who sends the results
 
 Sample usage:  q mserve_np.q -p 5001 2 servant.q
 
-.z.x 0 - 1st argument - number of servant to start up
-.z.x 1 - 2nd argument - the script we want each servant to load 
+.z.x 0  - 1st argument - number of servant to start up
+.z.x 1  - 2nd argument - the script we want each servant to load 
+.z.x 2+ - additional arguments are host names or ip addresses on which to run servants (round robbin).
 
 On startup of the master process, the following steps take place:
 1. Master decides on the port numbers the servants will listen on
@@ -52,8 +53,38 @@ h@\:".z.pc:{exit 0}";
 h@\:"\\l ",.z.x[1];
 \
 
-p:`:backup:5001`:backup:5002 ;
-h:neg hopen each p;
+/ get servant addresses from arguments
+port: system "p" ;
+hosts: 2_ .z.x ;
+if[0=count hosts; hosts: enlist ""] ;
+servant: (enlist each hosts) cross enlist each string 5001+til "J"$ .z.x 0 ; 
+0N!servant ;
+
+/ launch servants 
+/ expect "launcher" listening on port 5999 on each host.
+mycode: .z.x 1 ;
+myq: .z.X 0 ;
+mys: string system "s" ;
+
+\c 10 600
+
+h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
+  cmd: mycode, " -s ", mys, " -p ", (x 1) ;  
+  hh:hopen `$":",(x 0), ":5999" ; 
+  (neg hh) cmd; (neg hh)[]; 
+  hh 
+ } each servant ; 
+
+-1 "Wait 5 seconds" ;
+system "sleep 5"
+hclose each h ;
+h:() ;
+
+/ hopen handle to each servant
+-1 "Connect to servants" ;
+h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
+{ x ".z.pc:{exit 0}"} each h ; /shutdown on lost connection
+-1 "OK" ;
 
 /map each servant asynch handle to an empty list and assign resultant dictionary back to h
 /The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
