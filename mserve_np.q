@@ -3,6 +3,8 @@ Nathan Perrem
 First Derivatives
 2013-05.22
 
+Eric Lazarus 2024-09-18 Added support for servants on multiple hosts
+
 This is a heavily modified version of Arthur Whitney's mserve solution which can be found at code.kx:
 https://code.kx.com/trac/wiki/Cookbook/LoadBalancing
 
@@ -10,14 +12,14 @@ The purpose of mserve is to provide load balancing capabilities so that queries 
 can be sent to the master who will send these queries in a load balanced way to the servants.
 The servants will then send the results back to the master who sends the results back to the client
 
-Sample usage:  q mserve_np.q -p 5001 2 servant.q
+Sample usage:  q mserve_np.q -p 5001 2 servant.q  [host1 host2 ...]
 
 .z.x 0  - 1st argument - number of servant to start up
 .z.x 1  - 2nd argument - the script we want each servant to load 
 .z.x 2+ - additional arguments are host names or ip addresses on which to run servants (round robbin).
 
 On startup of the master process, the following steps take place:
-1. Master decides on the port numbers the servants will listen on
+1. Master decides on the hosts and port numbers the servants will listen on
 2. Master starts up the servant processes listening on the required ports 
 3. Master connects to the servants
 4. Master sends a message to each servant telling servant to:
@@ -57,8 +59,12 @@ h@\:"\\l ",.z.x[1];
 port: system "p" ;
 hosts: 2_ .z.x ;
 if[0=count hosts; hosts: enlist ""] ;
-servant: (enlist each hosts) cross enlist each string 5001+til "J"$ .z.x 0 ; 
-0N!servant ;
+
+servant: port+ {1+ x-first x} each (count hosts; 0N)# til "J"$ .z.x 0 ;
+servant: raze {(enlist first x),/: enlist each string 1_ x} each (enlist each hosts) ,' servant ;
+-1 "servant addresses" ;
+-1 each .Q.s1 each servant ;
+-1 "" ;
 
 / launch servants 
 / expect "launcher" listening on port 5999 on each host.
