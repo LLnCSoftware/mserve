@@ -162,9 +162,8 @@ if .z.w does not exist in h => message is a new request from a client
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; callback; query; rep)  Note: "rep" is optional.	
     sqid: 1^1+exec last qid from queries; /server id for new query
-    cqid: x[0]; callback: x[1]; query: x[2]; rep:1 & x[3] ; 
+    cqid: x[0]; callback: x[1]; query: x[2]; rep:1|x[3] ; 
     `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.T; 0Nt; 0Nt; 0N; `master); 
-
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
