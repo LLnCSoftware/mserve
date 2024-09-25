@@ -41,9 +41,13 @@ Change to communication protocol 2024.09.18
 1. Add required client_query_id and optional repetition factor to mserve request. 
    request: (client_query_id; callback; query; rep)
 2. Add client_query_id, servant elapsed time and servant address to mserve response.
-   response (callback; client query id; servant elapsed time; servant address; servant response)
+   response: (callback; client query id; servant elapsed time; servant address; servant response)
 3. Add client_qid, client_rep, and time sent to "queries" table.
 4. Provide a dictionary "d" mapping servant handle back to servant address.
+
+Change to communication protocol 2024.09.25
+
+1. Expect the responder function to be provided in the servant, rather than passing it with the request.
 \
 
 \c 10 133
@@ -119,7 +123,7 @@ send_query:{[hdl]
   	queries[qid;`slave_handle]:hdl;
     queries[qid;`time_sent]: .z.T ;
   	queries[qid;`location]:`slave;
-  	hdl( {[qid;query;rep] do[rep; r:@[value; query; {"Error: ", x}]]; (neg .z.w) (qid; r) }; qid; query; rep) ;
+    hdl (`respond; (qid; query; rep)) ;
 	];
  };
 
