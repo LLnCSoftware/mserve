@@ -86,7 +86,7 @@ h:() ;
 / hopen handle to each servant
 -1 "Connect to servants" ;
 h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
-{ x ".z.pc:{exit 0}"} each h ; /shutdown on lost connection
+{ x ".z.pc:{-1 \"closed\"; exit 0}"} each h ; /shutdown on lost connection
 -1 "OK" ;
 
 / map each servant asynch handle back to the servant address
@@ -183,6 +183,8 @@ if .z.w does not exist in h => message is a new request from a client
   	h[w]:1_h[w];
   	/send oldest unsent query to slave
   	send_query[w];
+    /send another if possible
+    check[] ;
 	]];	
  };
  
