@@ -141,11 +141,22 @@ send_result:{[qid;result]
 	queries[qid;`location`time_returned]:(`client;.z.T);
  }; 
  
-/check if free slave. If free slave exists -> try to send oldest query 
-check:{[]
-	if[not 0N=hdl:?[count each h;0];send_query[hdl]];
+/original: check if free slave. If free slave exists -> try to send oldest query 
+/this tends to put too many queries on the same slave
+check_orig:{[] if[not 0N=hdl:?[count each h;0];send_query[hdl]] ;};
+
+/new: check for free slave, further down the list than the last one
+/this distributes the queries more evenly across the slaves
+/howerver it can actually degrade performance because more queries run with a cold cache
+lasthdl:0i ;
+check:{[] 
+  list: asc where 0=count each h ;
+  if[0=count list; :(::)] ;
+  hdl: first list where list<lasthdl ;
+  if[null hdl; hdl: first list] ;
+  lasthdl:: hdl; send_query[hdl] ;
  }; 
- 
+
 /
 .z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
 or response from a servant will result in .z.ps executing on the master
