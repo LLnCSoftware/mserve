@@ -11,6 +11,7 @@ args[`master]:first"J"$args[`master];
 results:([id:`int$()] 
   rep:`int$();           /repetition factor
   query:();              /query expression
+  route:`$() ;           /routing symbol
   elapsed:`int$();       /elapsed time (includes time in mserve queue)
   execution:`int$();     /execution time (excludes time in mserve queue) 
   servant:`$();          /servant address used
@@ -23,11 +24,13 @@ h:neg hopen args[`master];
 
 /Client request: (id(int); callback(symbol); expression(string); rep)
 queryid: 0 ;
-send:{[rep; query]  
-  `results upsert `id`rep`query`start!(queryid+:1; rep; query; .z.T) ;
-  -1 "send: id=",(string queryid), " rep=", (string rep), "query=", query ;
-  h (queryid; `receive; query; rep) 
+sendRR:{[rep; route; query]  
+  `results upsert `id`rep`query`route`start!(queryid+:1; rep; query; route; .z.T) ;
+  -1 "send: id=",(string queryid), " route=", (string route), " rep=", (string rep), "query=", query ;
+  h (queryid; `receive; query; rep; route) 
  };
+sendR: sendRR[1;] ;    /sendR[route;query]
+send: sendRR[1;`;] ;   /send[query] ;
 
 /mserve_np callback
 receive:{[aid; aexecution; aservant; aresult]
@@ -37,8 +40,8 @@ receive:{[aid; aexecution; aservant; aresult]
  };
 
 /example client query:
-send[1; "proc1 `IBM"] ;  /send[rep; query]
+sendR[`ibm; "proc1 `IBM"] ;  /send[route; query]
 
-.z.ts:{ send[1; "proc1 ", .Q.s1 rand `GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS ] };
+.z.ts:{ send["proc1 ", .Q.s1 rand `GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS ] };
 	
 /\t 500	

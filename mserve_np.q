@@ -68,6 +68,7 @@ servant: raze {(enlist first x),/: enlist each string 1_ x} each (enlist each ho
 mycode: .z.x 1 ;
 myq: .z.X 0 ;
 mys: string system "s" ;
+str: {$[10=type x; x; string x]} ;
 launch:{value 0N!"system \"", (.z.X 0), " ", x, " &\"" ;} ;
 
 h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
@@ -89,8 +90,11 @@ h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
 { x ".z.pc:{-1 \"closed\"; exit 0}"} each h ; /shutdown on lost connection
 -1 "OK" ;
 
-/ map each servant asynch handle back to the servant address
+/ map each servant handle back to the servant address
 d:h!servant ; 
+
+/ map each servant handle to the routing symbol of its last query (initialize to null)
+r: h!(count h)#` ;
 
 /map each servant asynch handle to an empty list and assign resultant dictionary back to h
 /The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
@@ -108,13 +112,13 @@ queries:([qid:`u#`int$()]
     time_sent: `time$() ;
 		time_returned:`time$();
 		slave_handle:`int$();
-		location:`symbol$()
+		location:`symbol$() ;
+    route: `symbol$()
 		);
 
-/update `u#qid from `queries;		
+/update `u#qid from `queries;	
 
-send_query:{[hdl]
-	qid:exec first qid from queries where location=`master;
+send_query:{[hdl; qid]
 	/if there is an outstanding query to be sent, try to send it
 	if[not null qid;
   	query:queries[qid;`query];
@@ -137,25 +141,38 @@ send_result:{[qid;result]
 
   /0N!(`respond; client_handle; client_callback; client_queryid; servant_elapsed; servant_address; result) ;
 	client_handle (client_callback; client_queryid; servant_elapsed; servant_address; result);
-	/break[];
 	queries[qid;`location`time_returned]:(`client;.z.T);
+  r[ queries[qid; `slave_handle] ]: queries[qid; `route] ;
  }; 
  
 /original: check if free slave. If free slave exists -> try to send oldest query 
 /this tends to put too many queries on the same slave
 check_orig:{[] if[not 0N=hdl:?[count each h;0];send_query[hdl]] ;};
 
-/new: check for free slave, further down the list than the last one
+/previous: check for free slave, further down the list than the last one
 /this distributes the queries more evenly across the slaves
 /howerver it can actually degrade performance because more queries run with a cold cache
 lasthdl:0i ;
-check:{[] 
+check_prev:{[] 
   list: asc where 0=count each h ;
   if[0=count list; :(::)] ;
   hdl: first list where list<lasthdl ;
   if[null hdl; hdl: first list] ;
   lasthdl:: hdl; send_query[hdl] ;
  }; 
+
+/current: attempt to send oldest query to a free slave 
+/prefer a slave whos previous query had the same routing symbol 
+check:{[]
+	qry: exec first qid, first route from queries where location=`master;  /oldest query
+	hfree: asc where 0=count each h ;                                      /free servant handles
+  if[ (null qry `qid) or 0=count hfree; :(::)];                          /if no unsent query or no free servant ? return 
+  hmatch: $[null qry `route; `$(); hfree where r[hfree]= qry `route];    /free servant handles matching route
+  if[0<count hmatch; hfree: hmatch] ;                                    /if any matching, use those
+  hdl: first hfree where hfree>lasthdl ;
+  if[null hdl; hdl: first hfree] ;
+  lasthdl:: hdl; send_query[hdl; qry `qid] ;
+ };
 
 /
 .z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
@@ -175,10 +192,13 @@ if .z.w does not exist in h => message is a new request from a client
  
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
-	[ /request - (client qid; callback; query; rep)  Note: "rep" is optional.	
+	[ /request - (client qid; callback; query; route; rep)  Note:"route" and "rep" are optional.	
+    0N!(`mservereq; x) ;
     sqid: 1^1+exec last qid from queries; /server id for new query
-    cqid: x[0]; callback: x[1]; query: x[2]; rep:1|x[3] ; 
-    `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.T; 0Nt; 0Nt; 0N; `master); 
+    cqid: x[0]; callback: x[1]; query: x[2]; rep:1|x[3]; route:`$ str x[4] ; 
+    if[(route=`) & `getRoutingSymbol in key `.; route:getRoutingSymbol(query)] ;
+
+    `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.T; 0Nt; 0Nt; 0N; `master; route); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
@@ -192,10 +212,8 @@ if .z.w does not exist in h => message is a new request from a client
   	 ];
   	/drop the first query id from the slave list in dict h
   	h[w]:1_h[w];
-  	/send oldest unsent query to slave
-  	send_query[w];
-    /send another if possible
-    check[] ;
+    /route up to 2 additional queries to servants
+    check[]; check[] ;
 	]];	
  };
  
