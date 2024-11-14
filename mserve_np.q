@@ -113,7 +113,8 @@ queries:([qid:`u#`int$()]
 		time_returned:`time$();
 		slave_handle:`int$();
 		location:`symbol$() ;
-    route: `symbol$()
+    route: `symbol$() ;
+    bbi: `int$()
 		);
 
 /update `u#qid from `queries;	
@@ -123,11 +124,12 @@ send_query:{[hdl; qid]
 	if[not null qid;
   	query:queries[qid;`query];
     rep:queries[qid; `client_rep] ;
+    bbi:queries[qid; `bbi] ;
   	h[hdl],:qid;
   	queries[qid;`slave_handle]:hdl;
     queries[qid;`time_sent]: .z.T ;
   	queries[qid;`location]:`slave;
-    hdl (`respond; (qid; query; rep)) ;
+    hdl (`respond; (qid; query; rep; bbi)) ;
 	];
  };
 
@@ -192,13 +194,13 @@ if .z.w does not exist in h => message is a new request from a client
  
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
-	[ /request - (client qid; callback; query; route; rep)  Note:"route" and "rep" are optional.	
+	[ /request - (client qid; callback; query; route; rep; bbi)  Note:"route" and "rep" are optional.	
     0N!(`mservereq; x) ;
     sqid: 1^1+exec last qid from queries; /server id for new query
-    cqid: x[0]; callback: x[1]; query: x[2]; rep:1|x[3]; route:`$ str x[4] ; 
+    cqid: x[0]; callback: x[1]; query: x[2]; route:`$ str x[3]; rep:1|x[4]; bbi:x[5]; 
     if[(route=`) & `getRoutingSymbol in key `.; route:getRoutingSymbol(query)] ;
 
-    `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.T; 0Nt; 0Nt; 0N; `master; route); 
+    `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.T; 0Nt; 0Nt; 0N; `master; route; bbi); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
