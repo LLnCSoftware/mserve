@@ -133,16 +133,17 @@ send_query:{[hdl; qid]
 	];
  };
 
-send_result:{[qid;result]
+send_result:{[qid;result;info]
 	query:queries[qid;`query] ;
 	client_handle:queries[qid;`client_handle] ;
   client_queryid: queries[qid; `client_qid] ;
 	client_callback:queries[qid;`client_callback] ;
   servant_address: {`$":",(x 0),":",(x 1)} d queries[qid; `slave_handle] ;
   servant_elapsed: `long$ .z.T - queries[qid; `time_sent] ;
+  if[ 0=count info; info: `qsvr`execution!(servant_address; servant_elapsed) ];
 
-  /0N!(`respond; client_handle; client_callback; client_queryid; servant_elapsed; servant_address; result) ;
-	client_handle (client_callback; client_queryid; servant_elapsed; servant_address; result);
+  /0N!(`mserversp; client_handle; client_callback; client_queryid; result; info) ;
+	client_handle (client_callback; client_queryid; result; info);
 	queries[qid;`location`time_returned]:(`client;.z.T);
   r[ queries[qid; `slave_handle] ]: queries[qid; `route] ;
  }; 
@@ -195,7 +196,7 @@ if .z.w does not exist in h => message is a new request from a client
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; callback; query; route; rep; bbi)  Note:"route" and "rep" are optional.	
-    0N!(`mservereq; x) ;
+    /0N!(`mservereq; x) ;
     sqid: 1^1+exec last qid from queries; /server id for new query
     cqid: x[0]; callback: x[1]; query: x[2]; route:`$ str x[3]; rep:1|x[4]; bbi:x[5]; 
     if[(route=`) & `getRoutingSymbol in key `.; route:getRoutingSymbol(query)] ;
@@ -204,12 +205,13 @@ if .z.w does not exist in h => message is a new request from a client
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
-	[ /response - (server qid, result)
-  	qid:first x;
-  	result:last x;
+	[ /response - (server qid, result, info)
+    qid:x[0];
+    result:x[1];
+    info:$[2<count x; x[2]; ()] ;
   	/try to send result back to client
   	.[send_result;
-  		(qid;result);
+  		(qid;result;info);
   		{[qid;error]queries[qid;`location`time_returned]:(`client_failure;.z.T)}[qid]
   	 ];
   	/drop the first query id from the slave list in dict h
