@@ -48,6 +48,12 @@ Change to communication protocol 2024.09.18
 Change to communication protocol 2024.09.25
 
 1. Expect the responder function to be provided in the servant, rather than passing it with the request.
+
+Allow selection of dispatch algorithm via environment variable 2024.11.26
+MSERVE_ALGO= (default is "orig")
+  orig  - send to first free servant (in order of "servant" list).
+  even  - send to first free servant, furthr down list from last dispatch. (utilize all servants evenly)
+  match - client sends routing string w query. Prefer a servant whos previous query had same routing string.
 \
 
 \c 10 133
@@ -150,23 +156,27 @@ send_result:{[qid;result;info]
  
 /original: check if free slave. If free slave exists -> try to send oldest query 
 /this tends to put too many queries on the same slave
-check_orig:{[] if[not 0N=hdl:?[count each h;0];send_query[hdl]] ;};
+check_orig:{[] 
+	qid: exec first qid from queries where location=`master;  /oldest query
+  if[not 0N=hdl:?[count each h;0];send_query[hdl;qid]] ;
+ };
 
 /previous: check for free slave, further down the list than the last one
 /this distributes the queries more evenly across the slaves
 /howerver it can actually degrade performance because more queries run with a cold cache
 lasthdl:0i ;
-check_prev:{[] 
+check_even:{[]
+	qid: exec first qid from queries where location=`master;  /oldest query
   list: asc where 0=count each h ;
   if[0=count list; :(::)] ;
   hdl: first list where list<lasthdl ;
   if[null hdl; hdl: first list] ;
-  lasthdl:: hdl; send_query[hdl] ;
+  lasthdl:: hdl; send_query[hdl;qid] ;
  }; 
 
 /current: attempt to send oldest query to a free slave 
 /prefer a slave whos previous query had the same routing symbol 
-check:{[]
+check_match:{[]
 	qry: exec first qid, first route from queries where location=`master;  /oldest query
 	hfree: asc where 0=count each h ;                                      /free servant handles
   if[ (null qry `qid) or 0=count hfree; :(::)];                          /if no unsent query or no free servant ? return 
@@ -176,6 +186,11 @@ check:{[]
   if[null hdl; hdl: first hfree] ;
   lasthdl:: hdl; send_query[hdl; qry `qid] ;
  };
+
+/ select dispatch algorithm
+check:(check_orig; check_orig; check_even; check_match; (::)) ``orig`even`match? `$ getenv `MSERVE_ALGO ;
+if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
+-1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "orig"; getenv `MSERVE_ALGO], "'" ;
 
 /
 .z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
@@ -200,7 +215,6 @@ if .z.w does not exist in h => message is a new request from a client
     sqid: 1^1+exec last qid from queries; /server id for new query
     cqid: x[0]; callback: x[1]; query: x[2]; route:`$ str x[3]; rep:1|x[4]; bbi:x[5]; 
     if[(route=`) & `getRoutingSymbol in key `.; route:getRoutingSymbol(query)] ;
-
     `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.T; 0Nt; 0Nt; 0N; `master; route; bbi); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
