@@ -27,16 +27,16 @@ queryid: 0 ;
 sendRR:{[rep; route; query]  
   `results upsert `id`rep`query`route`start!(queryid+:1; rep; query; route; .z.T) ;
   -1 "send: id=",(string queryid), " route=", (string route), " rep=", (string rep), "query=", query ;
-  h (queryid; `receive; query; rep; route) 
+  h (queryid; `receive; query; route; rep) 
  };
 sendR: sendRR[1;] ;    /sendR[route;query]
 send: sendRR[1;`;] ;   /send[query] ;
 
 /mserve_np callback
-receive:{[aid; aexecution; aservant; aresult]
-  -1 "receive: id=", (string aid) ;
-  update elapsed:`int$ .z.T-start, execution:aexecution, servant:aservant, result:aresult from `results where id=aid ;
-  -1 "--info--"; show `result _ results[aid]; -1 "--result--"; show results[aid;`result] ; -1 "";
+receive:{[qid; qresult; qinfo]
+  -1 "receive: id=", (string qid); 
+  update elapsed:`int$ .z.T-start, execution:qinfo[`execution], servant:qinfo[`qsvr], result:qresult from `results where id=qid ;
+  -1 "--info--"; show `result _ results[qid]; -1 "--result--"; show results[qid;`result] ; -1 "";
  };
 
 /example client query:
