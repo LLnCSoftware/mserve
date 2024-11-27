@@ -99,8 +99,8 @@ h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
 / map each servant handle back to the servant address
 d:h!servant ; 
 
-/ map each servant handle to the routing symbol of its last query (initialize to null)
-r: h!(count h)#` ;
+/ map each servant handle to a list of routing symbols from previous queries (initialize to empty)
+r: h!(count h)# `$() ;
 
 /map each servant asynch handle to an empty list and assign resultant dictionary back to h
 /The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
@@ -177,18 +177,24 @@ check_even:{[]
 /current: attempt to send oldest query to a free slave 
 /prefer a slave whos previous query had the same routing symbol 
 check_match:{[]
+  n: 1|"J"$algo 1 ;
 	qry: exec first qid, first route from queries where location=`master;  /oldest query
 	hfree: asc where 0=count each h ;                                      /free servant handles
   if[ (null qry `qid) or 0=count hfree; :(::)];                          /if no unsent query or no free servant ? return 
-  hmatch: $[null qry `route; `$(); hfree where r[hfree]= qry `route];    /free servant handles matching route
-  if[0<count hmatch; hfree: hmatch] ;                                    /if any matching, use those
-  hdl: first hfree where hfree>lasthdl ;
-  if[null hdl; hdl: first hfree] ;
-  lasthdl:: hdl; send_query[hdl; qry `qid] ;
+
+  /hmatch: $[null qry `route; `$(); hfree where r[hfree]= qry `route];    /free servant handles matching route
+  rt: (`.)^ qry `route ;   /use "-" or null for non-specific route
+  hmatch: $[rt= `.; hfree where 0=count r[hfree] except `.; hfree where rt in r[hfree]] ; 
+
+  if[0<count hmatch; hfree: hmatch] ;         /if any matching, consider only those.
+  hdl: first hfree where hfree>lasthdl ;      /if any beyond last servent dispatched in the list, use first of those.
+  if[null hdl; hdl: first hfree] ;            /otherwize use first remaining.
+  lasthdl:: hdl; send_query[hdl; qry `qid] ;  /save handle as last dispathed servant, and send query to it.
  };
 
 / select dispatch algorithm
-check:(check_orig; check_orig; check_even; check_match; (::)) ``orig`even`match? `$ getenv `MSERVE_ALGO ;
+algo: " " vs (ssr[;"  "; " "]/) getenv `MSERVE_ALGO ;
+check:(check_orig; check_orig; check_even; check_match; (::)) ``orig`even`match? `$ algo 0 ;
 if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
 -1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "orig"; getenv `MSERVE_ALGO], "'" ;
 
