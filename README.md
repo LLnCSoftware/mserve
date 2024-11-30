@@ -1,6 +1,20 @@
 # mserve
 Enhanced mserve load balanced solution
 
+## Quickstart Demo on Linux
+
+1. Open two terminal windows
+2. In first window invoke: q mserve\_np.q 2 servant.q -p 5000
+3. In second window invoke: q client.q -master 5000
+4. Upon startup, client should send one query to myserve\_np.q which will forward it to a servant. 
+5. It will take several seconds to get the first result, which will show some benchmarking info
+   directly above the actual result.
+6. Will also store all results in an internal table calld "results"
+7. Once you get first result you can start the timer to run a series of them.
+
+
+## Details
+
 Nathan Perrem
 First Derivatives
 2013-05.22
@@ -19,6 +33,6 @@ The main enhancements in this version are:
   Dropped connections to client or servant are now handled.
   Client sends master message as a pair - (query,callback).
     where callback is the name or definition of the client's delegated callback function. This callback will handle the returned result.
-  
+
 On Windows, to kick off the master, 4 servants and 4 clients, simply run the included .bat file.
 On Linux, create an appropriate .sh file from the .bat file or kick off processes in separate shells.
