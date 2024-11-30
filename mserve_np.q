@@ -36,6 +36,8 @@ All the communication between client-master, master-servant, servant-master and 
 3 Store combination of client handle,query id,query and call back function in queries table
 4 Do not automatically send new query to least busy servant, instead only send new query when a servant is free
 
+******** comments below this point need revision *********
+
 Change to communication protocol 2024.09.18
 
 1. Add required client_query_id and optional repetition factor to mserve request. 
@@ -198,6 +200,10 @@ check:(check_orig; check_orig; check_even; check_match; (::)) ``orig`even`match?
 if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
 -1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "orig"; getenv `MSERVE_ALGO], "'" ;
 
+/ default routing string is first argument to api command
+getRoutingString:{[cmd] if[10=type cmd; cmd:parse cmd]; cmd[1]} ;
+if[0<count getenv `MSERVE_ROUTING; getRoutingString: parse getenv `MSERVE_ROUTING] ;
+
 /
 .z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
 or response from a servant will result in .z.ps executing on the master
@@ -219,8 +225,8 @@ if .z.w does not exist in h => message is a new request from a client
 	[ /request - (client qid; callback; query; route; rep; bbi)  Note:"route" and "rep" are optional.	
     /0N!(`mservereq; x) ;
     sqid: 1^1+exec last qid from queries; /server id for new query
-    cqid: x[0]; callback: x[1]; query: x[2]; route:`$ str x[3]; rep:1|x[4]; bbi:x[5]; 
-    if[(route=`) & `getRoutingSymbol in key `.; route:getRoutingSymbol(query)] ;
+    cqid: x[0]; callback: x[1]; query: x[2]; rep:1|x[3]; bbi:x[4]; 
+    route:getRoutingSymbol(query) ;
     `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.T; 0Nt; 0Nt; 0N; `master; route; bbi); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
