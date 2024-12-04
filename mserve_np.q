@@ -102,7 +102,7 @@ h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
 d:h!servant ; 
 
 / map each servant handle to a list of routing symbols from previous queries (initialize to empty)
-r: h!(count h)# `$() ;
+r: h!(count h)# enlist `$() ;
 
 /map each servant asynch handle to an empty list and assign resultant dictionary back to h
 /The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
@@ -137,7 +137,7 @@ send_query:{[hdl; qid]
   	queries[qid;`slave_handle]:hdl;
     queries[qid;`time_sent]: .z.T ;
   	queries[qid;`location]:`slave;
-    hdl (`respond; (qid; query; rep; bbi)) ;
+    hdl (qid; query; rep; bbi) ;
 	];
  };
 
@@ -148,17 +148,20 @@ send_result:{[qid;result;info]
 	client_callback:queries[qid;`client_callback] ;
   servant_address: {`$":",(x 0),":",(x 1)} d queries[qid; `slave_handle] ;
   servant_elapsed: `long$ .z.T - queries[qid; `time_sent] ;
-  if[ 0=count info; info: `qsvr`execution!(servant_address; servant_elapsed) ];
+  total_elapsed: `long$ .z.T - queries[qid; `time_received] ;
+  if[ 0=count info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
+  info[`route]: queries[qid; `route] ;
 
   /0N!(`mserversp; client_handle; client_callback; client_queryid; result; info) ;
 	client_handle (client_callback; client_queryid; result; info);
 	queries[qid;`location`time_returned]:(`client;.z.T);
-  r[ queries[qid; `slave_handle] ]: queries[qid; `route] ;
+  r[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
  }; 
  
 /original: check if free slave. If free slave exists -> try to send oldest query 
 /this tends to put too many queries on the same slave
 check_orig:{[] 
+  /0N!"check_orig" ;
 	qid: exec first qid from queries where location=`master;  /oldest query
   if[not 0N=hdl:?[count each h;0];send_query[hdl;qid]] ;
  };
@@ -168,6 +171,7 @@ check_orig:{[]
 /howerver it can actually degrade performance because more queries run with a cold cache
 lasthdl:0i ;
 check_even:{[]
+  /0N!"check_even" ;
 	qid: exec first qid from queries where location=`master;  /oldest query
   list: asc where 0=count each h ;
   if[0=count list; :(::)] ;
@@ -179,15 +183,15 @@ check_even:{[]
 /current: attempt to send oldest query to a free slave 
 /prefer a slave whos previous query had the same routing symbol 
 check_match:{[]
+  /0N!"check_match" ;
   n: 1|"J"$algo 1 ;
 	qry: exec first qid, first route from queries where location=`master;  /oldest query
 	hfree: asc where 0=count each h ;                                      /free servant handles
   if[ (null qry `qid) or 0=count hfree; :(::)];                          /if no unsent query or no free servant ? return 
-
-  /hmatch: $[null qry `route; `$(); hfree where r[hfree]= qry `route];    /free servant handles matching route
-  rt: (`.)^ qry `route ;   /use "-" or null for non-specific route
-  hmatch: $[rt= `.; hfree where 0=count r[hfree] except `.; hfree where rt in r[hfree]] ; 
-
+  rt: (`.)^ qry `route ;   /use `. or null for non-specific route
+  hmatch: $[rt= `.; hfree where {0=count x except `.} each r hfree; hfree where rt in/: r hfree] ; 
+  /prefer to send a query with a specific route to a servant which has previously seen this route.
+  /prefer to send a query with a non-specific route to a servant which has not previously seen any specific route
   if[0<count hmatch; hfree: hmatch] ;         /if any matching, consider only those.
   hdl: first hfree where hfree>lasthdl ;      /if any beyond last servent dispatched in the list, use first of those.
   if[null hdl; hdl: first hfree] ;            /otherwize use first remaining.
@@ -196,13 +200,14 @@ check_match:{[]
 
 / select dispatch algorithm
 algo: " " vs (ssr[;"  "; " "]/) getenv `MSERVE_ALGO ;
-check:(check_orig; check_orig; check_even; check_match; (::)) ``orig`even`match? `$ algo 0 ;
+check:(check_match; check_orig; check_even; check_match; (::)) ``orig`even`match? `$ algo 0 ;
 if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
--1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "orig"; getenv `MSERVE_ALGO], "'" ;
+-1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "match"; getenv `MSERVE_ALGO], "'" ;
 
 / default routing string is first argument to api command
-getRoutingString:{[cmd] if[10=type cmd; cmd:parse cmd]; cmd[1]} ;
-if[0<count getenv `MSERVE_ROUTING; getRoutingString: parse getenv `MSERVE_ROUTING] ;
+fixarg:{$[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
+getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str fixarg cmd[1]} ;
+if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: parse getenv `MSERVE_ROUTING] ;
 
 /
 .z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
@@ -246,7 +251,7 @@ if .z.w does not exist in h => message is a new request from a client
     check[]; check[] ;
 	]];	
  };
- 
+
 /Change location of queries outstanding on the dead servant to master
 .z.pc:{
 	update location:`master from `queries where qid in h@neg x; /reassign lost queries to master process (for subsequent re-assignment)
@@ -255,3 +260,4 @@ if .z.w does not exist in h => message is a new request from a client
 	/if client handle went down, remove outstanding queries
 	delete from `queries where location=`master,client_handle=neg x;
  };
+0N!"mserve_np.q loaded" ;
