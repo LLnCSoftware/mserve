@@ -24,23 +24,23 @@ h:neg hopen args[`master];
 
 /Client request: (id(int); callback(symbol); expression(string); rep)
 queryid: 0 ;
-sendRR:{[rep; route; query]  
-  `results upsert `id`rep`query`route`start!(queryid+:1; rep; query; route; .z.T) ;
-  -1 "send: id=",(string queryid), " route=", (string route), " rep=", (string rep), "query=", query ;
-  h (queryid; `receive; query; route; rep) 
+sendR:{[rep;  query]  
+  `results upsert `id`rep`query`start!(queryid+:1; rep; query; .z.T) ;
+  -1 "send: id=",(string queryid), " rep=", (string rep), "query=", query ;
+  h (queryid; `receive; query; rep) 
  };
-sendR: sendRR[1;] ;    /sendR[route;query]
-send: sendRR[1;`;] ;   /send[query] ;
+send: sendR[1;] ;  /send just query default rep factor to 1 ;
 
 /mserve_np callback
 receive:{[qid; qresult; qinfo]
   -1 "receive: id=", (string qid); 
-  update elapsed:`int$ .z.T-start, execution:qinfo[`execution], servant:qinfo[`qsvr], result:qresult from `results where id=qid ;
+  update elapsed:`int$ .z.T-start, execution:qinfo[`execution], servant:qinfo[`qsvr]
+   , route:qinfo[`route], result:qresult from `results where id=qid ;
   -1 "--info--"; show `result _ results[qid]; -1 "--result--"; show results[qid;`result] ; -1 "";
  };
 
 /example client query:
-sendR[`ibm; "proc1 `IBM"] ;  /send[route; query]
+/send["proc1 `IBM"] ;  /send[route; query]
 
 .z.ts:{ send["proc1 ", .Q.s1 rand `GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS ] };
 	
