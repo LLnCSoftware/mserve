@@ -5,19 +5,32 @@ et:16:00:00.000
 portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
 `trade insert (st+n?et-st;n?portfolio;n?100f;n?10000)
 
-/ req: (id; expr [; rep])  resp: (id; result)
-respond:{do[1|x 2; r:@[value; x 1; {[e] "Error: ", e}]]; (neg .z.w) (x 0; r)} ; 
+isopen:0b ;
+.z.po:{isopen::1b} ;
+.z.pc:{if[isopen;  -1 "servant closed"; exit 0]} ;
+.z.ps:{"USE ASYNC"} ;
+
+/request: (id; query)
+/response: (id; result)
+.z.ps:{
+  ex:0N!$[10=type x 1; parse x 1; x 1] ;
+  fn:$[`proc1=ex 0; proc1; `proc2=ex 0; proc2; (::)] ; 
+  if[fn~(::); (neg .z.w) (x 0; "Error: unknown command: ", string ex 0)];
+  (neg .z.w) (x 0; @[fn; ex 1; {[e] "Error: ",(string ex 0), " ", e}]);
+ };
+
+/api endpoints
 
 proc1:{[s]do[200;
-		res:select SYM:enlist s,MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
+		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
 		AVG:avg price,VWAP:size wavg price,DEV:dev price,VAR:var price
-		from trade where sym=s;];
+		by SYM:sym from trade where sym in s;];
 		res
 	}
 
 proc2:{[s]do[800;
-		res:select SYM:enlist s,MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
+		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
 		AVG:avg price,VWAP:size wavg price,DEV:dev price,VAR:var price
-		from trade where sym=s;];
+		by SYM:sym from trade where sym in s;];
 		res
 	}
