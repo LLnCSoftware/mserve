@@ -13,7 +13,7 @@ isopen:0b ;
 /request: (id; query)
 /response: (id; result)
 .z.ps:{
-  ex:0N!$[10=type x 1; parse x 1; x 1] ;
+  ex:$[10=type x 1; parse x 1; x 1] ;
   fn:$[`proc1=ex 0; proc1; `proc2=ex 0; proc2; (::)] ; 
   if[fn~(::); (neg .z.w) (x 0; "Error: unknown command: ", string ex 0)];
   (neg .z.w) (x 0; @[fn; ex 1; {[e] "Error: ",(string ex 0), " ", e}]);
@@ -34,3 +34,5 @@ proc2:{[s]do[800;
 		by SYM:sym from trade where sym in s;];
 		res
 	}
+
+0N!"servant loaded" ;

@@ -53,7 +53,6 @@ myq: .z.X 0 ;
 mys: string system "s" ;
 str: {$[10=type x; x; string x]} ;
 tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
-
 launch:{value 0N!"system \"", (.z.X 0), " ", x, " &\"" ;} ;
 
 h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
@@ -88,19 +87,19 @@ h!:()
 .z.pg:{:"SEND MESSAGE ASYNCH!"};
 
 queries:([qid:`u#`int$()]
-		query:();
-    client_qid: `int$() ;
-    client_rep: `int$() ;
-		client_handle:`int$();
-		client_callback:`symbol$();
-		time_received:`timestamp$();
-    time_sent: `timestamp$() ;
-		time_returned:`timestamp$();
-		slave_handle:`int$();
-		location:`symbol$() ;
-    route: `symbol$() ;
-    bbi: `int$()
-		);
+  query:();
+  client_qid: `int$() ;
+  client_rep: `int$() ;
+  client_handle:`int$();
+  client_callback:`symbol$();
+  time_received:`timestamp$();
+  time_sent: `timestamp$() ;
+  time_returned:`timestamp$();
+  slave_handle:`int$();
+  location:`symbol$() ;
+  route: `symbol$() ;
+  bbi: `int$()
+ );
 
 /update `u#qid from `queries;	
 
@@ -182,9 +181,9 @@ if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
 -1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "match"; getenv `MSERVE_ALGO], "'" ;
 
 / default routing string is first argument to api command
-fixarg:{0N!type x;  $[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
-getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str 0N! fixarg cmd[1]} ;
-if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: parse getenv `MSERVE_ROUTING] ;
+fixarg:{type x;  $[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
+getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str fixarg cmd[1]} ;
+if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTING] ;
 
 
 /.z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
@@ -203,7 +202,7 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: parse getenv `MSERVE_ROUTIN
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; callback; query; route; rep; bbi)  Note:"route" and "rep" are optional.	
-    0N!(`mservereq; x) ;
+    /0N!(`mservereq; x) ;
     sqid: 1^1+exec last qid from queries; /server id for new query
     cqid: x[0]; callback: x[1]; query: x[2]; rep:1|x[3]; bbi:x[4]; 
     route:getRoutingSymbol(query) ;
@@ -235,4 +234,10 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: parse getenv `MSERVE_ROUTIN
 	/if client handle went down, remove outstanding queries
 	delete from `queries where location=`master,client_handle=neg x;
  };
+
+/ Purge completed queries from the table
+retainCompletedMs:60000* 30^ "J"$ getenv `MSERVE_RETAIN_COMPLETED ;  /default 30 minutes
+.z.ts:{ delete from `queries where location=`client, retainCompletedMs< tms .z.P - time_returned ;}
+system "t ", string (60000*600) & retainCompletedMs div 12 ;  /1 min -> check every 5 sec;  1+ hrs ->  max interval 5 min;  0-> no timer!
 0N!"mserve_np.q loaded" ;
+
