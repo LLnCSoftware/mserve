@@ -1,62 +1,37 @@
-/ 
-Nathan Perrem
-First Derivatives
-2013-05.22
-
-Eric Lazarus 2024-09-18 Added support for servants on multiple hosts (requires "launcher.q" running on each remote host).
-
-This is a heavily modified version of Arthur Whitney's mserve solution which can be found at code.kx:
-https://code.kx.com/trac/wiki/Cookbook/LoadBalancing
-
-The purpose of mserve is to provide load balancing capabilities so that queries from one or more clients
-can be sent to the master who will send these queries in a load balanced way to the servants.
-The servants will then send the results back to the master who sends the results back to the client
-
-Sample usage:  q mserve_np.q -p 5001 2 servant.q  [host1 host2 ...]
-
-.z.x 0  - 1st argument - number of servant to start up
-.z.x 1  - 2nd argument - the script we want each servant to load 
-.z.x 2+ - additional arguments are host names or ip addresses on which to run servants (round robbin).
-
-On startup of the master process, the following steps take place:
-1. Master decides on the hosts and port numbers the servants will listen on
-2. Master starts up the servant processes listening on the required ports 
-3. Master connects to the servants
-4. Master sends a message to each servant telling servant to:
-	a)define .z.pc such that servant terminates when master disconnects
-	b)load in the appropriate script so the servant has data
-
-We maintain a dictionary on the master process which keeps track on all the outstanding requests on the servants.
-This dictionary maps each servant handle to a list of all query ids for whom that servant has requests currently.
-
-All the communication between client-master, master-servant, servant-master and master-client is asynchronous.
-
-1 Store query as well as client handle when new request is received by master
-2 assign unique id to each new query
-3 Store combination of client handle,query id,query and call back function in queries table
-4 Do not automatically send new query to least busy servant, instead only send new query when a servant is free
-
-******** comments below this point need revision *********
-
-Change to communication protocol 2024.09.18
-
-1. Add required client_query_id and optional repetition factor to mserve request. 
-   request: (client_query_id; callback; query; rep)
-2. Add client_query_id, servant elapsed time and servant address to mserve response.
-   response: (callback; client query id; servant elapsed time; servant address; servant response)
-3. Add client_qid, client_rep, and time sent to "queries" table.
-4. Provide a dictionary "d" mapping servant handle back to servant address.
-
-Change to communication protocol 2024.09.25
-
-1. Expect the responder function to be provided in the servant, rather than passing it with the request.
-
-Allow selection of dispatch algorithm via environment variable 2024.11.26
-MSERVE_ALGO= (default is "orig")
-  orig  - send to first free servant (in order of "servant" list).
-  even  - send to first free servant, furthr down list from last dispatch. (utilize all servants evenly)
-  match - client sends routing string w query. Prefer a servant whos previous query had same routing string.
-\
+/Nathan Perrem
+/First Derivatives
+/2013-05.22
+/-
+/Eric Lazarus 2024-09-18 Added support for servants on multiple hosts (requires "launcher.q" running on each remote host).
+/-
+/This is a heavily modified version of Arthur Whitney's mserve solution which can be found at code.kx:
+/https://code.kx.com/trac/wiki/Cookbook/LoadBalancing
+/-
+/The purpose of mserve is to provide load balancing capabilities so that queries from one or more clients
+/can be sent to the master who will send these queries in a load balanced way to the servants.
+/The servants will then send the results back to the master who sends the results back to the client
+/-
+/Sample usage:  q mserve_np.q -p 5001 2 servant.q  [host1 host2 ...]
+/-
+/.z.x 0  - 1st argument - number of servant to start up
+/.z.x 1  - 2nd argument - the script we want each servant to load 
+/.z.x 2+ - additional arguments are host names or ip addresses on which to run servants (round robbin).
+/-
+/On startup of the master process, the following steps take place:
+/1. Master decides on the hosts and port numbers the servants will listen on
+/2. Master starts up the servant processes listening on the required ports 
+/3. Master connects to the servants
+/-
+/We maintain a dictionary on the master process which keeps track on all the outstanding requests on the servants.
+/This dictionary maps each servant handle to a list of all query ids for whom that servant has requests currently.
+/-
+/All the communication between client-master, master-servant, servant-master and master-client is asynchronous.
+/-
+/Allow selection of dispatch algorithm via environment variable 2024.11.26
+/MSERVE_ALGO= (default is "match")
+/  orig  - send to first free servant (in order of "servant" list).
+/  even  - send to first free servant, furthr down list from last dispatch. (utilize all servants evenly)
+/  match - client sends routing string w query. Prefer a servant whos previous query had same routing string.
 
 \c 10 133
 
@@ -209,21 +184,19 @@ fixarg:{$[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; 
 getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str fixarg cmd[1]} ;
 if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: parse getenv `MSERVE_ROUTING] ;
 
-/
-.z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
-or response from a servant will result in .z.ps executing on the master
 
-input to .z.ps is x
-There are 2 possibilities
-1. x is a query received from a client
-2. x is a result received from a servant
-
-.z.w stores the asynch handle back to whoever has sent the master the asynch message (either a client or servant)
-
-We have an if else statement checking whether the call back handle (.z.w) to the other process exists in the key of h or not
-if .z.w exists in h => message is a response from a servant
-if .z.w does not exist in h => message is a new request from a client
-\
+/.z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
+/or response from a servant will result in .z.ps executing on the master
+/-
+/input to .z.ps is x
+/There are 2 possibilities
+/1. x is a query received from a client
+/2. x is a result received from a servant
+/-
+/.z.w stores the asynch handle back to whoever has sent the master the asynch message (either a client or servant)
+/We have an if else statement checking whether the call back handle (.z.w) to the other process exists in the key of h or not
+/if .z.w exists in h => message is a response from a servant
+/if .z.w does not exist in h => message is a new request from a client
  
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
