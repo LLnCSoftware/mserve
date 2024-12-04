@@ -52,6 +52,8 @@ mycode: .z.x 1 ;
 myq: .z.X 0 ;
 mys: string system "s" ;
 str: {$[10=type x; x; string x]} ;
+tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
+
 launch:{value 0N!"system \"", (.z.X 0), " ", x, " &\"" ;} ;
 
 h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
@@ -91,9 +93,9 @@ queries:([qid:`u#`int$()]
     client_rep: `int$() ;
 		client_handle:`int$();
 		client_callback:`symbol$();
-		time_received:`time$();
-    time_sent: `time$() ;
-		time_returned:`time$();
+		time_received:`timestamp$();
+    time_sent: `timestamp$() ;
+		time_returned:`timestamp$();
 		slave_handle:`int$();
 		location:`symbol$() ;
     route: `symbol$() ;
@@ -110,7 +112,7 @@ send_query:{[hdl; qid]
     bbi:queries[qid; `bbi] ;
   	h[hdl],:qid;
   	queries[qid;`slave_handle]:hdl;
-    queries[qid;`time_sent]: .z.T ;
+    queries[qid;`time_sent]: .z.P ;
   	queries[qid;`location]:`slave;
     hdl (qid; query; rep; bbi) ;
 	];
@@ -122,14 +124,14 @@ send_result:{[qid;result;info]
   client_queryid: queries[qid; `client_qid] ;
 	client_callback:queries[qid;`client_callback] ;
   servant_address: {`$":",(x 0),":",(x 1)} d queries[qid; `slave_handle] ;
-  servant_elapsed: `long$ .z.T - queries[qid; `time_sent] ;
-  total_elapsed: `long$ .z.T - queries[qid; `time_received] ;
+  servant_elapsed: tms .z.P - queries[qid; `time_sent] ;
+  total_elapsed: tms .z.P - queries[qid; `time_received] ;
   if[ 0=count info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
   info[`route]: queries[qid; `route] ;
 
   /0N!(`mserversp; client_handle; client_callback; client_queryid; result; info) ;
 	client_handle (client_callback; client_queryid; result; info);
-	queries[qid;`location`time_returned]:(`client;.z.T);
+	queries[qid;`location`time_returned]:(`client;.z.P);
   r[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
  }; 
  
@@ -180,8 +182,8 @@ if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
 -1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "match"; getenv `MSERVE_ALGO], "'" ;
 
 / default routing string is first argument to api command
-fixarg:{$[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
-getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str fixarg cmd[1]} ;
+fixarg:{0N!type x;  $[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
+getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str 0N! fixarg cmd[1]} ;
 if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: parse getenv `MSERVE_ROUTING] ;
 
 
@@ -201,11 +203,11 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: parse getenv `MSERVE_ROUTIN
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; callback; query; route; rep; bbi)  Note:"route" and "rep" are optional.	
-    /0N!(`mservereq; x) ;
+    0N!(`mservereq; x) ;
     sqid: 1^1+exec last qid from queries; /server id for new query
     cqid: x[0]; callback: x[1]; query: x[2]; rep:1|x[3]; bbi:x[4]; 
     route:getRoutingSymbol(query) ;
-    `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.T; 0Nt; 0Nt; 0N; `master; route; bbi); 
+    `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.P; 0Np; 0Np; 0N; `master; route; bbi); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
@@ -216,7 +218,7 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: parse getenv `MSERVE_ROUTIN
   	/try to send result back to client
   	.[send_result;
   		(qid;result;info);
-  		{[qid;error]queries[qid;`location`time_returned]:(`client_failure;.z.T)}[qid]
+  		{[qid;error]queries[qid;`location`time_returned]:(`client_failure;.z.P)}[qid]
   	 ];
   	/drop the first query id from the slave list in dict h
   	h[w]:1_h[w];
