@@ -7,10 +7,10 @@ h:neg hopen port;
 
 /Client request: (id; callback; expression) example: send["proc1 `IBM"] 
 qhi:0 ; 
-send:{[query] h 0N!(qhi+:1; `receive; query) };
+send:{[query] h 0N!(qhi+:1; query) };
 
-/mserve_np callback
-receive:{[qid; qresult; qinfo] -1 "ID: ", (string qid); -1 "--info--"; show qinfo; -1 "--result--"; show qresult ; -1 "";};
+/mserve_np response: (qid; result; info)
+.z.ps:{-1 "ID: ", (string x 0); -1 "--info--"; show x 2; -1 "--result--"; show x 1 ; -1 ""};
 
 /.z.ts:{ send["proc1 ", .Q.s1 rand `GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS ] };
 .z.ts:{ send["proc1 ", .Q.s1 rand `AAPL`IBM ] };
