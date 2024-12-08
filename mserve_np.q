@@ -31,12 +31,14 @@
 /MSERVE_ALGO= (default is "match")
 /  orig  - send to first free servant (in order of "servant" list).
 /  even  - send to first free servant, furthr down list from last dispatch. (utilize all servants evenly)
-/  match - client sends routing string w query. Prefer a servant whos previous query had same routing string.
+/  match - computes a routing string for each query. Prefer a servant whos previous query had same routing string.
 
 \c 10 133
 
 / get servant addresses from arguments
-port: system "p" ;
+port: system "p"; 
+if[port=0i; system "p 5000"; port:5000i] ;
+
 hosts: {$[x~"localhost"; ""; x]} each 2_ .z.x ;
 if[0=count hosts; hosts: enlist ""] ;
 
@@ -71,7 +73,6 @@ h:() ;
 / hopen handle to each servant
 -1 "Connect to servants" ;
 h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
-{ x ".z.pc:{-1 \"closed\"; exit 0}"} each h ; /shutdown on lost connection
 -1 "OK" ;
 
 / map each servant handle back to the servant address
@@ -89,16 +90,14 @@ h!:()
 queries:([qid:`u#`int$()]
   query:();
   client_qid: `int$() ;
-  client_rep: `int$() ;
+  client_options: () ;
   client_handle:`int$();
-  client_callback:`symbol$();
   time_received:`timestamp$();
   time_sent: `timestamp$() ;
   time_returned:`timestamp$();
-  slave_handle:`int$();
-  location:`symbol$() ;
   route: `symbol$() ;
-  bbi: `int$()
+  slave_handle:`int$();
+  location:`symbol$() 
  );
 
 /update `u#qid from `queries;	
@@ -107,13 +106,12 @@ send_query:{[hdl; qid]
 	/if there is an outstanding query to be sent, try to send it
 	if[not null qid;
   	query:queries[qid;`query];
-    rep:queries[qid; `client_rep] ;
-    bbi:queries[qid; `bbi] ;
+    options: queries[qid; `client_options];
   	h[hdl],:qid;
   	queries[qid;`slave_handle]:hdl;
     queries[qid;`time_sent]: .z.P ;
   	queries[qid;`location]:`slave;
-    hdl (qid; query; rep; bbi) ;
+    hdl (qid; query), options ;
 	];
  };
 
@@ -121,15 +119,14 @@ send_result:{[qid;result;info]
 	query:queries[qid;`query] ;
 	client_handle:queries[qid;`client_handle] ;
   client_queryid: queries[qid; `client_qid] ;
-	client_callback:queries[qid;`client_callback] ;
   servant_address: {`$":",(x 0),":",(x 1)} d queries[qid; `slave_handle] ;
   servant_elapsed: tms .z.P - queries[qid; `time_sent] ;
   total_elapsed: tms .z.P - queries[qid; `time_received] ;
-  if[ 0=count info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
-  info[`route]: queries[qid; `route] ;
+  if[ 0=count info; info: enlist `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
+  if[ 99=type info 0; dict:info 0; dict[`route]:queries[qid; `route]; info:(enlist dict), 1_ info; ];
 
-  /0N!(`mserversp; client_handle; client_callback; client_queryid; result; info) ;
-	client_handle (client_callback; client_queryid; result; info);
+  0N!(`mserversp; client_handle; (client_queryid; result), info) ;
+	client_handle (client_queryid; result), info;
 	queries[qid;`location`time_returned]:(`client;.z.P);
   r[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
  }; 
@@ -201,19 +198,19 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTIN
  
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
-	[ /request - (client qid; callback; query; route; rep; bbi)  Note:"route" and "rep" are optional.	
-    /0N!(`mservereq; x) ;
+	[ /request - (client qid; query; options[0]; options[1]...)	
+    0N!(`mservereq; x) ;
     sqid: 1^1+exec last qid from queries; /server id for new query
-    cqid: x[0]; callback: x[1]; query: x[2]; rep:1|x[3]; bbi:x[4]; 
+    cqid: x[0]; query: x[1]; options: 2_ x;  
     route:getRoutingSymbol(query) ;
-    `queries upsert (sqid; query; cqid; rep; (neg .z.w); callback; .z.P; 0Np; 0Np; 0N; `master; route; bbi); 
+    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; route; 0N; `master); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
-	[ /response - (server qid, result, info)
+	[ /response - (server qid, result, info[0], info[1]...)
     qid:x[0];
     result:x[1];
-    info:$[2<count x; x[2]; ()] ;
+    info: 2_ x ;
   	/try to send result back to client
   	.[send_result;
   		(qid;result;info);
