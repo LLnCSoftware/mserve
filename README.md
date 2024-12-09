@@ -103,6 +103,7 @@ The diagram below shows the messages exchanged in the demo above
 ![Sequence Diagram](sequencediagram.png)
 
 * When you run 'send proc1 `IBM' in the quickstart demo:
+
     * The message (1234; "proc1 `IBM") is sent from the client to mserve_np.
     * mserve_np sends the query to an internal function (denoted "match dispatcher")
     * which sends back a "routing string" in this case the first argument to the query: `IBM.   
