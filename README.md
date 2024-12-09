@@ -28,7 +28,12 @@ q mserve_np.q 2 servant.q -p 5000
   This runs 2 instances of the demo server "servant.q" on the local machine, 
   with mserve\_np.q on port 5000 and the servants on 5001 and 5002.
   
-2. Start the demo client in another terminal:  **q qs.q 5000**
+2. Start the demo client in another terminal: 
+
+```
+q qs.q 5000
+ ```
+
   giving it the port number that mserve\_np.q is listening on.
 
 3. Try a test query: 
