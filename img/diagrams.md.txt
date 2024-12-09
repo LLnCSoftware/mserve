@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant Client
+    participant MServe_LoadBalancer as MServe LoadBalancer
+    participant Match_Dispatcher as Match Dispatcher
+    participant Servant_1 as Servant 1
+    participant Servant_2 as Servant 2
+    
+    Client->>MServe_LoadBalancer: "1234 proc1 `ibm"
+    MServe_LoadBalancer->>Match_Dispatcher: "1234 proc1 `ibm"
+    Match_Dispatcher-->>MServe_LoadBalancer: `ibm
+    MServe_LoadBalancer->>Servant_1: "1234 proc1 `ibm"
+    Servant_1-->>MServe_LoadBalancer: result table
+    MServe_LoadBalancer-->>Client: result table, query ID, benchmarking dict
+
+    
