@@ -48,6 +48,73 @@ SYM MAX      MIN          OPEN    CLOSE    AVG      VWAP     DEV      VAR
 IBM 99.99956 5.739275e-05 1.89879 58.87289 50.04816 50.04443 28.84313 831.9261
 ```
 
+5. Understanding the response:  
+5.1. The line directly under the request (1234; "proc1 `IBM") is the "q" data structure 
+ that is actually sent from the  client to meserve and forwarded to the servant.
+5.2. There are 3 parts to the response, the id echoed from the client, the query result,
+ and a dictionary containing benchmarking information.
+5.3 That infomation includes which servant the query ran on, the elapsed time of the query,
+  The execution time (excludes time in queue), and the "routing string" used to help select the servant.
+
+6. Run a series of test queries, by starting the timer: **\t 3000**
+ Choose a timer interval less than the elapsed time above so that queries will be sent
+ faster than they complete to build up a backlog.
+ After running for a while stop the timer, and watch the backlog finish executing.
+ 
+### What is a routing string ?
+
+In our benchmarking experiments we are trying to determine the best way to farm out queries to a collection of servers. 
+So far, we have tried 3 methods, called "dispatch algorithms", and do not have frim conclusions yet.
+
+Originally meserve_np just sent each query to the first servant from the top the the list which was not busy.
+This tended to put too many queries on the same servant, and could leave others completely unused.
+
+So we tried sending each query to next free servant down the list from the last dispatched servant.
+This distributed the queries evenly, but that actually was slower because more queries ran on newly
+started servers, and so had a cold cache.
+
+The method we are using now, computes a "routing string" from the query as a hint as to what part of the database
+the query accesses, so that when a query runs on a server whos previous query and the same routing string,
+the data is more likely to be in cache.
+
+We currently use the first argument to the query as the routing string.
+That was really designed for an experiment which runs against a large date-partitioned historical database
+and the first argument is a date or date range.
+
+### Example Sequence Diagram
+
+The diagram below shows the messages exchanged in the demo above
+
+[ diagram goes here ]   
+
+* When you run 'send proc1 `IBM' in the quickstart demo:
+    * The message (1234; "proc1 `IBM") is sent from the client to mserve_np.
+    * mserve_np sends the query to an internal function (denoted "match dispatcher")
+    * which sends back a "routing string" in this case the first argument to the query: `IBM.   
+
+2. When this message is dequeued for dispatch
+    * The routing string is used to select a servant.
+    * Prefer to send a query to a servant whos previous query had the same rounting string.
+    * If preferred servant is not available choose any free (ie not busy) servant.
+    * The message (1234; "proc1 `IBM) is forwarded to the selected servant unchanged.
+
+3. When the servant responds with a result table
+    * The message (1234; <result table>) is sent from the servant to mserve_np.
+
+4. When mserve_np receives the result
+    * msevere_np notices that the response includes only the id and result, no extra "info".
+    * For that reason it provides a default "info dictionary" that reports: 
+       * the routing string used
+       * which servant ran the request
+       * elapsed time (includes time in queue)
+       * execution time (excludes time in queue)
+    * If the servant had provided its own info dictionary as the 3rd item in the response  
+      mserve_np would return that dictionary, with the routing string added to it.
+    * The message (1234; <result table>; <info dictionary>) is sent back to the client
+
+
+### --- to be deleted ---
+
 5. Have a look at the server console (in the other terminal).
  At least the way things are configured now, mserve_np.q will log each request received from the client 
  and each response sent back as:
@@ -75,12 +142,10 @@ SYM MAX      MIN          OPEN    CLOSE    AVG      VWAP     DEV      VAR
 ------------------------------------------------------------------------------
 IBM 99.99956 5.739275e-05 1.89879 58.87289 50.04816 50.04443 28.84313 831.9261
 ```
+--- above to be deleted ---
 
-6. Run a series of test queries, by starting the timer: **\t 3000**
- Choose a timer interval less than the elapsed time above so that queries will be sent
- faster than they complete to build up a backlog.
- After running for a while stop the timer, and watch the backlog finish executing.
- 
+
+
 ## Requests and Responses
 
 1. A **request** is a general list where the first element is an integer id 
@@ -103,44 +168,12 @@ IBM 99.99956 5.739275e-05 1.89879 58.87289 50.04816 50.04443 28.84313 831.9261
    by mserve_np.q to help choose the server to run on.
 
 4. Because the routing string is computed by mserve_np.q rather than being sent from the client or servant,
-   there is no pre-defined place to put it in the "info" to be passed back. For now, the routing string
-   will be set in the 3rd item sent back from the servant, provided it is a dictionary (like the default).
+   there is no pre-defined place to put it when "info" is being passed back from the servant. For now, the 
+   routing string will be set in the 3rd item sent back from the servant, provided it is a dictionary (like the default).
    Otherwise the routing string is not reported.
 
 5. Some of the uses envisioned for the extra "options" and "info" are:
   authorization, accounting, benchmarking, error status, and debugging.
-
-### Example Sequence Diagram
-
-The diagram below shows the messages exchanged when there are no special "options" or "info"
-
-[ diagram goes here ]   
-
-* When you run 'send proc1 `IBM' in the quickstart demo:
-    * The message (1234; "proc1 `IBM") is sent from the client to mserve_np.
-    * mserve_np sends the query to an internal function (match dispatcher)
-    * which sends back a "routing string" in this case the first argument to the query: `IBM.   
-
-2. When this message is dequeued for dispatch
-    * The routing string is used to select a servant.
-    * Prefer to send a query to a servant whos previous query had the same rounting string.
-    * If preferred servant is not available choose any free (ie not busy) servant.
-    * The message (1234; "proc1 `IBM) is forwarded to the selected servant unchanged.
-
-3. When the servant responds with a result table
-    * The message (1234; <result table>) is sent from the servant to mserve_np.
-
-4. When mserve_np receives the result
-    * msevere_np notices that the response includes only the id and result, no extra "info".
-    * For that reason it provides its own "info dictionary" that reports: 
-       * the routing string used
-       * which servant ran the request
-       * elapsed time (includes time in queue)
-       * execution time (excludes time in queue)
-    * If the servant had provided its own info dictionary as the 3rd item in the response  
-      mserve_np would use that dictionary, and add the routing string to it.
-    * The message (1234; <result table>; <info dictionary>) is sent back to the client
-
 
 ## Secure Invocation
 
