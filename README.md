@@ -126,7 +126,7 @@ The diagram below shows the messages exchanged in the demo above
        * execution time (excludes time in queue)
     * If the servant had provided its own info dictionary as the 3rd item in the response  
       mserve_np would return that dictionary, with the routing string added to it.
-    * The message (1234; <result table>; <info dictionary>) is sent back to the client
+    * The message (1234; \<result table>; \<info dictionary>) is sent back to the client
 
 
 ### --- to be deleted ---
