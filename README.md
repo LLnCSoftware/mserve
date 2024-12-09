@@ -100,7 +100,7 @@ and the first argument is a date or date range.
 
 The diagram below shows the messages exchanged in the demo above
 
-[ diagram goes here ]   
+![Sequence Diagram](sequencediagram.png)
 
 * When you run 'send proc1 `IBM' in the quickstart demo:
     * The message (1234; "proc1 `IBM") is sent from the client to mserve_np.
