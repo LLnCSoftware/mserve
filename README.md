@@ -19,14 +19,31 @@ When the number of servants equals the number of host names, one servant is star
 
 ## Quickstart Demo
 
-**Step 1 - Start the server in a terminal:**
+We will run a demo with two servants each on its on host.
+
+**Step 1 - Prepare the hosts**
+
+We start 2 AWS EC2 instances using the AWS console, from which we obtain their public IP addresses. 
+Then we ssh into each of them and start "launcher.q" which mserve\_np.q will use to launch the servant code
+on that instance when it starts up. 
+
+**Step 2 - Start the server in a terminal:**
+
+Assuming the IP addresses of the servant AWS instances are 50.25.0.1 and 50.25.0.1:
 
 ```
-q mserve_np.q 2 servant.q -p 5000
+q mserve_np.q 2 servant.q -p 5000 50.25.0.1 50.25.0.2
 ```
 
-  This runs 2 instances of the demo server "servant.q" on the local machine, 
-  with mserve\_np.q on port 5000 and the servants on 5001 and 5002.
+This runs mserve\_np.q on the local machine (maybe your laptop), listening on port 5000,
+with one instance of servant.q running as 50.25.0.1:5001 and another as 50.25.0.2:5001
+  
+If the number of servants was greater than the number of IP addresses, additional servant processes
+would be started using successive port number on those hosts with more than one servant process.
+
+For example, if the number of servants was 3, you would get servant processes running as:
+50.25.0.1:5001, 50.25.0.1:5002, and 50.25.0.2:5001.
+
   
 **Step 2 - Start the demo client in another terminal:**
 
@@ -53,7 +70,7 @@ send "proc1 `IBM"
 
 ID: 1234
 --info--
-qsvr     | `::5002
+qsvr     | `:50.25.0.1:5001
 elapsed  | 4724
 execution| 4724
 route    | `IBM
@@ -71,11 +88,6 @@ IBM 99.99956 5.739275e-05 1.89879 58.87289 50.04816 50.04443 28.84313 831.9261
 5.3 That information includes which servant the query ran on, the elapsed time of the query,
   The execution time (excludes time in queue), and the "routing string" used to help select the servant.
 
-6. Run a series of test queries, by starting the timer: **\t 3000**
- Choose a timer interval less than the elapsed time above so that queries will be sent
- faster than they complete to build up a backlog.
- After running for a while stop the timer, and watch the backlog finish executing.
- 
 ### What is a routing string ?
 
 In our benchmarking experiments we are trying to determine the best way to farm out queries to a collection of servers. 
@@ -104,8 +116,8 @@ The diagram below shows the messages exchanged in the demo above
 
 * When you run 'send proc1 `IBM' in the quickstart demo:
 
-    * The message (1234; "proc1 `IBM") is sent from the client to mserve_np.
-    * mserve_np sends the query to an internal function (denoted "match dispatcher")
+    * The message (1234; "proc1 `IBM") is sent from the client to mserve\_np.
+    * mserve\_np sends the query to an internal function (denoted "match dispatcher")
     * which sends back a "routing string" in this case the first argument to the query: `IBM.   
 
 2. When this message is ready to be sent:
@@ -115,10 +127,10 @@ The diagram below shows the messages exchanged in the demo above
     * The message (1234; "proc1 `IBM) is forwarded to the selected servant unchanged.
 
 3. When the servant responds with a result table
-    * The message (1234; \<result table>) is sent from the servant to mserve_np.
+    * The message (1234; \<result table>) is sent from the servant to mserve\_np.
 
-4. When mserve_np receives the result
-    * msevere_np notices that the response includes only the id and result, no extra "info".
+4. When mserve\_np receives the result
+    * msevere\_np notices that the response includes only the id and result, no extra "info".
     * For that reason it provides a default "info dictionary" that reports: 
        * the routing string used
        * which servant ran the request
@@ -127,40 +139,6 @@ The diagram below shows the messages exchanged in the demo above
     * If the servant had provided its own info dictionary as the 3rd item in the response  
       mserve_np would return that dictionary, with the routing string added to it.
     * The message (1234; \<result table>; \<info dictionary>) is sent back to the client
-
-
-### --- to be deleted ---
-
-5. Have a look at the server console (in the other terminal).
- At least the way things are configured now, mserve_np.q will log each request received from the client 
- and each response sent back as:
-```
-(`mservereq;(1234;"proc1 `IBM"))
-(`mserversp;-8i;(1234;+`SYM`MAX`MIN`OPEN`CLOSE`AVG`VWAP`DEV`VAR!(,`IBM;,99.99956;,5.739275e-05;,1.89879;,58.87289;,50.04816;,50.0444..
-```
-
-In `mserversp the -8i is the client handle (.z.w), 1234 is the query id, and the rest is the result table.
-The info dictionary is after the cutoff (..).
-
-6. Note that you can run the same query using a list style command
-```
-send (`proc1; `IBM)
-(3;`proc1`IBM)
-
-ID: 3
---info--
-qsvr     | `::5002
-elapsed  | 4560
-execution| 4559
-route    | `IBM
---result--
-SYM MAX      MIN          OPEN    CLOSE    AVG      VWAP     DEV      VAR     
-------------------------------------------------------------------------------
-IBM 99.99956 5.739275e-05 1.89879 58.87289 50.04816 50.04443 28.84313 831.9261
-```
---- above to be deleted ---
-
-
 
 ## Requests and Responses
 
