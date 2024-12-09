@@ -100,7 +100,7 @@ and the first argument is a date or date range.
 
 The diagram below shows the messages exchanged in the demo above
 
-![Sequence Diagram](img/sequencediagram.svg)
+![Sequence Diagram](img/sequencediagram.png)
 
 * When you run 'send proc1 `IBM' in the quickstart demo:
 
