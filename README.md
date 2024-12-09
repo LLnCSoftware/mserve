@@ -19,7 +19,12 @@ When the number of servants equals the number of host names, one servant is star
 
 ## Quickstart Demo
 
-1. Start the server in a terminal:  **q mserve\_np.q 2 servant.q -p 5000**
+1. Start the server in a terminal:  
+
+```
+q mserve\_np.q 2 servant.q -p 5000
+```
+
   This runs 2 instances of the demo server "servant.q" on the local machine, 
   with mserve\_np.q on port 5000 and the servants on 5001 and 5002.
   
