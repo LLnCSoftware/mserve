@@ -19,7 +19,7 @@ When the number of servants equals the number of host names, one servant is star
 
 ## Quickstart Demo
 
-**Step 1** - Start the server in a terminal:  
+**Step 1 - Start the server in a terminal:**
 
 ```
 q mserve_np.q 2 servant.q -p 5000
@@ -68,7 +68,7 @@ IBM 99.99956 5.739275e-05 1.89879 58.87289 50.04816 50.04443 28.84313 831.9261
  that is actually sent from the  client to mserve and forwarded to the servant.
 5.2. There are 3 parts to the response, the id echoed from the client, the query result,
  and a dictionary containing benchmarking information.
-5.3 That infomation includes which servant the query ran on, the elapsed time of the query,
+5.3 That information includes which servant the query ran on, the elapsed time of the query,
   The execution time (excludes time in queue), and the "routing string" used to help select the servant.
 
 6. Run a series of test queries, by starting the timer: **\t 3000**
@@ -108,14 +108,14 @@ The diagram below shows the messages exchanged in the demo above
     * mserve_np sends the query to an internal function (denoted "match dispatcher")
     * which sends back a "routing string" in this case the first argument to the query: `IBM.   
 
-2. When this message is dequeued for dispatch
+2. When this message is ready to be sent:
     * The routing string is used to select a servant.
-    * Prefer to send a query to a servant whos previous query had the same rounting string.
+    * Prefer to send a query to a servant whose previous query had the same routing string.
     * If preferred servant is not available choose any free (ie not busy) servant.
     * The message (1234; "proc1 `IBM) is forwarded to the selected servant unchanged.
 
 3. When the servant responds with a result table
-    * The message (1234; <result table>) is sent from the servant to mserve_np.
+    * The message (1234; \<result table>) is sent from the servant to mserve_np.
 
 4. When mserve_np receives the result
     * msevere_np notices that the response includes only the id and result, no extra "info".
