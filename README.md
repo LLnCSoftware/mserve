@@ -22,7 +22,7 @@ When the number of servants equals the number of host names, one servant is star
 1. Start the server in a terminal:  
 
 ```
-q mserve\_np.q 2 servant.q -p 5000
+q mserve_np.q 2 servant.q -p 5000
 ```
 
   This runs 2 instances of the demo server "servant.q" on the local machine, 
