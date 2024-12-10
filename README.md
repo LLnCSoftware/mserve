@@ -109,10 +109,10 @@ The demo client is a stand-in for a real client application.
 It assumes that mserve\_np.q is running on the same machine as itself, gets its port number 
 from a command line argument, and opens a handle to it upon startup.
 
-The demo client provides only one global function "send", whos arguement is the query to send.
+The demo client provides only one global function "send", whose argument is the query to send.
 It increments a query sequence number "qid" and sends the list (qid; query) over the open handle.
 
-The demo client also provides a .z.ps handler to display the reponses.
+The demo client also provides a .z.ps handler to display the responses.
 Each response is expected to consist of 3 parts (qid; result; info) which are displayed separately.
 Although the "info" comes after the "result" in the response, it is displayed first.
 
@@ -142,7 +142,7 @@ with no recursive evaluation in their arguments.
    the command list, and send back the result or trapped error.
 5. The "send" function used here handles the special case where the request is received on handle zero,
   by simply displaying the response, rather than trying to send it. This allows you to run the servant
-  independent of mserve, and test your api (and .z.ps handler) from ther servant console itelf, where
+  independent of mserve, and test your api (and .z.ps handler) from there servant console itself, where
   you can get breakpoints, etc.
 
 Unfortunately, "Secure Invocation" prevents mserve from setting the .z.pc handler to cause
@@ -162,7 +162,7 @@ These problems were solved by adding 2 status flags.
 ### What is a routing string ?
 
 In our benchmarking experiments we are trying to determine the best way to farm out queries to a collection of servers. 
-So far, we have tried 3 methods, called "dispatch algorithms", and do not have frim conclusions yet.
+So far, we have tried 3 methods, called "dispatch algorithms", and do not have firm conclusions yet.
 
 Originally meserve\_np just sent each query to the first servant from the top the the list which was not busy.
 This tended to put too many queries on the same servant, and could leave others completely unused.
@@ -172,7 +172,7 @@ This distributed the queries evenly, but that actually was slower because more q
 started servers, and so had a cold cache.
 
 The method we are using now, computes a "routing string" from the query as a hint as to what part of the database
-the query accesses, so that when a query runs on a server whos previous query and the same routing string,
+the query accesses, so that when a query runs on a server who's previous query and the same routing string,
 the data is more likely to still be in cache.
 
 We currently use the first argument to the query as the routing string.
@@ -185,8 +185,8 @@ The diagram below shows the messages exchanged in the demo above
 
 ![Sequence Diagram](img/sequencediagram.png)
 
-* When you run 'send proc1 `IBM' in the quickstart demo:
-    * The message (1234; "proc1 `IBM") is sent from the client to mserve\_np.
+* When you run ``send proc1 `IBM`` in the quickstart demo:
+    * The message ``(1234; "proc1 `IBM")`` is sent from the client to mserve\_np.
     * mserve\_np sends the query to an internal function (denoted "match dispatcher")
     * which sends back a "routing string" in this case the first argument to the query: `IBM.   
 
@@ -194,10 +194,10 @@ The diagram below shows the messages exchanged in the demo above
     * The routing string is used to select a servant.
     * Prefer to send a query to a servant whose previous query had the same routing string.
     * If preferred servant is not available choose any free (ie not busy) servant.
-    * The message (1234; "proc1 `IBM) is forwarded to the selected servant unchanged.
+    * The message ``(1234; "proc1 `IBM)`` is forwarded to the selected servant unchanged.
 
 3. When the servant responds with a result table
-    * The message (1234; \<result table>) is sent from the servant to mserve\_np.
+    * The message ``(1234; \<result table>)`` is sent from the servant to mserve\_np.
 
 4. When mserve\_np receives the result
     * msevere\_np notices that the response includes only the id and result, no extra "info".
@@ -216,7 +216,7 @@ The diagram below shows the messages exchanged in the demo above
  intended to be echoed back with the response, and the second element 
  is the query or command either as as string or general list.
  Additional items may be present in this list, and will be included in the message sent
- to the servant. Such items may be used in any way agreeed to between client and servant.
+ to the servant. Such items may be used in any way agreed to between client and servant.
  *(id, query, option1, option2...)*
 
 
@@ -288,7 +288,7 @@ must direct besides these queries and responses.
 ### validating arguments
 
 
-### accomodating other traffic
+### accommodating other traffic
 
 
 
