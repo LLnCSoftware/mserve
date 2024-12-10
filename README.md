@@ -77,7 +77,8 @@ response with its request. This message is displayed on the client console.
 
 **Step 5 - Await the response** 
 
-If all goes, Console Output should look like the below:
+If all goes, Console Output should look like the below, with an echoed value, and a return value with an ID, a dictionary 
+and the actual computed result, in this case, a table:
 
 ```
 q)send "proc1 `IBM"
