@@ -77,7 +77,7 @@ response with its request. This message is displayed on the client console.
 
 **Step 5 - Await the response** 
 
-If all goes well you will see something like:
+If all goes, Console Output should look like the below:
 
 ```
 q)send "proc1 `IBM"
@@ -94,14 +94,14 @@ SYM MAX      MIN          OPEN    CLOSE    AVG      VWAP     DEV      VAR
 ------------------------------------------------------------------------------
 IBM 99.99956 5.739275e-05 1.89879 58.87289 50.04816 50.04443 28.84313 831.9261
 
-### Understanding the console output
+### Understanding the Console Output
   
 1. The line directly under the request (1234; "proc1 `IBM") is the "q" data structure 
- that is actually sent from the  client to mserve and forwarded to the servant.
+   that is actually sent from the  client to mserve and forwarded to the servant.
 2. There are 3 parts to the response, the id echoed from the client, the query result,
- and a dictionary containing benchmarking information.
+   and a dictionary containing benchmarking information.
 3. That information includes which servant the query ran on, the elapsed time of the query,
-  The execution time (excludes time in queue), and the "routing string" used to help select the servant.
+   The execution time (excludes time in queue), and the "routing string" used to help select the servant.
 
 ### Understanding the demo client (qs.q)
 
