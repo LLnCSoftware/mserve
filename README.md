@@ -78,7 +78,7 @@ response with its request. This message is displayed on the client console.
 **Step 5 - Await the response** 
 
 If all goes, Console Output should look like the below, with an echoed value, and a return value with an ID, a dictionary 
-and the actual computed result, in this case, a table:
+and the actual computed result, in this case, a result table:
 
 ```
 q)send "proc1 `IBM"
@@ -114,7 +114,7 @@ from a command line argument, and opens a handle to it upon startup.
 The demo client provides only one global function "send", whose argument is the query to send.
 It increments a query sequence number "qid" and sends the list ``(qid; query)`` over the open handle.
 
-The demo client also provides a .z.ps handler to display the responses.
+The demo client also provides a [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler to display the responses.
 Each response is expected to consist of 3 parts ``(qid; result; info)`` which are displayed separately.
 Although the "info" comes after the "result" in the response, it is displayed first.
 
