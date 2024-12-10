@@ -118,7 +118,7 @@ The demo client also provides a [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set)
 Each response is expected to consist of 3 parts ``(qid; result; info)`` which are displayed separately.
 Although the "info" comes after the "result" in the response, it is displayed first.
 
-Finally the demo client provides a .z.ts handler to send a series of "proc1" requests 
+Finally the demo client provides a [.z.ts](https://code.kx.com/q/ref/dotz/#zts-timer) handler to send a series of "proc1" requests 
 for random symbols on the timer.
 
 ### Understanding the demo server (servant.q)
@@ -134,7 +134,7 @@ Additional code was needed to support "Secure Invocation" which means preventing
 of arbitrary code on the servants, essentially by "avoiding use of eval".
 
 To do that we override .z.pg to  prevent synchronous queries entirely.
-We override .z.ps (for async) to allow execution only of the global functions "proc1" and "proc2",
+We override [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) (for async) to allow execution only of the global functions "proc1" and "proc2",
 with no recursive evaluation in their arguments.
 
 1. If we get a string, we parse it.
@@ -144,7 +144,7 @@ with no recursive evaluation in their arguments.
    the command list, and send back the result or trapped error.
 5. The "send" function used here handles the special case where the request is received on handle zero,
   by simply displaying the response, rather than trying to send it. This allows you to run the servant
-  independent of mserve, and test your api (and .z.ps handler) from there servant console itself, where
+  independent of mserve, and test your api (and [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler) from there servant console itself, where
   you can get breakpoints, etc.
 
 Unfortunately, "Secure Invocation" prevents mserve from setting the .z.pc handler to cause
@@ -249,7 +249,7 @@ The diagram below shows the messages exchanged in the demo above
  We accomplish that by restricting queries to invoking functions defined in global
  variables on the servant, with no recursive evaluation in their parameters.
 
- This is enforced in the .z.ps handler of servant.q
+ This is enforced in the [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler of servant.q
 
 ```
 .z.ps:{
