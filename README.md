@@ -199,7 +199,7 @@ The diagram below shows the messages exchanged in the demo above
     * The message ``(1234; "proc1 `IBM)`` is forwarded to the selected servant unchanged.
 
 3. When the servant responds with a result table
-    * The message ``(1234; \<result table>)`` is sent from the servant to mserve\_np.
+    * The message ``(1234; <result table>)`` is sent from the servant to mserve\_np.
 
 4. When mserve\_np receives the result
     * msevere\_np notices that the response includes only the id and result, no extra "info".
@@ -210,7 +210,7 @@ The diagram below shows the messages exchanged in the demo above
        * execution time (excludes time in queue)
     * If the servant had provided its own info dictionary as the 3rd item in the response  
       mserve_np would return that dictionary, with the routing string added to it.
-    * The message (1234; \<result table>; \<info dictionary>) is sent back to the client
+    * The message ``(1234; \<result table>; \<info dictionary>)`` is sent back to the client
 
 ## Requests and Responses
 
