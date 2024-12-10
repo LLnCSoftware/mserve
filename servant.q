@@ -5,6 +5,9 @@ et:16:00:00.000
 portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
 `trade insert (st+n?et-st;n?portfolio;n?100f;n?10000)
 
+/Ensure that we terminate the when we lose our connection to mserve_np.q,
+/but not before a connection is made. When not running under mserve_np.q, 
+/do not terminate automatically as conventional clients may come and go. 
 isopen:0b; autoclose:1b;  /"B"$ getenv "MSERVE_AUTOCLOSE" ;
 .z.po:{isopen::1b} ;
 .z.pc:{if[isopen & autoclose;  -1 "servant closed"; exit 0]} ;
