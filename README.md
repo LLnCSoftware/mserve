@@ -97,7 +97,7 @@ IBM 99.99956 5.739275e-05 1.89879 58.87289 50.04816 50.04443 28.84313 831.9261
 
 ### Understanding the Console Output
   
-1. The line directly under the request (1234; "proc1 `IBM") is the "q" data structure 
+1. The line directly under the request ``(1234; "proc1 `IBM")`` is the "q" data structure 
    that is actually sent from the  client to mserve and forwarded to the servant.
 2. There are 3 parts to the response, the id echoed from the client, the query result,
    and a dictionary containing benchmarking information.
@@ -111,10 +111,10 @@ It assumes that mserve\_np.q is running on the same machine as itself, gets its 
 from a command line argument, and opens a handle to it upon startup.
 
 The demo client provides only one global function "send", whose argument is the query to send.
-It increments a query sequence number "qid" and sends the list (qid; query) over the open handle.
+It increments a query sequence number "qid" and sends the list ``(qid; query)`` over the open handle.
 
 The demo client also provides a .z.ps handler to display the responses.
-Each response is expected to consist of 3 parts (qid; result; info) which are displayed separately.
+Each response is expected to consist of 3 parts ``(qid; result; info)`` which are displayed separately.
 Although the "info" comes after the "result" in the response, it is displayed first.
 
 Finally the demo client provides a .z.ts handler to send a series of "proc1" requests 
