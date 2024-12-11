@@ -55,7 +55,7 @@ myq: .z.X 0 ;
 mys: string system "s" ;
 str: {$[10=type x; x; string x]} ;
 tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
-launch:{value 0N!"system \"", (.z.X 0), " ", x, " &\"" ;} ;
+launch:{value 0N!"system \"", (.z.X 0), " exitOnClose.q ", x, " &\"" ;} ;
 
 h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
   cmd: mycode, " -s ", mys, " -p ", (x 1) ;  
