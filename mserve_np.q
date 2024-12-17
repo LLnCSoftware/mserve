@@ -181,7 +181,7 @@ if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
 -1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "match"; getenv `MSERVE_ALGO], "'" ;
 
 / default routing string is first argument to api command
-fixarg:{type x;  $[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
+fixarg:{$[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
 getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str fixarg cmd[1]} ;
 if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTING] ;
 
