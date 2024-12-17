@@ -37,6 +37,6 @@ proc2:{[s]do[800;
 		res
 	}
 
-/Specify env: KDBQ_PLUGINS=authoriz.q to authorize based on permissions table (overides allowedfn).
+/Specify env: KDBQ_PLUGINS=authoriz.q to authorize based on permissions table (overrides allowedfn).
 {system "l ",x} each {$[0=count x; (); "," vs x]} getenv `KDBQ_PLUGINS
 0N!"servant loaded" ;
