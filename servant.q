@@ -10,16 +10,16 @@ portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
 
 /request: (id; query; options)
 /response: (id; result)
-.z.ps:{ 
-  role:getrole x 2;
-  ex:$[10=type x 1; parse x 1; x 1] ;
+.z.ps:{[req] /0N!req ;
+  role:getrole req 2;
+  ex:$[10=type req 1; parse req 1; req 1] ;
   fn: {$[0=count x; (::); x]} allowedfn[role] ex 0 ;
-  if[null fn; :send[.z.w;] (x 0; 0N!"Error: unknown command: ", string ex 0)];
-  send[.z.w] (x 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);
+  if[null fn; :send[.z.w;] (req 0; 0N!"Error: unknown command: ", string ex 0)];
+  send[.z.w] (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);
  };
 send:{[h;data] if[h=0; -1 "\nresult:"; :show each data]; (neg h) data} ;
-getrole:{[req] $[99=type x; x `role; `]} ;   /overidden in authent.q
-allowedfn:{[role] (system "f")# value `.} ;  /overidden in authriz.q
+getrole:{[opt] $[99=type opt; opt `role; `]} ;   /overidden in authent.q
+allowedfn:{[role] (system "f")# value `.} ;      /overidden in authriz.q
 
 /api endpoints
 
