@@ -11,15 +11,13 @@ portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
 
 /request: (id; query; options)
 /response: (id; result)
-.z.ps:{[req] /0N!req ;
+.z.ps:{[req] 
   role:$[99=type req 2; (req 2) `role; `];
   ex:$[10=type req 1; parse req 1; req 1] ;
-  fn: {$[0=count x; (::); x]} functions ex 0 ;
-  if[null fn; :send[.z.w;] (req 0; 0N!"Error: unknown command: ", string ex 0)];
-  send[.z.w] (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);
+  fn: functions ex 0 ;
+  if[null fn; :(neg .z.w) (req 0; 0N!"Error: unknown command: ", string ex 0)];
+  (neg .z.w) (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);
  };
-send:{[h;data] if[h=0; -1 "\nresult:"; :show each data]; (neg h) data} ;
-functions{(system "f")# value `.} ;   
 
 /api endpoints
 
@@ -36,4 +34,6 @@ proc2:{[s]do[800;
 		by SYM:sym from trade where sym in s;];
 		res
 	}
+
+functions: (system "f")# value `. ;
 0N!"servant loaded" ;
