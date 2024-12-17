@@ -55,7 +55,9 @@ myq: .z.X 0 ;
 mys: string system "s" ;
 str: {$[10=type x; x; string x]} ;
 tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
-launch:{value 0N!"system \"", (.z.X 0), " exitOnClose.q ", x, " &\"" ;} ;
+servant_plugins:"exitOnClose.q" ;
+if["authent.q" in "," vs getenv `KDBQ_PLUGINS; servant_plugins,:",authriz.q"];
+launch:{value 0N!"system \"KDBQ_PLUGINS=", servant_plugins, " ", (.z.X 0), " ", x, " &\"" ;} ;
 
 h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
   cmd: mycode, " -s ", mys, " -p ", (x 1) ;  
@@ -111,7 +113,7 @@ send_query:{[hdl; qid]
   	queries[qid;`slave_handle]:hdl;
     queries[qid;`time_sent]: .z.P ;
   	queries[qid;`location]:`slave;
-    hdl (qid; query), options ;
+    hdl (qid; query; options) ; 
 	];
  };
 
@@ -195,14 +197,16 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTIN
 /We have an if else statement checking whether the call back handle (.z.w) to the other process exists in the key of h or not
 /if .z.w exists in h => message is a response from a servant
 /if .z.w does not exist in h => message is a new request from a client
- 
+
+getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users table 
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; query; options[0]; options[1]...)	
     0N!(`mservereq; x) ;
     sqid: 1^1+exec last qid from queries; /server id for new query
-    cqid: x[0]; query: x[1]; options: 2_ x;  
-    route:getRoutingSymbol(query) ;
+    cqid:x[0]; query:x[1]; options: x[2]; role:getrole[]; route:getRoutingSymbol[query] ;
+    if[not null role; if[99<>type options; options:()!()]; options[`user]:.z.u; options[`role]:role];
+
     `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; route; 0N; `master); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
@@ -236,5 +240,8 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTIN
 retainCompletedMs:60000* 30^ "J"$ getenv `MSERVE_RETAIN_COMPLETED ;  /default 30 minutes
 .z.ts:{ delete from `queries where location=`client, retainCompletedMs< tms .z.P - time_returned ;}
 system "t ", string (60000*600) & retainCompletedMs div 12 ;  /1 min -> check every 5 sec;  1+ hrs ->  max interval 5 min;  0-> no timer!
+
+/ Load plugins
+{system "l ",x;} each {$[0=count x; (); "," vs x]} getenv `KDBQ_PLUGINS;
 0N!"mserve_np.q loaded" ;
 
