@@ -19,18 +19,18 @@ portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
  };
 send:{[h;data] if[h=0; -1 "\nresult:"; :show each data]; (neg h) data} ;
 getrole:{[opt] $[99=type opt; opt `role; `]} ;   /overidden in authent.q
-allowedfn:{[role] (system "f")# value `.} ;      /overidden in authriz.q
+allowedfn:{[role] value `.api} ;                 /overidden in authriz.q
 
 /api endpoints
 
-proc1:{[s]do[200;
+.api.proc1:{[s]do[200;
 		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
 		AVG:avg price,VWAP:size wavg price,DEV:dev price,VAR:var price
 		by SYM:sym from trade where sym in s;];
 		res
 	}
 
-proc2:{[s]do[800;
+.api.proc2:{[s]do[800;
 		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
 		AVG:avg price,VWAP:size wavg price,DEV:dev price,VAR:var price
 		by SYM:sym from trade where sym in s;];
