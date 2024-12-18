@@ -1,16 +1,20 @@
-# Example 1
+# 01quickstart
 
 This example contains a simple client and servant to be run with mserve\_np.q
 
 ## Demo Instructions
 
-You will need 2 terminals, for the server and client.
+You will need 2 terminals, for the server and client, both cd into the 01quickstart directory.
 
 **Step 1 - start the load balancing server:**  
 
 ```
 $ q mserve_np.q 1 servant.q -p 5000
 ```
+
+The first argument to mserve\_np.q, shown here as "1", is the number of copies of the servant.q code to start.
+In this case just one copy on localhost.
+
 
 **Step 2 - start the client:**  
 
@@ -51,7 +55,7 @@ In development you would probably want to allow additional connections dirctly t
 (not thru mserve) for debugging, but in production you will probably want to allow only a single connection, 
 which can be accomplished by setting .z.pw to always return 0b. 
 
-This happens in the .z.po handler, because if .z.pc is set to exit before a a connection is made,
+This happens in the .z.po handler, because if .z.pc is set to exit before a connection is made,
 The q instance will terminate immediately after loading.
 
 ## Annoying Details Glossed Over
