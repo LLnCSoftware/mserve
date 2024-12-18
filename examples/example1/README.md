@@ -9,13 +9,13 @@ You will need 2 terminals, for the server and client.
 **Step 1 - start the load balancing server:**  
 
 ```
-q mserve_np.q 1 servant.q -p 5000
+$ q mserve_np.q 1 servant.q -p 5000
 ```
 
 **Step 2 - start the client:**  
 
 ```
-q qs.q 5000
+$ q qs.q 5000
 ```
 
 ## The client qs.q
