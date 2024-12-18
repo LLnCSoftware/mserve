@@ -6,9 +6,13 @@ This example contains a simple client and servant to be run with mserve\_np.q
 
 You will need 2 terminals, for the server and client.
 
-**start the server:**  ``q mserve_np.q 1 servant.q -p 5000``  
-**start the client:**  ``q qs.q 5000`` 
+**start the server:**  
 
+``q mserve_np.q 1 servant.q -p 5000``  
+
+**start the client:**  
+
+``q qs.q 5000`` 
 
 ## The client qs.q
 
