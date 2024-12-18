@@ -4,7 +4,7 @@ This example uses essentially the same client as in 01quickstart, but which acce
 2 additional command line arguments for the username and password, which are 
 added to the "hopen" command that connects to mserve\_np.q. 
 
-The servant here has modifications which allow it to load and utilize the plugins
+The servant here has modifications which allow it to load and utilize plugins
 to optionally implement authentication, authorization, and exit on close.
 
 ## Demo1- Adding authentication and authorization
@@ -81,5 +81,22 @@ from the command line and adding them to the hopen command.
 
 ## The servant servant.q
 
-(more to come)
+The servant has modifications which allow it to load and utilize plugins
+to optionally implement authentication, authorization, and exit on close.
+
+Plugins are q-files intended to be listed in the KDBQ\_PLUGINS environment variable.
+In this example we have 3 of them: authent.q, authrize.q, exitOnClose.q
+
+They are typically loaded in at the bottom of the "q" file which wants to "import" them.
+The following line of code is used to load the plugins in servant.q.
+
+```
+{system "l ",x} each {$[0=count x; (); "," vs x]} getenv `KDBQ_PLUGINS
+```
+
+The strange piece in the middle just handles the case where getenv returns a null string.
+
+
+
+
 
