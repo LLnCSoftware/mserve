@@ -121,7 +121,6 @@ To Implement authentication with this model, you need to:
 
 1. Provide a .z.pw handler to validate the username and password.
 2. Provide a "getrole" function to obtain the role for each request given the authenticated username in .z.u.
-3. Note: Any user who's password matches is legitimate. A null role represents an unprivileged user, not an invalid one.
 
 Of course you will need some data source which provides the role and a hash of the password for each username.
 
@@ -130,16 +129,17 @@ The example does not include the capability to add, edit, or remove users.
 
 #### Note: When authentication is specified for mserve\_np, it will automatically specify authorization for its servants.
 
-To allow authentication in mserve\_np.q, a default "getrole" function is provided there for authent.q to override.
-
+To allow authentication in mserve\_np.q, it needs to obtain the role for each request and send it along to
+the servant in the options dictionary of the request. A default "getrole" is provided for this which always
+returns the null symbol. The authent.q plugin will override this function. 
+ 
 When a plugin with the name "authent.q" is loaded by mserve\_np.q it will automatically add a plugin with the
 name "authrize.q" to the servants it launches. (this is because there is currently no convenient way to specify
-environment variables for servants launched by mserve\_np.q).
+plugins for servants launched by mserve\_np.q, but maybe we could use a second environmnt variable).
 
 However, this is not really much of a limitation, because you will generally want both "auth"s when you want either.
 If you should want authentication without authorization that can be accomplished by providing an "authriz.q" file
-which just contains: 'allowedfn:{[role] value `.api}', which is the default, including all functions in the .api namespace.
-Unfortunately, if you omit this file you will get an error when loading the plugins in servant.q.
+which just contains the default function: 'allowedfn:{[role] value `.api}', including all functions in the .api namespace.
 
 ### Authorization
 
@@ -163,13 +163,12 @@ To that end mserve\_np.q always provides "exitOnClose.q" in the environment vari
 the servants.
 
 This file just contains one line: '.z.po:{ .z.pc:{exit 0} }'
-To enhance security you could also set '.z.pw:{0b}' to reject any connections after the first, 
-and/or validate that the ip address in .z.a is the one expected for the mserve machine. 
+
+To enhance security you could:
+1. add .z.pw:{[h;pw] 0b} within the .z.po handler, to allow only the first connection.
+2. add .z.pw alongside the .z.po handler to validate ip address in .z.a against the known ip address of mserve.
 
 The setting of .z.pc must be done after the file has loaded successfully, otherwise it will terminate immediately,
 so it is convienient to do it when the first connection is made.
 
-This works for us here because we are not using .z.po for anything else.
-If your servant was using .z.po, you might include in it a call to another function "exitonclose" which is a no-op,
-and override that function in your exitOnClose.q plugin.
 
