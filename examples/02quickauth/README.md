@@ -48,7 +48,7 @@ You will be able to run both "proc1" and "proc2"
 ## Demo2 - Running without the load balancer
 
 Note that in each case below the servant will stay up when the client disconnects.
-Thats because the "exitOnClose" plugin is omitted ! 
+That's because the "exitOnClose" plugin is omitted ! 
 
 **Start the servant with auth/auth:** 
 
@@ -81,6 +81,8 @@ from the command line and adding them to the hopen command.
 
 ## The servant servant.q
 
+### Plugins
+
 The servant has modifications which allow it to load and utilize plugins
 to optionally implement authentication, authorization, and exit on close.
 
@@ -94,9 +96,80 @@ The following line of code is used to load the plugins in servant.q.
 {system "l ",x} each {$[0=count x; (); "," vs x]} getenv `KDBQ_PLUGINS
 ```
 
-The strange piece in the middle just handles the case where getenv returns a null string.
+The strange piece in the middle returns a empty list when getenv returns a null string.
+Otherwise you would get a singleton containing an empty list from ("," vs x).
 
+### Adaptations in servant.q
 
+The changes in servant.q to support these plugins are related to the 3 new functions
+found below the .z.ps handler: "send", "getrole", and "allowedfn".
 
+The "send" function is actually not related to the plugins at all.
+It just allows testing from the servant console using handle zero, 
+in which case it displays the result, rather than trying to send it.
 
+The "getrole" function coded here is a default that is used when authentication is not provided in servant.q
+Note that when running with mserve\_np.q, authentication is done there and only authorization is done in servant.q.
+In that case we get the role from the options dictionary of the request, returning a null symbol when it is not provided.
+
+The "allowedfn" function coded here is a default that is used when authorization is not provided in servant.q.
+While it accepts a "role" argument, it always returns all the functions in the .api namespace.
+
+### Authentication
+
+To Implement authentication with this model, you need to:
+
+1. Provide a .z.pw handler to validate the username and password.
+2. Provide a "getrole" function to obtain the role for each request given the authenticated username in .z.u.
+3. Note: Any user who's password matches is legitimate. A null role represents an unprivileged user, not an invalid one.
+
+Of course you will need some data source which provides the role and a hash of the password for each username.
+
+In our example, "authent.q" the data is provided by the file users.csv, and "sha1" (-33!) is used for the hash.
+The example does not include the capability to add, edit, or remove users.
+
+#### Note: When authentication is specified for mserve\_np, it will automatically specify authorization for its servants.
+
+To allow authentication in mserve\_np.q, a default "getrole" function is provided there for authent.q to override.
+
+When a plugin with the name "authent.q" is loaded by mserve\_np.q it will automatically add a plugin with the
+name "authrize.q" to the servants it launches. (this is because there is currently no convenient way to specify
+environment variables for servants launched by mserve\_np.q).
+
+However, this is not really much of a limitation, because you will generally want both "auth"s when you want either.
+If you should want authentication without authorization that can be accomplished by providing an "authriz.q" file
+which just contains: 'allowedfn:{[role] value `.api}', which is the default, including all functions in the .api namespace.
+Unfortunately, if you omit this file you will get an error when loading the plugins in servant.q.
+
+### Authorization
+
+To implement authorization with this model you need to:
+
+1. Provide an "allowedfn" function to obtain the list of allowed functions for each role.
+
+Of course you will need some data source that provides such data.
+
+In our example "authriz.q" the data is provided by the file roles.csv. (delimited by |)
+This is read in as a table with 2 columns, the role, and the list of function names (delimited by ,).
+That is converted to a dictionary that maps the role name as a symbol to the function names as a list of symbols.
+
+In the 'allowedfn' function, we filter the dictionary representing the .api namespace to the list of functions 
+allowed by the role. 
+
+### Exit on close
+
+We want servant.q to exit on a lost connection when running under mserve, but not when running independently.
+To that end mserve\_np.q always provides "exitOnClose.q" in the environment variable KDBQ_PLUGINS when launching
+the servants.
+
+This file just contains one line: '.z.po:{ .z.pc:{exit 0} }'
+To enhance security you could also set '.z.pw:{0b}' to reject any connections after the first, 
+and/or validate that the ip address in .z.a is the one expected for the mserve machine. 
+
+The setting of .z.pc must be done after the file has loaded successfully, otherwise it will terminate immediately,
+so it is convienient to do it when the first connection is made.
+
+This works for us here because we are not using .z.po for anything else.
+If your servant was using .z.po, you might include in it a call to another function "exitonclose" which is a no-op,
+and override that function in your exitOnClose.q plugin.
 

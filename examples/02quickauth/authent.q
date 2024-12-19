@@ -4,5 +4,5 @@
 
 users: ("JS*S"; enlist "|") 0: `:users.csv ; / load user information
 getrole:{ exec first role from users where username=.z.u }; / get role for user of current request 
-/ check password on connection open
+/ check password on connection open - match password using sha1 (-33!)
 .z.pw:{[u;pw] ps:exec first password from users where username=u; ps~raze string -33!pw }; 
