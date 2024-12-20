@@ -1,0 +1,1 @@
+../02quickauth/authriz.q
