@@ -63,7 +63,7 @@ h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1);
   cmd: mycode, " -s ", mys, " -p ", (x 1) ;  
   if[""~(x 0); launch cmd; :0N] ;
   hh:hopen `$":",(x 0), ":5999" ; 
-  hh "setenvironment[\"KDBQ_PLUGINS=", servant_plugins, "\"]" ; 
+  hh "setEnvString[\"KDBQ_PLUGINS=", servant_plugins, "\"]" ; 
   (neg hh) cmd; (neg hh)[]; 
   hh 
  } each servant ; 
