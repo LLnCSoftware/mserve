@@ -1,8 +1,6 @@
 # 03multihost
 
-Enhanced mserve load balanced solution based on [mserve_np](https://github.com/nperrem/mserve) which was based on [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) adding "servants" on multiple remote hosts, and providing for query locality. Also designed to provide benchmarking information.
-
-## Starting the Server
+## Starting the Server with remote servants
 
 From the root of the repo:
 ```
@@ -13,7 +11,7 @@ Here each "host" is an ip address or resolvable host name for each machine
 available for running servants.
 
 When no "hosts" are specified, All servants will be started on the local machine.
-To include the local machine in the list of hosts, specify "localhost".
+To include the local machine in a list of otherwize remote hosts, specify "localhost".
 
 When a list of hosts is specified, servants will be started on them in a round robbin. 
 When the number of servants equals the number of host names, one servant is started on each host.
@@ -25,21 +23,24 @@ When the number of servants equals the number of host names, one servant is star
 You will need 3 machines that are accessible to each other over the network;
 2 as servants and one for both mserve\_np.q and the client. 
 
-The way I did it was with 3 AWS EC2 instances, running "mserve\_np.q" on the
-instance hosting my development environment, which I will call the "mserve" machine, 
-and 2 more stripped down instances for the servants.
+The way I did it was with 3 AWS EC2 instances each containing the mserve repo.
 
-1. Copy the required files onto each servant machine: launcher.q, servant.q, exitOnClose.q
-2. If you need authentication/authorization, also copy: authent.q, authriz.q
-3. Ensure that the "mserve machine" can reach the 2 servant machines on ports 5999 and 5001.
-4. Run 'q launcher.q -p 5999' from the directory containing these files on each servant machine.
+1. Ensure that the "mserve machine" can reach the 2 servant machines on ports 5999 and 5001.
+2. Run 'q launcher.q -p 5999' from the directory containing these files on each servant machine.
 
 Launcher.q listens for requests to start servant processes as directed by mserve\_np.q.
 
-If this was a "real" deployment, "servant.q" would be replaced by your real api server,
-and all the data it needs must be accessible from each of these AWS instances.
+If this was a "real" deployment, you probably would not clone the mserve repo onto the servant.
+After all, the only "real" file in there is mserve\_np.q, and it is not needed on the servant.
+The others are just templates to be replaced with your "real" versions.
 
-Alternatively, you could build this structure into a docker container and run in a container service.
+Instead, you would clone your "project repo" which would look alot like an examples directory, except
+that "mserve\_np.q" would be the only symlink (back to the mserve repo), and it would be in .gitignore.
+and the others would be your versions of: servant.q, launcher.q, authrize.q, and exitOnClose.q
+You might include your client and authrize.q as well (although unused on servant), unless you have a 
+better place to put them.
+
+Alternatively, you could build your project repo into a docker container and run in a container service.
 
 **Step 2 - Start the server in a terminal on the mserve machine**
 
