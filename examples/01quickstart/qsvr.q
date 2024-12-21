@@ -7,36 +7,31 @@ portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
 
 .z.pg:{"USE ASYNC"} ;
 .z.exit:{-1 "servant closed"} ;
+.z.po:{ .z.pc:{exit 0} } ;                /After first connection made, set to exit when it closes.
 
-/request: (id; query; options)
+/request: (id; query)
 /response: (id; result)
 .z.ps:{[req] /0N!req ;
-  role:getrole req 2;
-  ex:$[10=type req 1; parse req 1; req 1] ;
-  fn: {$[0=count x; (::); x]} allowedfn[role] ex 0 ;
-  if[null fn; :send[.z.w;] (req 0; 0N!"Error: unknown command: ", string ex 0)];
-  send[.z.w] (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);
- };
-send:{[h;data] if[h=0; -1 "\nresult:"; :show each data]; (neg h) data} ;
-getrole:{[opt] $[99=type opt; opt `role; `]} ;   /overidden in authent.q
-allowedfn:{[role] (system "f")# value `.} ;      /overidden in authriz.q
+  ex:$[10=type req 1; parse req 1; req 1] ;  /if query is a string, parse it.
+  fn: (value `.api) 0N!ex 0 ;                   /get function given its name at index 0 of the parsed query/
+  if[null fn; :(neg .z.w) (req 0; 0N!"Error: unknown command: ", string ex 0)];   /reject anything else
+  (neg .z.w) (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);      /invoke function on argument at index 1 of parsed query
+ };                                                                         /respond with id from request, and result or error message.
 
 /api endpoints
 
-proc1:{[s]do[200;
+.api.proc1:{[s]do[200;
 		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
 		AVG:avg price,VWAP:size wavg price,DEV:dev price,VAR:var price
 		by SYM:sym from trade where sym in s;];
 		res
 	}
 
-proc2:{[s]do[800;
+.api.proc2:{[s]do[800;
 		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
 		AVG:avg price,VWAP:size wavg price,DEV:dev price,VAR:var price
 		by SYM:sym from trade where sym in s;];
 		res
 	}
 
-/Specify env: KDBQ_PLUGINS=authoriz.q to authorize based on permissions table (overrides allowedfn).
-{system "l ",x} each {$[0=count x; (); "," vs x]} getenv `KDBQ_PLUGINS
 0N!"servant loaded" ;

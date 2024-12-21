@@ -1,5 +1,10 @@
 # 03multihost
 
+We need to secure the launcher
+
+
+
+
 ## Starting the Server with remote servants
 
 From the root of the repo:
