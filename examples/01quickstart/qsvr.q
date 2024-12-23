@@ -12,11 +12,11 @@ portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
 /request: (id; query)
 /response: (id; result)
 .z.ps:{[req] /0N!req ;
-  ex:$[10=type req 1; parse req 1; req 1] ;  /if query is a string, parse it.
-  fn: (value `.api) 0N!ex 0 ;                   /get function given its name at index 0 of the parsed query/
-  if[null fn; :(neg .z.w) (req 0; 0N!"Error: unknown command: ", string ex 0)];   /reject anything else
-  (neg .z.w) (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);      /invoke function on argument at index 1 of parsed query
- };                                                                         /respond with id from request, and result or error message.
+  ex:$[10=type req 1; parse req 1; req 1] ;    /if query is a string, parse it.
+  fn: (value `.api) $[-11=type ex 0; ex 0; `]; /get function given its name as symbol at index 0 of the parsed query
+  if[null fn; :(neg .z.w) (req 0; 0N!"Error: unknown command: ", string ex 0)]; /reject anything else
+  (neg .z.w) (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);    /invoke function on argument at index 1 of parsed query
+ };                                                                             /respond with id from request, and result or error message.
 
 /api endpoints
 
