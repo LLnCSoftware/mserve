@@ -106,7 +106,7 @@ When you run this example you will see that an environment variable is set when 
 Specifically: *KDBQ\_PLUGINS="exitOnClose.q"*
 
 This environment variable is intended to supply a list of "q-files" to be loaded after the main servant module.
-The content of the "exitOnClose.q" plugin is just the line *.z.po:{ .z.pc:{exit 0} }* we use in servant.q
+The content of the "exitOnClose.q" plugin is just the line *.z.po:{ .z.pc:{exit 0} }* we use in qsvr.q
 to implement this functionlity.
 
 So in this case the environment variable is being ignored, just to avoid the complexity of loading the plugins.
