@@ -1,13 +1,22 @@
 # 02quickauth
 
-This example uses essentially the same client as in 01quickstart, but which accepts 
-2 additional command line arguments for the username and password, which are 
-added to the "hopen" command that connects to mserve\_np.q. 
+## About this Example
+
+This example uses the same client as in 01quickstart (qs.q) but a different servant (servant.q)
 
 The servant here has modifications which allow it to load and utilize plugins
 to optionally implement authentication, authorization, and exit on close.
 
-## Demo1- Adding authentication and authorization
+## New/Modified Files
+
+servant.q - contains new functions (getrole, allowedfn) designed to be overriden to provide authentication and authorization.
+authent.q - provides authentication based on the username, password, and role in the file users.csv
+authriz.q - provides the allowed function names for each user role as specified in the file roles.csv
+exitOnClose.q - provides the line: .z.po:{ .z.pc:{exit 0}} to cause "terminate on lost connection".
+
+## To Do and Observe
+
+### Demo1- Adding authentication and authorization
 
 **start the server:** 
 
@@ -15,21 +24,34 @@ to optionally implement authentication, authorization, and exit on close.
 KDBQ\_PLUGINS="authent.q"  q mserve\_np.q 1 servant.q -p 5000
 ```
 
-When the mserve\_np.q loads the "authent.q" plugin to do authentication, it will automatically 
-add the "authriz.q" plugin to the servant to do authorization.
+Note that mserve\_np.q always provides the KDBQ\_PLUGINS env variable when launching a servant,
+because it needs to provide "exitOnClose", and also because it needs to clear out any plugins
+intended only for mserve\_np.q itself.
 
-Currently you have to use these names because they are hard coded in mserve\_np.q for that purpose.
+However this makes it difficult to specify additional plugins (such as authrize.q) for the servant. 
+The solution chosen was for mserve\_np.q to automatically provide the authrize.q plugin
+(for authorization) to the servant, whenever it loads the "authent.q" plugin for authentication.
 
-**Start the client with no username or password:** 
+A more flexible solution would use separate environment variables for mserve\_np.q and its servants.
+The advantage of the chosen solution is that it is simpler for the user, results in a shorter command
+line, and at this point we do not anticipate wanting any additional plugins on the servant.
+
+
+**Start the client without valid credentials** 
+
+Try each of the following commands:
 
 ```
-q qs.q localhost 5000    
-q qs.q localhost 5000 ken wrongpassword
+q qs.q localhost 5000                      /no credentials
+q qs.q localhost 5000 ken wrongpassword    /invalid credentials
 ```
 
-You will get an 'access error. Same will happen for invalid passwords.  
+In each case you will get an 'access error.  
 
 **Start the client as an ordinary user:**  
+
+In the file users.csv "ken" has password (sha1 of) "ken", and role "user".
+In the file roles.csv "user" has "fn" equal to "proc1", which means this role can only run the "proc1" function.
 
 ```
 q qs.q localhost 5000 ken ken
@@ -39,6 +61,9 @@ You will be able to run "proc1", but "proc2" will give you an "unknown command" 
 
 **Start the client as a power user:**  
 
+In the file users.csv "arthur" has password (sha1 of) "arthur" and role "poweruser".
+In the file roles.csv "poweruser" has "fn" equal to "proc1,proc2", which means this role can run both functions.
+
 ```
 q qs.q localhost 5000 arthur arthur
 ```
@@ -47,6 +72,7 @@ You will be able to run both "proc1" and "proc2"
 
 ## Demo2 - Running without the load balancer
 
+The point here is that the authentication and authorization plugins will work directly on a servant not running under mserve. 
 Note that in each case below the servant will stay up when the client disconnects.
 That's because the "exitOnClose" plugin is omitted ! 
 
@@ -74,10 +100,11 @@ KDBQ\_PLUGINS="authent.q"  q servant.q -p 5001
 * q qs.q localhost 5001 -> can run both proc1 and proc2
 
 
-## The client qs.q
+## How it Works
 
-The only change from 01quickstart is accepting the username and password
-from the command line and adding them to the hopen command.
+### The client qs.q
+
+This is the same client as in 01quickstart.
 
 ## The servant servant.q
 
@@ -98,6 +125,9 @@ The following line of code is used to load the plugins in servant.q.
 
 The strange piece in the middle returns a empty list when getenv returns a null string.
 Otherwise you would get a singleton containing an empty list from ("," vs x).
+
+This same line is included in mserve\_np.q itself, to allow it to use plugins.
+
 
 ### Adaptations in servant.q
 

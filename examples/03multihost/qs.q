@@ -1,1 +1,1 @@
-../02quickauth/qs.q
+../01quickstart/qs.q
