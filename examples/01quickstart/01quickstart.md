@@ -2,47 +2,50 @@
 
 ## About This Example
 
-This is a simple example of a client interacting with a servant through mserve\_np.q
+This is a simple example of a client interacting with a servant through mserve\_np.q loadbalancer, all 
+on one host. 
 
 ## About the Files
 
-mserve\_np.q  - Symlink to the mserve load balancer at the root of the repo.
-qsvr.q        - Simple servant used for this demo ("quick server").
-qs.q          - Simple client used for all demos ("quickstart client").
+**qs.q**: Simple client used for examples 1-3 ("quickstart client").  
+**qsvr.q**: Simple servant used for this demo ("quick server").  
+**mserve\_np.q**: Symlink to the mserve load balancer at the root of the repo.
 
 ## To Do and Observe
 
-You will need 2 terminals, one each for the servant and client.
-
 **Step 1 - start mserve with one copy of the servant:**  
 
-From the examples/01quickstart directory, launch mserve as follows:
+Open two terminals, one each for the servant and client, and ``cd`` into the examples/01quickstart directory.
+
+Launch mserve as follows:
 
 ```
 $ q mserve_np.q 1 qsvr.q -p 5000
 ```
 
-The first argument to mserve\_np.q, shown here as "1", is the number of copies of the servant code to start.
-In this case just one copy of "qsvr.q" on localhost.
+The above starts q on port 5000, loads mserve and instructs it to start one instance of qsrv.q on localhost.
+
+DELETE: -The first argument to mserve\_np.q, shown here as "1", is the number of copies of the servant code to start. In this case just one copy of "qsvr.q" on localhost.-
 
 
 **Step 2 - start the client:**  
 
-From the examples/01quickstart directory, launch the client, providing the host and port that mserve is running on.
+From the examples/01quickstart directory, type:
 
 ```
 $ q qs.q localhost 5000
 ```
 
+This launches a client, qs.q, and tells it to send its requests to the loadbalancer on localhost port 5000.
+
 ## How it Works
 
 ### The client qs.q
 
-* In this case the client is running on the same host as mserve.
-* It gets the hostname and port number for mserve from command line arguments.
-* It provides a "send" method, which generates a query id, and sends the id and query as expected.
-* It provides a .z.ps handler which just displays the received response.
-* It also provides a .z.ts handler to run a series of queries with random inputs on the timer.
+* Client gets the hostname and port number for mserve from command line arguments.
+* Client (qs.q) provides a "send" method, which generates a query id, and sends the id and query as expected. ????????????? WHAT DOES THAT MEAN ?????????????????
+* qs.q provides a [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler which just displays the received response.
+* It also provides a [.z.ts](https://code.kx.com/q/ref/dotz/#zts-timer) handler to run a series of queries with random inputs on the timer.
 
 ## The servant qsvr.q
 
@@ -60,14 +63,16 @@ We will also extend "secure invocation" to optionally provide authorization base
 
 ### details
 
-* The file begins by creating a "trade" table to be used as test data.
-* We disallow synchronous requests.
+TODO: Secure invocation MUST REFERENCE A GLOSSARY ENTRY AS MENTIONED IN THE TICKET. 
+
+* The file begins by creating a "trade" table to be used as test data, on load. 
+* We disallow synchronous requests. TODO: HOW??? 
 
 * Exit on close is implemented by: .z.po:{ .z.pc:{exit 0} }.
     * After first connection made, set to terminate when any connection closes
     * Note: if setting ".z.pc" was not delayed until after the file has loaded, the new "q" session would terminate immediately.
 
-* Secure invokation is implmented in the .z.ps handler (for async requests)
+* Secure invocation is implemented in the .z.ps handler (for async requests)
     * Expect a request to be a general list of the form (id; query).
     * If the query is a string parse it.
     * Obtain the function name as a symbol from first item in the parsed query.
@@ -78,12 +83,12 @@ We will also extend "secure invocation" to optionally provide authorization base
 
 ## Annoying Details Glossed Over
 
-### The parse command is really degined for use with eval
+### The parse command is really designed for use with eval
 
 The problem is that "parse" mangles arguments which are symbols, lists of symbols, or general lists.
 It "enlists" symbols and lists of symbols, and encodes a general list as an "enlist" command.
 
-Most likely it does this so that "eval" can distiguish symbols used as variable names from those used as literals,
+Most likely it does this so that "eval" can distinguish symbols used as variable names from those used as literals,
 and so that general lists used as literals are not mistaken for commands.
 
 Instead of explicitly unmangling the argument (which is a symbol) I just changed the where clause
@@ -107,8 +112,8 @@ Specifically: *KDBQ\_PLUGINS="exitOnClose.q"*
 
 This environment variable is intended to supply a list of "q-files" to be loaded after the main servant module.
 The content of the "exitOnClose.q" plugin is just the line *.z.po:{ .z.pc:{exit 0} }* we use in qsvr.q
-to implement this functionlity.
+to implement this functionality.
 
 So in this case the environment variable is being ignored, just to avoid the complexity of loading the plugins.
-We have additonal plugins to implement authentication and authorization, as you will see in the next example.
+We have additional plugins to implement authentication and authorization, as you will see in the next example.
 

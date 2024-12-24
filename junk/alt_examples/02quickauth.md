@@ -23,8 +23,8 @@ Currently you have to use these names because they are hard coded in mserve\_np.
 **Start the client with no username or password:** 
 
 ```
-q qs.q localhost 5000    
-q qs.q localhost 5000 ken wrongpassword
+$ q qs.q localhost 5000    # start a q, load the client and try to connect with mserve with no credentials 
+$ q qs.q localhost 5000 ken wrongpassword
 ```
 
 You will get an 'access error. Same will happen for invalid passwords.  
