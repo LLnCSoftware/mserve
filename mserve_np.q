@@ -114,26 +114,26 @@ send_query:{[hdl; qid]
   	h[hdl],:qid;
   	queries[qid;`slave_handle]:hdl;
     queries[qid;`time_sent]: .z.P ;
-  	queries[qid;`location]:`slave;
+  	queries[qid;`location]:`servant;
     hdl (qid; query; options) ; 
 	];
  };
 
 send_result:{[qid;result;info]
 	query:queries[qid;`query] ;
+	queries[qid;`location`time_returned]:(`client;.z.P);
 	client_handle:queries[qid;`client_handle] ;
   client_queryid: queries[qid; `client_qid] ;
   servant_address: {`$":",(x 0),":",(x 1)} d queries[qid; `slave_handle] ;
   servant_elapsed: tms .z.P - queries[qid; `time_sent] ;
   total_elapsed: tms .z.P - queries[qid; `time_received] ;
   remaining: exec count i from queries where location in `master`servant ;
-  backlog:queries[qid; `backlog] ;
+  backlog: `long$ queries[qid; `backlog] ;
   route:queries[qid; `route] ;
   if[ null info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
   if[ 99=type info; info,: `route`backlog`remaining!(route; backlog; remaining) ];
   0N!(`mserversp; client_handle; (client_queryid; result; info)) ;
 	client_handle (client_queryid; result; info);
-	queries[qid;`location`time_returned]:(`client;.z.P);
   r[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
  }; 
  
@@ -151,7 +151,7 @@ check_orig:{[]
 lasthdl:0i ;
 check_even:{[]
   /0N!"check_even" ;
-	qid: exec first qid from queries where location in `master`servant
+	qid: exec first qid from queries where location in `master ;
   list: asc where 0=count each h ;
   if[0=count list; :(::)] ;
   hdl: first list where list<lasthdl ;
@@ -163,14 +163,17 @@ check_even:{[]
 /prefer a slave whos previous query had the same routing symbol 
 check_match:{[]
   /0N!"check_match" ;
-  n: 1|"J"$algo 1 ;
-	qry: exec first qid, first route from queries where location=`master;  /oldest query
+  /n: 1|"J"$algo 1 ;
+	qry: exec first qid, first query from queries where location=`master;  /oldest query
 	hfree: asc where 0=count each h ;                                      /free servant handles
   if[ (null qry `qid) or 0=count hfree; :(::)];                          /if no unsent query or no free servant ? return 
-  rt: (`.)^ qry `route ;   /use `. or null for non-specific route
+
+  rt: `. ^ getRoutingSymbol qry `query ;                                 /get routing symbol from query (use `. for "non-specific")
+  update route:rt from `queries where qid= qry `qid ;                    /save routing symbol for info
   hmatch: $[rt= `.; hfree where {0=count x except `.} each r hfree; hfree where rt in/: r hfree] ; 
-  /prefer to send a query with a specific route to a servant which has previously seen this route.
-  /prefer to send a query with a non-specific route to a servant which has not previously seen any specific route
+  /prefer to send a query with a specific route to a servant which has previously seen this routing symbol
+  /prefer to send a query with a non-specific route to a servant which has not previously seen any specific routing symbol
+
   if[0<count hmatch; hfree: hmatch] ;         /if any matching, consider only those.
   hdl: first hfree where hfree>lasthdl ;      /if any beyond last servent dispatched in the list, use first of those.
   if[null hdl; hdl: first hfree] ;            /otherwize use first remaining.
@@ -205,18 +208,19 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTIN
 getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users table 
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
-	[ /request - (client qid; query; options[0]; options[1]...)	
+	[ /request - (client qid; query; options)	
     0N!(`mservereq; x) ;
-    sqid: 1^1+exec last qid from queries;                      /server id for new query
-    bklg: exec count i from queries where location=`master ;   /queries in queue ahead of this one
-    cqid:x[0]; query:x[1]; options: x[2]; role:getrole[]; route:getRoutingSymbol[query] ;
+    cqid:x[0]; query:x[1]; options: x[2]; 
+    sqid: 1^1+exec last qid from queries;                                 /server id for new query
+    bklg: exec count i from queries where location in `master`servant ;   /queries in queue ahead of this one
+    role:getrole[];                                                       /overridden in authent.q plugin
     if[not null role; if[99<>type options; options:()!()]; options[`user]:.z.u; options[`role]:role];
 
-    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; route; bklg; 0N; `master); 
+    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; `; bklg; 0N; `master); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
-	[ /response - (server qid, result, info[0], info[1]...)
+	[ /response - (server qid; result; info)
     qid:x[0]; result:x[1]; info:x[2];
   	/try to send result back to client
   	.[send_result;
