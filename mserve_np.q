@@ -55,6 +55,8 @@ myq: .z.X 0 ;
 mys: string system "s" ;
 str: {$[10=type x; x; string x]} ;
 tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
+ip2string:{"." sv string `int$ 0x0 vs x} ; /convert ip address from integer to string
+
 servant_plugins:"exitOnClose.q" ;
 if["authent.q" in "," vs getenv `KDBQ_PLUGINS; servant_plugins,:",authriz.q"];
 launch:{value 0N!"system \"KDBQ_PLUGINS=", servant_plugins, " ", (.z.X 0), " ", x, " &\"" ;} ;
