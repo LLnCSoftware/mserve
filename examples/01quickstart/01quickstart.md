@@ -2,7 +2,7 @@
 
 ## About This Example
 
-This is a simple example of a client interacting with a servant through mserve\_np.q, all 
+This is a simple example of a client interacting with a servant through mserve\_np.q loadbalancer, all 
 on one host. 
 
 ## About the Files
