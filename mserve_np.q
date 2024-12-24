@@ -99,6 +99,7 @@ queries:([qid:`u#`int$()]
   time_sent: `timestamp$() ;
   time_returned:`timestamp$();
   route: `symbol$() ;
+  backlog: `int$() ;
   slave_handle:`int$();
   location:`symbol$() 
  );
@@ -125,11 +126,13 @@ send_result:{[qid;result;info]
   servant_address: {`$":",(x 0),":",(x 1)} d queries[qid; `slave_handle] ;
   servant_elapsed: tms .z.P - queries[qid; `time_sent] ;
   total_elapsed: tms .z.P - queries[qid; `time_received] ;
-  if[ 0=count info; info: enlist `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
-  if[ 99=type info 0; dict:info 0; dict[`route]:queries[qid; `route]; info:(enlist dict), 1_ info; ];
-
-  0N!(`mserversp; client_handle; (client_queryid; result), info) ;
-	client_handle (client_queryid; result), info;
+  remaining: exec count i from queries where location in `master`servant ;
+  backlog:queries[qid; `backlog] ;
+  route:queries[qid; `route] ;
+  if[ null info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
+  if[ 99=type info; info,: `route`backlog`remaining!(route; backlog; remaining) ];
+  0N!(`mserversp; client_handle; (client_queryid; result; info)) ;
+	client_handle (client_queryid; result; info);
 	queries[qid;`location`time_returned]:(`client;.z.P);
   r[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
  }; 
@@ -148,7 +151,7 @@ check_orig:{[]
 lasthdl:0i ;
 check_even:{[]
   /0N!"check_even" ;
-	qid: exec first qid from queries where location=`master;  /oldest query
+	qid: exec first qid from queries where location in `master`servant
   list: asc where 0=count each h ;
   if[0=count list; :(::)] ;
   hdl: first list where list<lasthdl ;
@@ -204,18 +207,17 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; query; options[0]; options[1]...)	
     0N!(`mservereq; x) ;
-    sqid: 1^1+exec last qid from queries; /server id for new query
+    sqid: 1^1+exec last qid from queries;                      /server id for new query
+    bklg: exec count i from queries where location=`master ;   /queries in queue ahead of this one
     cqid:x[0]; query:x[1]; options: x[2]; role:getrole[]; route:getRoutingSymbol[query] ;
     if[not null role; if[99<>type options; options:()!()]; options[`user]:.z.u; options[`role]:role];
 
-    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; route; 0N; `master); 
+    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; route; bklg; 0N; `master); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
 	[ /response - (server qid, result, info[0], info[1]...)
-    qid:x[0];
-    result:x[1];
-    info: 2_ x ;
+    qid:x[0]; result:x[1]; info:x[2];
   	/try to send result back to client
   	.[send_result;
   		(qid;result;info);
