@@ -25,9 +25,6 @@ $ q mserve_np.q 1 qsvr.q -p 5000
 
 The above starts q on port 5000, loads mserve and instructs it to start one instance of qsrv.q on localhost.
 
-DELETE: -The first argument to mserve\_np.q, shown here as "1", is the number of copies of the servant code to start. In this case just one copy of "qsvr.q" on localhost.-
-
-
 **Step 2 - start the client:**  
 
 From the examples/01quickstart directory, type:
@@ -43,7 +40,7 @@ This launches a client, qs.q, and tells it to send its requests to the loadbalan
 ### The client qs.q
 
 * Client gets the hostname and port number for mserve from command line arguments.
-* Client (qs.q) provides a "send" method, which generates a query id, and sends the id and query as expected. ????????????? WHAT DOES THAT MEAN ?????????????????
+* Client (qs.q) provides a "send" method, which generates a query id, and sends the id and query as a general list.
 * qs.q provides a [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler which just displays the received response.
 * It also provides a [.z.ts](https://code.kx.com/q/ref/dotz/#zts-timer) handler to run a series of queries with random inputs on the timer.
 
