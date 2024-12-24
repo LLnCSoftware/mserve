@@ -7,8 +7,8 @@ on one host.
 
 ## About the Files
 
-qs.q          - Simple client used for examples 1-3 ("quickstart client").
-qsvr.q        - Simple servant used for this demo ("quick server").
+**qs.q**: Simple client used for examples 1-3 ("quickstart client").
+**qsvr.q**: Simple servant used for this demo ("quick server").
 mserve\_np.q  - Symlink to the mserve load balancer at the root of the repo.
 
 ## To Do and Observe
