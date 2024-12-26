@@ -40,7 +40,7 @@ allowedfn:{[role] value `.api} ;                 /overidden in authriz.q
 / Environment Options
 if[0<count getenv `Q_PLUGINS; {system "l ", x} each "," vs getenv `Q_PLUGINS] ; /When Q_PLUGINS specified, load listed "q-files".                                                                                 /When Q_SERVANTOF specified,
 if[0<count getenv `Q_SERVANTOF;                                                 /When Q_SERVANTOF specified:
- .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .u.a};          / accept connectinon only from specified IP.
+ .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .z.a};          / accept connectinon only from specified IP.
  .z.po:{.z.pw:{[u;p] 0b}; .z.pc:{exit 0}} ;                                     / accept only single connection, terminate on close
  ];
 0N!"servant loaded" ;
