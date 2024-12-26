@@ -14,7 +14,7 @@ portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
   role:getrole req 2;                                   /get user role from request. default to null symbol.
   ex:$[10=type req 1; parse req 1; req 1] ;             /get parsed expression from request
   fn: allowedfn[role] ex 0 ;                            /get function by name from those allowed by role. Null for not found.
-  if[null fn; :send[.z.w;] (req 0; 0N!"Error: unknown command: ", string ex 0)];  /reject request when function not found
+  if[null fn; :send[.z.w;] (req 0; 0N!"Error: unknown command: ", string ex 0)];   /reject request when function not found
   send[.z.w] (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]); /run function on first parsed argument, return result or error.    
  };
 send:{[h;data] if[h=0; -1 "\nresult:"; :show each data]; (neg h) data} ;  /allows testing from servant console using handle zero.
@@ -37,6 +37,10 @@ allowedfn:{[role] value `.api} ;                 /overidden in authriz.q
 		res
 	}
 
-/load plugins
-{system "l ",x} each {$[0=count x; (); "," vs x]} getenv `KDBQ_PLUGINS
+/ Environment Options
+if[0<count getenv `Q_PLUGINS; {system "l ", x} each "," vs getenv `Q_PLUGINS] ; /When Q_PLUGINS specified, load listed "q-files".                                                                                 /When Q_SERVANTOF specified,
+if[0<count getenv `Q_SERVANTOF;                                                 /When Q_SERVANTOF specified:
+ .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .u.a};          / accept connectinon only from specified IP.
+ .z.po:{.z.pw:{[u;p] 0b}; .z.pc:{exit 0}} ;                                     / accept only single connection, terminate on close
+ ];
 0N!"servant loaded" ;
