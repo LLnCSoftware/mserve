@@ -56,16 +56,14 @@ mys: string system "s" ;
 str: {$[10=type x; x; string x]} ;
 tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
 ip2string:{"." sv string `int$ 0x0 vs x} ; /convert ip address from integer to string
-
-servant_plugins:"exitOnClose.q" ;
-if["authent.q" in "," vs getenv `KDBQ_PLUGINS; servant_plugins,:",authriz.q"];
-launch:{value 0N!"system \"KDBQ_PLUGINS=", servant_plugins, " ", (.z.X 0), " ", x, " &\"" ;} ;
+servant_env:"Q_SERVANTOF='", (ip2string .z.a), "'; Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
+launch:{value 0N!"system \"", servant_env, " ", (.z.X 0), " ", x, " &\"" ;} ;
 
 h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
   cmd: mycode, " -s ", mys, " -p ", (x 1) ;  
   if[""~(x 0); launch cmd; :0N] ;
   hh:hopen `$":",(x 0), ":5999" ; 
-  0N!hh 0N!"setEnvString[\"KDBQ_PLUGINS=", servant_plugins, "\"]" ; 
+  0N!hh 0N!"setEnvString \"", servant_env, "\"" ; 
   (neg hh) 0N!cmd; (neg hh)[]; 
   hh 
  } each servant ; 
@@ -251,6 +249,6 @@ retainCompletedMs:60000* 30^ "J"$ getenv `MSERVE_RETAIN_COMPLETED ;  /default 30
 system "t ", string (60000*600) & retainCompletedMs div 12 ;  /1 min -> check every 5 sec;  1+ hrs ->  max interval 5 min;  0-> no timer!
 
 / Load plugins
-{system "l ",x;} each {$[0=count x; (); "," vs x]} getenv `KDBQ_PLUGINS;
+if[0<count getenv `MSERVE_PLUGINS;   {system "l ",x;} each "," vs getenv `MSERVE_PLUGINS];
 0N!"mserve_np.q loaded" ;
 
