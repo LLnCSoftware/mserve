@@ -350,11 +350,11 @@ The main enhancements in this version are:
 On Windows, to kick off the master, 4 servants and 4 clients, simply run the included .bat file.
 On Linux, create an appropriate .sh file from the .bat file or kick off processes in separate shells.
 
-## Glossary  
+## MServe Glossary  
 
 ### Secure Invocation
 
-**Definition:** Secure Invocation refers to the practice of executing q functions or operations in a controlled and predictable manner, without evaluating arbitrary character vectors. This approach mitigates security risks associated with dynamically executing user-provided strings, which can be difficult to "lock down." Instead, Secure Invocation relies on pre-defined, validated inputs, akin to a conventional API call.
+**Definition:** Secure Invocation refers to the practice of executing q functions or operations in a controlled and predictable manner, without evaluating arbitrary character vectors. This approach mitigates security risks associated with dynamically executing client-provided strings, which can be difficult to "lock down." Instead, Secure Invocation relies on pre-defined, validated inputs, akin to a conventional API call.
 
 #### Key Characteristics:
 - **Avoids Arbitrary Execution:** Inputs are validated or sanitized before being executed.
@@ -368,3 +368,4 @@ evalString:{@[.z.p;enlist x;{`error$x}]}
 
 // Secure: explicitly calling a function
 secureCall:{[input] myFunc[input]}
+```
