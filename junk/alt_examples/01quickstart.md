@@ -34,15 +34,15 @@ It also provides a .z.ts handler to run a series of queries with random inputs o
 
 ### Secure Invocation
 
-The servant is configured to use "secure invocation" which means that it does
-not allow execution of arbitrary code. Rather it only allows execution of 
-functions in the main namespace, with no recursive evaluation in the arguments.
+The servant is configured to use "secure invocation" (See Glossary in readme.md) which means that it does
+not allow execution of arbitrary code. Rather, in this example, it only allows execution of 
+functions in the .api namespace, with no evaluation in the arguments.
 
 This means that if the query is a string we parse it.
 If its not a string we assume it is already parsed.
 From the parsed query we obtain the function name and first argument.
 
-We invoke the function on its argument explictly, without using eval.
+We invoke the function on its argument explicitly, without using eval.
 So if the argument is a parse tree, it will not be evaluated, but will likely cause a type error.
 
 ### Terminate on Close
