@@ -9,7 +9,7 @@ on one host.
 
 **qs.q**: Simple client used for examples 1-3 ("quickstart client").  
 **qsvr.q**: Simple servant used for this demo ("quick server").  
-**mserve\_np.q**: Symlink to the mserve load balancer at the root of the repo.
+**mserve_np.q**: Symlink to the mserve load balancer at the root of the repo.
 
 ## To Do and Observe
 
@@ -55,15 +55,15 @@ The servant code is complicated by two features.
 1. Secure invocation - Invoke only functions in the ".api" namespace, with no recursive evaluation in their arguments.
 2. Exit on Close - Expect only one connection (to mserve). Exit when it closes.
 
+For more information see "Secure Invocation" in the Glossery in README.md
+
 In the next example "exit on close" will be made optional, so that the servant can run independent of mserve.
 We will also extend "secure invocation" to optionally provide authorization based on a user role.
 
 ### details
 
-TODO: Secure invocation MUST REFERENCE A GLOSSARY ENTRY AS MENTIONED IN THE TICKET. 
-
 * The file begins by creating a "trade" table to be used as test data, on load. 
-* We disallow synchronous requests. TODO: HOW??? 
+* We disallow synchronous requests, by setting .z.pg to always return the string "USE ASYNC". 
 
 * Exit on close is implemented by: .z.po:{ .z.pc:{exit 0} }.
     * After first connection made, set to terminate when any connection closes
@@ -102,15 +102,16 @@ This can be used to reject commands that include built-in but not user-defined f
 Nested user-defined functions will not be executed but will appear in the argument as a parse tree.
 Type checking in the individual functions may be needed to invalidate them.
 
-### Exit on close is really done by a plugin.
+### More is needed for security than what we describe as  "secure invocation"
 
-When you run this example you will see that an environment variable is set when launching the servant.
-Specifically: *KDBQ\_PLUGINS="exitOnClose.q"*
+When you run this example you will see that two environment variables are set when launching the servant.
+Specifically: *Q_SERVANTOF='an ip address'; Q_PLUGINS='list of q-files*
 
-This environment variable is intended to supply a list of "q-files" to be loaded after the main servant module.
-The content of the "exitOnClose.q" plugin is just the line *.z.po:{ .z.pc:{exit 0} }* we use in qsvr.q
-to implement this functionality.
+For simplicity these environment variables are ignored in the simple servant "qsvr.q".
 
-So in this case the environment variable is being ignored, just to avoid the complexity of loading the plugins.
-We have additional plugins to implement authentication and authorization, as you will see in the next example.
+The environment variable Q\_PLUGINS is supplies a list of "q-files" to be loaded after the main servant module.
+We have plugins to implement authentication and authorization, as you will see in the next example.
+
+The environment variable Q\_SERVANTOF provides the known IP address of the mserve machine.
+In the next example we will use this to restrict access to the servants to just the mserve machine.
 

@@ -3,16 +3,24 @@
 ## About this Example
 
 This example uses the same client as in 01quickstart (qs.q) but a different servant (servant.q)
+It will use plugins to implement authentication and authorization.
 
-The servant here has modifications which allow it to load and utilize plugins
-to optionally implement authentication, authorization, and exit on close.
+The servant will obtain its plugins from the env variable Q\_PLUGINS (for authorization).
+The load balancer mserve will obtain its plugins from the env variable MSERVE\_PLUGINS (for authentication).
+
+The Q\_SERVANTOF env variable is automatically set by mserve to its own ip address (from .z.a) when launching a servant.
+When this env variable is set, servant.q implements a stronger version of "exit on close" which only accepts connections
+from the specified IP address, and ensures that only one such connection is made, in addition to exiting upon disconnect.
+
+When Q\_SERVANTOF is not set, "exit on close" is NOT implemented in servant.q, allowing it to run independently.
 
 ## New/Modified Files
 
-servant.q - contains new functions (getrole, allowedfn) designed to be overriden to provide authentication and authorization.
-authent.q - provides authentication based on the username, password, and role in the file users.csv
-authriz.q - provides the allowed function names for each user role as specified in the file roles.csv
-exitOnClose.q - provides the line: .z.po:{ .z.pc:{exit 0}} to cause "terminate on lost connection".
+authent.q - Provides authentication based on the username, password, and role in the file users.csv
+authriz.q - Provides the allowed function names for each user role as specified in the file roles.csv
+servant.q - Contains new functions (getrole, allowedfn) designed to be overriden to provide authentication and authorization.
+            it also contains code to load the plugins listed in Q\_PLUGINS, and to restrict access to just the IP addres
+            specifed in the Q_SERVANTOF environment variable. 
 
 ## To Do and Observe
 
@@ -21,20 +29,15 @@ exitOnClose.q - provides the line: .z.po:{ .z.pc:{exit 0}} to cause "terminate o
 **start the server:** 
 
 ```
-KDBQ\_PLUGINS="authent.q"  q mserve\_np.q 1 servant.q -p 5000
+MSERVE\_PLUGINS='authent.q' Q_PLUGINS='authriz.q' q mserve\_np.q 1 servant.q -p 5000
 ```
 
-Note that mserve\_np.q always provides the KDBQ\_PLUGINS env variable when launching a servant,
-because it needs to provide "exitOnClose", and also because it needs to clear out any plugins
-intended only for mserve\_np.q itself.
+Note that mserve\_np.q always provides the Q\_PLUGINS env variable when launching a servant,
+If that variable is not set when launching mserve\_np.q, Q\_PLUGINS will be passed as an empty string.
 
-However this makes it difficult to specify additional plugins (such as authrize.q) for the servant. 
-The solution chosen was for mserve\_np.q to automatically provide the authrize.q plugin
-(for authorization) to the servant, whenever it loads the "authent.q" plugin for authentication.
-
-A more flexible solution would use separate environment variables for mserve\_np.q and its servants.
-The advantage of the chosen solution is that it is simpler for the user, results in a shorter command
-line, and at this point we do not anticipate wanting any additional plugins on the servant.
+However we want authentication to happen when the client connects to mserve, not when mserve connects
+to the servants. To facilitate that, mserve looks for its own plugins in a different env variable,
+MSERVE\_PLUGINS.
 
 
 **Start the client without valid credentials** 
@@ -79,7 +82,7 @@ That's because the "exitOnClose" plugin is omitted !
 **Start the servant with auth/auth:** 
 
 ```
- KDBQ\_PLUGINS="authent.q,authriz.q"  q servant.q -p 5001
+Q\_PLUGINS="authent.q,authriz.q"  q servant.q -p 5001
 ```
 
 * q qs.q localhost 5001  -> no credentials 'access error
@@ -89,7 +92,7 @@ That's because the "exitOnClose" plugin is omitted !
 **Start the sevant with authentication only:** 
 
 ```
-KDBQ\_PLUGINS="authent.q"  q servant.q -p 5001
+Q\_PLUGINS="authent.q"  q servant.q -p 5001
 ```
 
 * q qs.q localhost 5001 -> no credentials 'access error
@@ -111,23 +114,22 @@ This is the same client as in 01quickstart.
 ### Plugins
 
 The servant has modifications which allow it to load and utilize plugins
-to optionally implement authentication, authorization, and exit on close.
+to optionally implement authentication and authorization.
 
-Plugins are q-files intended to be listed in the KDBQ\_PLUGINS environment variable.
-In this example we have 3 of them: authent.q, authrize.q, exitOnClose.q
+Plugins are q-files intended to be listed in an environment variable, when launching a 
+q-file that is configured look at that variable of a list of additional files to load.
+
+In general we use the variable Q\_PLUGINS, but since we must distinguish plugins intended
+for mserve from those intended for the servant, we use the variable MSERVE\_PLUGINS for mserve.
 
 They are typically loaded in at the bottom of the "q" file which wants to "import" them.
 The following line of code is used to load the plugins in servant.q.
 
 ```
-{system "l ",x} each {$[0=count x; (); "," vs x]} getenv `KDBQ_PLUGINS
+if[0<count getenv `Q_PLUGINS; {system "l ",x} "," vs getenv `Q_PLUGINS] ;
 ```
 
-The strange piece in the middle returns a empty list when getenv returns a null string.
-Otherwise you would get a singleton containing an empty list from ("," vs x).
-
-This same line is included in mserve\_np.q itself, to allow it to use plugins.
-
+A similar line is included in mserve\_np.q itself, but using the varible MSERVE\_PLUGINS.
 
 ### Adaptations in servant.q
 
@@ -157,20 +159,6 @@ Of course you will need some data source which provides the role and a hash of t
 In our example, "authent.q" the data is provided by the file users.csv, and "sha1" (-33!) is used for the hash.
 The example does not include the capability to add, edit, or remove users.
 
-#### Note: When authentication is specified for mserve\_np, it will automatically specify authorization for its servants.
-
-To allow authentication in mserve\_np.q, it needs to obtain the role for each request and send it along to
-the servant in the options dictionary of the request. A default "getrole" is provided for this which always
-returns the null symbol. The authent.q plugin will override this function. 
- 
-When a plugin with the name "authent.q" is loaded by mserve\_np.q it will automatically add a plugin with the
-name "authrize.q" to the servants it launches. (this is because there is currently no convenient way to specify
-plugins for servants launched by mserve\_np.q, but maybe we could use a second environmnt variable).
-
-However, this is not really much of a limitation, because you will generally want both "auth"s when you want either.
-If you should want authentication without authorization that can be accomplished by providing an "authriz.q" file
-which just contains the default function: 'allowedfn:{[role] value `.api}', including all functions in the .api namespace.
-
 ### Authorization
 
 To implement authorization with this model you need to:
@@ -188,17 +176,16 @@ allowed by the role.
 
 ### Exit on close
 
-We want servant.q to exit on a lost connection when running under mserve, but not when running independently.
-To that end mserve\_np.q always provides "exitOnClose.q" in the environment variable KDBQ_PLUGINS when launching
-the servants.
+The Q\_SERVANTOF env variable instructs the "q" program to behave as a servant of the specified IP address.
+When launching servants, mserve\_np.q always sets this variable to its own IP address which is the value of ".z.a".
+The code implementing this in servant.q is shown below:
 
-This file just contains one line: '.z.po:{ .z.pc:{exit 0} }'
+```
+if[0<count getenv `Q_SERVANTOF;                                                /when Q_SERVANTOF specified:
+  .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .z.a};          / accept connectinon only from specified ip.
+  .z.po:{.z.pw:{[u;p] 0b}; .z.pc:{exit 0}} ;                                     / accept only single connection, terminate on close
+ ];
 
-To enhance security you could:
-1. add .z.pw:{[h;pw] 0b} within the .z.po handler, to allow only the first connection.
-2. add .z.pw alongside the .z.po handler to validate ip address in .z.a against the known ip address of mserve.
-
-The setting of .z.pc must be done after the file has loaded successfully, otherwise it will terminate immediately,
-so it is convienient to do it when the first connection is made.
+```
 
 
