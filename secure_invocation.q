@@ -1,3 +1,4 @@
+/synchronous
 / request: query OR (query; options) (options might contain role)
 / response result ;
 .z.pg:{[req]  
