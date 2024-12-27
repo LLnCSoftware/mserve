@@ -352,9 +352,9 @@ On Linux, create an appropriate .sh file from the .bat file or kick off processe
 
 ## MServe Glossary  
 
-### Secure Invocation
+**Secure Invocation:** The practice of executing q functions or operations in a controlled and predictable manner, without evaluating arbitrary character vectors. This approach mitigates security risks associated with dynamically executing client-provided strings, which can be difficult to "lock down." Instead, Secure Invocation relies on pre-defined, validated inputs, akin to a conventional API call.
 
-**Definition:** Secure Invocation refers to the practice of executing q functions or operations in a controlled and predictable manner, without evaluating arbitrary character vectors. This approach mitigates security risks associated with dynamically executing client-provided strings, which can be difficult to "lock down." Instead, Secure Invocation relies on pre-defined, validated inputs, akin to a conventional API call.
+See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe/#119-interprocess-communication-101) for an explanation of why this is important. 
 
 #### Key Characteristics:
 - **Avoids Arbitrary Execution:** Inputs are validated or sanitized before being executed.
