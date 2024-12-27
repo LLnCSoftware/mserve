@@ -14,7 +14,7 @@ launcher.q - Listens on port 5999 for requests to start servant processes as dir
 **Step 1 - Prepare the hosts**
 
 You will need 3 machines that are accessible to each other over the network;
-2 as servants and one for both mserve\_np.q and the client. 
+2 as servants and one for both mserve\_np.q and the client, qs.q.
 
 The way I did it was with 3 AWS EC2 instances each containing the mserve repo.
 
@@ -23,17 +23,17 @@ The way I did it was with 3 AWS EC2 instances each containing the mserve repo.
 3. Run 'Q\_SERVANTOF='ip address' q launcher.q -p 5999' from the mserve/examples/03multihost directory on each servant machine.
 
 The logic for Q\_SERVANTOF is different in launcher.q than in servant.q.
-It ONLY restricts access to the specified IP address (.z.pw) 
-It accepts multiple connections and does not terminate automatically (no .z.po). 
+launcher.q ONLY restricts access to the specified IP address (.z.pw) 
+and accepts multiple connections and does not terminate automatically (no .z.po). 
 
 **Step 2 - Start the server in a terminal on the mserve machine**
 
 Assuming the IP addresses of the servant AWS instances are 172.30.0.20 and 172.30.0.207, start mserve as follows.
-You may enable authentication/authorization by provideing the KDBQ\_PLUGINS env variable as in 02quickauth.
+You may enable authentication/authorization by providing the MSERVE\_PLUGINS and Q\_PLUGINS env variables as in 02quickauth.
 
 ```
 q mserve_np.q 2 servant.q 172.30.0.20 172.30.0.207 -p 5000   /no authentication or authorization
-MSERVE_PLUGINS='authent.q' Q_PLUGINS='authriz.q' q mserve_np.q 2 servant.q 172.30.0.20 172.30.0.207 -p 5000  /with auth-auth
+MSERVE\_PLUGINS='authent.q' Q\_PLUGINS='authriz.q' q mserve_np.q 2 servant.q 172.30.0.20 172.30.0.207 -p 5000  /with auth-auth
 ```
 
 This runs mserve\_np.q on the mserve machine, listening on port 5000,

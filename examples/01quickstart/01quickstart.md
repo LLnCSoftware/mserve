@@ -27,13 +27,13 @@ The above starts q on port 5000, loads mserve and instructs it to start one inst
 
 **Step 2 - start the client:**  
 
-From the examples/01quickstart directory, type:
+cd into examples/01quickstart directory then type:
 
 ```
 $ q qs.q localhost 5000
 ```
 
-This launches a client, qs.q, and tells it to send its requests to the loadbalancer on localhost port 5000.
+This launches a client, qs.q, and tells it to send its requests to the load balancer on localhost port 5000.
 
 ## How it Works
 
@@ -42,27 +42,27 @@ This launches a client, qs.q, and tells it to send its requests to the loadbalan
 * Client gets the hostname and port number for mserve from command line arguments.
 * Client (qs.q) provides a "send" method, which generates a query id, and sends the id and query as a general list.
 * qs.q provides a [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler which just displays the received response.
-* It also provides a [.z.ts](https://code.kx.com/q/ref/dotz/#zts-timer) handler to run a series of queries with random inputs on the timer.
+* qs.q also provides a [.z.ts](https://code.kx.com/q/ref/dotz/#zts-timer) handler to run a series of queries with random inputs on the timer.
 
 ## The servant qsvr.q
 
 The servant provides a sample api that has two functions "proc1" and "proc2".
 They each run the same query multiple times in order increase elapsed time.
-The "proc2" function has more repetitions and so is more expensive.
+The "proc2" function has more repetitions and so is slower.
 
 The servant code is complicated by two features.
 
 1. Secure invocation - Invoke only functions in the ".api" namespace, with no recursive evaluation in their arguments.
 2. Exit on Close - Expect only one connection (to mserve). Exit when it closes.
 
-For more information see "Secure Invocation" in the Glossery in README.md
+For more information see "Secure Invocation" in the Glossary in README.md
 
 In the next example "exit on close" will be made optional, so that the servant can run independent of mserve.
 We will also extend "secure invocation" to optionally provide authorization based on a user role.
 
 ### details
 
-* The file begins by creating a "trade" table to be used as test data, on load. 
+* qs.q begins by creating a "trade" table to be used as test data, on load. 
 * We disallow synchronous requests, by setting .z.pg to always return the string "USE ASYNC". 
 
 * Exit on close is implemented by: .z.po:{ .z.pc:{exit 0} }.
@@ -80,7 +80,11 @@ We will also extend "secure invocation" to optionally provide authorization base
 
 ## Annoying Details Glossed Over
 
-### The parse command is really designed for use with eval
+### The q parse command is really designed for use with eval
+
+TODO: WHEN DO PEOPLE NEED TO UNDERSTAND THIS? WHEN WRITING A SERVANT? IF SO, HAVE A SECTION
+CALLED COMPLEXITIES OF WRITING A SERVANT. OR GIVE THEM A COVERING FUNCTION SO THEY DONT NEED T
+UNDERSTAND THIS. 
 
 The problem is that "parse" mangles arguments which are symbols, lists of symbols, or general lists.
 It "enlists" symbols and lists of symbols, and encodes a general list as an "enlist" command.
