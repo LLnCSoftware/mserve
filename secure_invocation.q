@@ -26,9 +26,9 @@ validateAndRunSync:{[req]
 /asynchronous (use as .z.ps)
 / request: (id; query; [options])
 / response: (id; result) 
-validateAndRunAsync{[req] 
+validateAndRunAsync:{[req] 
   cmd:.[.si.validate; (req 1; req 2); {x}];       /validate command
-  if[10=type cmd; :send[.z.w;] 0N!(req 0; cmd)];  /if string returned its an error
+  if[10=type cmd; :.si.send[.z.w;] 0N!(req 0; cmd)];  /if string returned its an error
   res: .[cmd 0; cmd 1; {[nam;e] "Error: in ",nam, ", ", e}[cmd 2;]] ; /invoke command
   .si.send[.z.w;] (req 0; res) ;                      /return result or error
  };
@@ -46,7 +46,7 @@ validateAndRunAsync{[req]
   fn: allowedfn[role] {$[-11=type x; x; `]} query 0 ;      /Function name is symbol from first item of parsed queerty; otherwize null.
   if[null fn; '"unknown command: ", .Q.s1 query 0] ;       /Accept only function names in .api namespace, AND allowed by role.
   arg: 1_ query ;                                          /Remaining query items are arguments.
-  if[100<=any type each raze/ arg; "nested evaluation"] ;  /Reject query with any function type anywhere in any argument
+  if[100<=any type each (raze/) arg; "nested evaluation"]; /Reject query with any function type anywhere in any argument
   (fn; arg; query 0)                                       /return: function; arguments; funtion name
  };
 
@@ -55,7 +55,7 @@ validateAndRunAsync{[req]
 .si.parse:{  
  cmd: parse x; 
  arg:1_ cmd; cmd:cmd 0;
- arg:fixarg each arg ;
+ arg:.si.fixarg each arg ;
  raze (cmd; arg) 
  };
 
