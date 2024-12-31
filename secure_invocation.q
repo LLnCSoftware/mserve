@@ -11,16 +11,17 @@
 / request: (id; query; [options])
 / response: (id; result) 
 .z.ps:{[req] 
-  cmd:.[.si.validate; (req 1; req 2); {x}];       /vaidate command
+  cmd:.[.si.validate; (req 1; req 2); {x}];       /validate command
   if[10=type cmd; :send[.z.w;] 0N!(req 0; cmd)];  /if string returned its an error
   res: .[cmd 0; cmd 1; {[nam;e] "Error: in ",nam, ", ", e}[cmd 2;]] ; /invoke command
   .si.send[.z.w;] (req 0; res) ;                      /return result or error
  };
+
 .si.send:{[h;data] if[h=0; -1 "\nresult:"; :show each data]; (neg h) data} ;  /allows testing from console using handle zero.
 
 .si.validate:{[query; options]
   role:getrole options ;
-  if[10=type query; query:siparse query];
+  if[10=type query; query:.si.parse query];
   fn: allowedfn[role] {$[-11=type x; x; `]} query 0 ;
   if[null fn; '"unknown command: ", .Q.s1 query 0] ;  /not a symbol atom OR not in .api namespace OR not allowed by role
   arg: 1_ query ;
@@ -46,13 +47,13 @@
  };
 
 /Defaults for override by plugins
-getrole:{[opt] $[99=type opt; opt `role; `]} ;   /overidden in authent.q
-allowedfn:{[role] value `.api} ;                 /overidden in authriz.q
+getrole:{[opt] $[99=type opt; opt `role; `]} ;   /overridden in authent.q
+allowedfn:{[role] value `.api} ;                 /overridden in authriz.q
 
 / Environment Options
 if[0<count getenv `Q_PLUGINS; {system "l ", x} each "," vs getenv `Q_PLUGINS] ; /When Q_PLUGINS specified, load listed "q-files".                                                                                 /When Q_SERVANTOF specified,
 if[0<count getenv `Q_SERVANTOF;                                                 /When Q_SERVANTOF specified:
- .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .z.a};          / accept connectinon only from specified IP.
+ .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .z.a};          / accept connection only from specified IP.
  .z.po:{.z.pw:{[u;p] 0b}; .z.pc:{exit 0}} ;                                     / accept only single connection, terminate on close
  ];
 0N!"secure_invocation.q loaded" ;
