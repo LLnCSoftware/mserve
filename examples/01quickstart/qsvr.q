@@ -1,3 +1,4 @@
+/simulate opening database upon load by just creating random data
 trade:([]time:`time$();sym:`symbol$();price:`float$();size:`int$())
 n:3000000
 st:09:00:00.000
@@ -5,33 +6,32 @@ et:16:00:00.000
 portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
 `trade insert (st+n?et-st;n?portfolio;n?100f;n?10000)
 
-.z.pg:{"USE ASYNC"} ;
-.z.exit:{-1 "servant closed"} ;
-.z.po:{ .z.pc:{exit 0} } ;                /After first connection made, set to exit when it closes.
-
-/request: (id; query)
-/response: (id; result)
-.z.ps:{[req] /0N!req ;
-  ex:$[10=type req 1; parse req 1; req 1] ;    /if query is a string, parse it.
-  fn: (value `.api) $[-11=type ex 0; ex 0; `]; /get function given its name as symbol at index 0 of the parsed query
-  if[null fn; :(neg .z.w) (req 0; 0N!"Error: unknown command: ", string ex 0)]; /reject anything else
-  (neg .z.w) (req 0; @[fn; ex 1; {[e] 0N!"Error: ",(string ex 0), " ", e}]);    /invoke function on argument at index 1 of parsed query
- };                                                                             /respond with id from request, and result or error message.
+/simulate closing database upon exit by just issuing a message
+.z.exit:{-1 "servant closed"} ;           
 
 /api endpoints
 
-.api.proc1:{[s]do[200;
+proc1:{[s]do[100;
 		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
 		AVG:avg price,VWAP:size wavg price,DEV:dev price,VAR:var price
 		by SYM:sym from trade where sym in s;];
 		res
 	}
 
-.api.proc2:{[s]do[800;
+proc2:{[s]do[400;
 		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
 		AVG:avg price,VWAP:size wavg price,DEV:dev price,VAR:var price
 		by SYM:sym from trade where sym in s;];
 		res
 	}
+
+/adapt to use with mserve
+
+.z.pg:{"USE ASYNC"} ;          /disallow synchronous
+.z.po:{ .z.pc:{exit 0} } ;     /After connection made, set to exit upon close. (shutdown all servants along with mserve)
+  
+
+/implement calling convention: request=(id; query) response=(id; result)
+.z.ps:{[req] (neg .z.w) (req 0; @[value; req 1; {[e] 0N!"Error: ",(.Q.s1 req), " ", e}]) };
 
 0N!"servant loaded" ;
