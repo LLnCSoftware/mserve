@@ -43,14 +43,14 @@ validateAndRunAsync:{[req]
 .si.validate:{[query; options]
   role:getrole options ;                                   /get role from options 
   if[10=type query; query:.si.parse query];                /when query is a string, parse it
-  fn: allowedfn[role] {$[-11=type x; x; `]} query 0 ;      /Function name is symbol from first item of parsed queerty; otherwize null.
+  fn: allowedfn[role] {$[-11=type x; x; `]} query 0 ;      /Function name is symbol from first item of parsed query; otherwize null.
   if[null fn; '"unknown command: ", .Q.s1 query 0] ;       /Accept only function names in .api namespace, AND allowed by role.
   arg: 1_ query ;                                          /Remaining query items are arguments.
   if[100<=any type each (raze/) arg; "nested evaluation"]; /Reject query with any function type anywhere in any argument
-  (fn; arg; query 0)                                       /return: function; arguments; funtion name
+  (fn; arg; query 0)                                       /return: function; arguments; function name
  };
 
-/This parses a query intended to be run without using "eval".
+/This parses a query intended to be run without using "eval" - treating all symbols as literals.
 /It invokes the usual "q" parse function, and then applies "fixarg" below to each argument.
 .si.parse:{  
  cmd: parse x; 
