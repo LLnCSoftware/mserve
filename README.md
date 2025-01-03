@@ -43,7 +43,7 @@ execution of a limited number pre-defined functions, as in a conventional API ca
 Secure invocation must prevent execution of arbitary expressions which might appear in the
 arguments to the functions.
 
-**key characteristics**
+_key characteristics_
 - Reduces the risk of code injection attacks.
 - Allows execution of only a pre-defined set of commands.
 - Arguments are validated or sanitized before command is executed.
@@ -54,8 +54,8 @@ See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe
 a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
 
 **Plugin** A program that provides some optional functionality to a "main" program without modifying the main program's source code.
-Of course the "main" program must provide code to load the plugins, but which plugins get loaded is determined at launch time,
-in our case via an environment variable. The environment variable Q_PLUGINS lists the plugins for the servant processes,
+The "main" program may provide code to load the plugins, but which plugins get loaded is determined at launch time,
+in our case by an environment variable. The environment variable Q_PLUGINS lists the plugins for the servant processes,
 while the variable MSERVE_PLUGINS lists the plugins for mserve_np.q itself.
  
 **Dispatch Algorithm** A means of selecting a servant to run a particular query. In mserve_np.q, a dispatch algorithm
