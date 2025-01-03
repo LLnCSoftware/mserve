@@ -2,8 +2,9 @@
 
 ## About this Example
 
-This example uses the same client as in 01quickstart (qs.q) but a different servant (servant.q)
-It will use plugins to implement authentication and authorization.
+This example uses the same client as in 01quickstart (qs.q) but a different servant (servant.q),
+which loads the module "secure\_invocation.q" to prevent requests from running arbitrary code
+on the servant, and loads plugins to optionally implement authentication and authorization.
 
 The servant will obtain its plugins from the env variable Q\_PLUGINS (for authorization).
 The load balancer mserve will obtain its plugins from the env variable MSERVE\_PLUGINS (for authentication).
@@ -16,11 +17,20 @@ When Q\_SERVANTOF is not set, "exit on close" is NOT implemented in servant.q, a
 
 ## New/Modified Files
 
-authent.q - Provides authentication based on the username, password, and role in the file users.csv
-authriz.q - Provides the allowed function names for each user role as specified in the file roles.csv
-servant.q - Contains new functions (getrole, allowedfn) designed to be overriden to provide authentication and authorization.
-            it also contains code to load the plugins listed in Q\_PLUGINS, and to restrict access to just the IP addres
-            specifed in the Q_SERVANTOF environment variable. 
+_secure_invocation.q:_
+* .si.validate - Allow execution only of designated api functions, without function evaluation in their arguments                        
+* .si.parse    - Parse a string returning a general list representing a command in which all arguments are taken as literals.                   
+* .si.fixarg   - Enables .si.parse by unmangling the arguments returned by the standard "q" parse command.
+* getrole      - Stub to be overridden by authentication plugin. Gets user role given authenticated user name. 
+* allowedfn    - Stub to be overridden by authorization plugin. Get list of allowed function names from user role.
+* Q\_PLUGINS   - Environment variable providing list of plugin "q" files to be loaded.
+* Q\_SERVANTOF - Enviornment variable providing the only IP address from which servant may accept a connection. 
+                 When present, only one such connection is allowed, and servant terminates upon disconnect.
+                 When not present, all connections are allowed and servant stays up when they close.
+
+servant.q - Same API as in qsvr.q, but with client interface implemented using secure\_invocation.q
+authent.q - Plugin providing authentication based on the username, password, and role in the file users.csv
+authriz.q - Plugin providing the allowed function names for each user role as specified in the file roles.csv
 
 ## To Do and Observe
 
@@ -77,7 +87,7 @@ You will be able to run both "proc1" and "proc2"
 
 The point here is that the authentication and authorization plugins will work directly on a servant not running under mserve. 
 Note that in each case below the servant will stay up when the client disconnects.
-That's because the "exitOnClose" plugin is omitted ! 
+That's because the "Q\_SERVANTOF" environment variable is NOT set ! 
 
 **Start the servant with auth/auth:** 
 
@@ -123,7 +133,7 @@ In general we use the variable Q\_PLUGINS, but since we must distinguish plugins
 for mserve from those intended for the servant, we use the variable MSERVE\_PLUGINS for mserve.
 
 They are typically loaded in at the bottom of the "q" file which wants to "import" them.
-The following line of code is used to load the plugins in servant.q.
+The following line of code is used to load the plugins in secure\_invocation.q.
 
 ```
 if[0<count getenv `Q_PLUGINS; {system "l ",x} "," vs getenv `Q_PLUGINS] ;
@@ -133,18 +143,14 @@ A similar line is included in mserve\_np.q itself, but using the varible MSERVE\
 
 ### Adaptations in servant.q
 
-The changes in servant.q to support these plugins are related to the 3 new functions
-found below the .z.ps handler: "send", "getrole", and "allowedfn".
+The changes in servant.q to support these plugins are related to the stubs "getrole" and "allowedfn"
+provided in secure\_invocation.q
 
-The "send" function is actually not related to the plugins at all.
-It just allows testing from the servant console using handle zero, 
-in which case it displays the result, rather than trying to send it.
-
-The "getrole" function coded here is a default that is used when authentication is not provided in servant.q
+The "getrole" function coded there is a default that is used when authentication is not provided in servant.q
 Note that when running with mserve\_np.q, authentication is done there and only authorization is done in servant.q.
 In that case we get the role from the options dictionary of the request, returning a null symbol when it is not provided.
 
-The "allowedfn" function coded here is a default that is used when authorization is not provided in servant.q.
+The "allowedfn" function coded there is a default that is used when authorization is not provided in servant.q.
 While it accepts a "role" argument, it always returns all the functions in the .api namespace.
 
 ### Authentication
@@ -178,7 +184,7 @@ allowed by the role.
 
 The Q\_SERVANTOF env variable instructs the "q" program to behave as a servant of the specified IP address.
 When launching servants, mserve\_np.q always sets this variable to its own IP address which is the value of ".z.a".
-The code implementing this in servant.q is shown below:
+The code implementing this in secure_invocation.q is shown below:
 
 ```
 if[0<count getenv `Q_SERVANTOF;                                                /when Q_SERVANTOF specified:
