@@ -5,9 +5,12 @@
 This is a simple example of a client interacting with a servant through mserve\_np.q loadbalancer, all on one host. 
 This example is insecure; it allows anyone to execute any "q" expression on a servant.
 
+TODO: GET THE RIGHT PHRASE FROM JOHN. "Anyone on the same network as the host machine who is not stopped by a firewall rule..." 
+
 In the next example we will demonstrate the use of our "secure\_invocation.q" module to allow
-execution of only functions defined in an ".api" namespace, preventing recursive evaluation in their arguments,
-and optionally implementing authentication and authorization. 
+execution of only the functions defined in an ".api" namespace, preventing evaluation arguments,
+and optionally implementing authentication and authorization. That example implements "secure invocation"
+(See Glossary in readme.md) which is generally **very** important. 
 
 ## About the Files
 
@@ -45,8 +48,8 @@ This launches a client, qs.q, and tells it to send its requests to the load bala
 
 * Client gets the hostname and port number for mserve from command line arguments.
 * Client (qs.q) provides a "send" method, which generates a query id, and sends the id and query as a general list.
-* qs.q provides a [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler which just displays the received response.
-* qs.q also provides a [.z.ts](https://code.kx.com/q/ref/dotz/#zts-timer) handler to run a series of queries with random inputs on the timer.
+* qs.q provides a [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler which displays the received response.
+* qs.q also provides a [.z.ts](https://code.kx.com/q/ref/dotz/#zts-timer) handler to run a series of queries with random inputs on the timer. (If you type ``\t 1000`` then this code will run one query per second.)
 
 ## The servant qsvr.q
 
@@ -70,8 +73,7 @@ The servant code is complicated by two features.
     * If .z.pc was set while the servant was still loading, it would exit immediately after loading.
 * .z.ps is configured to implement the calling convention
     * The query id expected as the first item of the request is returned as the first item of the response.
-    * The query is evauladed in an error trap. Upon error the message is returned in place of the result.
+    * The query is evaluated in an error trap. Upon error the message is returned in place of the result.
 
-Note: a more secure version of this calling convention and exit on close is provided in the secure\_invocation.q
-module, as we shall see in the next example.
-
+Note: This example is simple and **very insecure** as described at the start of this file. See examples/02quickauth
+for a much more practical example of how to use this load balancer. 

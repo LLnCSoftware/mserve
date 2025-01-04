@@ -23,6 +23,7 @@ validateAndRunSync:{[req]
   .[cmd 0; cmd 1; {[nam;e] "Error: in ",nam, ", ", e}[cmd 2;]];             /run command; return result or error
  };
 
+/TODO: Explain what this function does and who should use it and why. 
 /asynchronous (use as .z.ps)
 / request: (id; query; [options])
 / response: (id; result) 

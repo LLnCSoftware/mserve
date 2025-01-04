@@ -18,6 +18,9 @@ When Q\_SERVANTOF is not set, "exit on close" is NOT implemented in servant.q, a
 ## New/Modified Files
 
 _secure_invocation.q:_
+
+See "secure invocation" in the Glossary section of readme.md.
+
 * .si.validate - Allow execution only of designated api functions, without function evaluation in their arguments                        
 * .si.parse    - Parse a string returning a general list representing a command in which all arguments are taken as literals.                   
 * .si.fixarg   - Enables .si.parse by unmangling the arguments returned by the standard "q" parse command.
