@@ -130,8 +130,8 @@ send_result:{[qid;result;info]
   remaining: exec count i from queries where location in `master`servant ;
   backlog: `long$ queries[qid; `backlog] ;
   route:queries[qid; `route] ;
-  if[ null info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
-  if[ 99=type info; info,: `route`backlog`remaining!(route; backlog; remaining) ];
+  if[ 99<>type info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
+  info,: `route`backlog`remaining!(route; backlog; remaining) ;
   0N!(`mserversp; client_handle; (client_queryid; result; info)) ;
 	client_handle (client_queryid; result; info);
   r[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
