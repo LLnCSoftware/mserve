@@ -57,14 +57,15 @@ str: {$[10=type x; x; string x]} ;
 tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
 ip2string:{"." sv string `int$ 0x0 vs x} ; /convert ip address from integer to string
 servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
-launch:{value 0N!"system \"", servant_env, " ", (.z.X 0), " ", x, " &\"" ;} ;
+local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
+launch:{value 0N!"system \"", local_env, " ", (.z.X 0), " ", x, " &\"" ;} ;
 
 h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
   cmd: mycode, " -s ", mys, " -p ", (x 1) ;  
   if[""~(x 0); launch cmd; :0N] ;
   hh:hopen `$":",(x 0), ":5999" ; 
-  0N!hh 0N!"setEnvString \"", servant_env, "\"" ; 
-  (neg hh) 0N!cmd; (neg hh)[]; 
+  hh "setEnvString \"", servant_env, "\"" ; 
+  (neg hh) cmd; (neg hh)[]; 
   hh 
  } each servant ; 
 
@@ -79,10 +80,10 @@ h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
 -1 "OK" ;
 
 / map each servant handle back to the servant address
-d:h!servant ; 
+h2addr:h!servant ; 
 
 / map each servant handle to a list of routing symbols from previous queries (initialize to empty)
-r: h!(count h)# enlist `$() ;
+h2route: h!(count h)# enlist `$() ;
 
 /map each servant asynch handle to an empty list and assign resultant dictionary back to h
 /The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
@@ -124,7 +125,7 @@ send_result:{[qid;result;info]
 	queries[qid;`location`time_returned]:(`client;.z.P);
 	client_handle:queries[qid;`client_handle] ;
   client_queryid: queries[qid; `client_qid] ;
-  servant_address: {`$":",(x 0),":",(x 1)} d queries[qid; `slave_handle] ;
+  servant_address: {`$":",(x 0),":",(x 1)} h2addr queries[qid; `slave_handle] ;
   servant_elapsed: tms .z.P - queries[qid; `time_sent] ;
   total_elapsed: tms .z.P - queries[qid; `time_received] ;
   remaining: exec count i from queries where location in `master`servant ;
@@ -134,7 +135,7 @@ send_result:{[qid;result;info]
   info,: `route`backlog`remaining!(route; backlog; remaining) ;
   0N!(`mserversp; client_handle; (client_queryid; result; info)) ;
 	client_handle (client_queryid; result; info);
-  r[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
+  h2route[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
  }; 
  
 /original: check if free slave. If free slave exists -> try to send oldest query 
@@ -170,7 +171,7 @@ check_match:{[]
 
   rt: `. ^ getRoutingSymbol qry `query ;                                 /get routing symbol from query (use `. for "non-specific")
   update route:rt from `queries where qid= qry `qid ;                    /save routing symbol for info
-  hmatch: $[rt= `.; hfree where {0=count x except `.} each r hfree; hfree where rt in/: r hfree] ; 
+  hmatch: $[rt= `.; hfree where {0=count x except `.} each h2route hfree; hfree where rt in/: h2route hfree] ; 
   /prefer to send a query with a specific route to a servant which has previously seen this routing symbol
   /prefer to send a query with a non-specific route to a servant which has not previously seen any specific routing symbol
 
@@ -221,6 +222,7 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
     check[];
 	] ;
 	[ /response - (server qid; result; info)
+    /0N!(`servantrsp; x) ;
     qid:x[0]; result:x[1]; info:x[2];
   	/try to send result back to client
   	.[send_result;
