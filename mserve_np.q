@@ -55,6 +55,7 @@ myq: .z.X 0 ;
 mys: string system "s" ;
 str: {$[10=type x; x; string x]} ;
 tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
+addMs:{y+1000000*x} ;  /add ms to timestamp
 ip2string:{"." sv string `int$ 0x0 vs x} ; /convert ip address from integer to string
 servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
 local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
@@ -84,6 +85,7 @@ h2addr:h!servant ;
 
 / map each servant handle to a list of routing symbols from previous queries (initialize to empty)
 h2route: h!(count h)# enlist `$() ;
+h2idle:  h!(count h)# 0Np ;
 
 /map each servant asynch handle to an empty list and assign resultant dictionary back to h
 /The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
@@ -113,6 +115,8 @@ send_query:{[hdl; qid]
   	query:queries[qid;`query];
     options: queries[qid; `client_options];
   	h[hdl],:qid;
+    h2route[hdl]: enlist queries[qid; `route] ;
+    h2idle[hdl]: 0Wp ;
   	queries[qid;`slave_handle]:hdl;
     queries[qid;`time_sent]: .z.P ;
   	queries[qid;`location]:`servant;
@@ -135,7 +139,7 @@ send_result:{[qid;result;info]
   info,: `route`backlog`remaining!(route; backlog; remaining) ;
   0N!(`mserversp; client_handle; (client_queryid; result; info)) ;
 	client_handle (client_queryid; result; info);
-  h2route[ queries[qid; `slave_handle] ]: enlist queries[qid; `route] ;
+  h2idle[ queries[qid; `slave_handle] ]: .z.P ;
  }; 
  
 /original: check if free slave. If free slave exists -> try to send oldest query 
@@ -160,25 +164,31 @@ check_even:{[]
   lasthdl:: hdl; send_query[hdl;qid] ;
  }; 
 
-/current: attempt to send oldest query to a free slave 
-/prefer a slave whos previous query had the same routing symbol 
+/current: attempt to send a query to servent with same routing symbol 
+/otherwise attempt to send first query to a servant with an unset or expired routing symbol
+/otherwise request call on the timer
+routeExpireMs:12000 ;
 check_match:{[]
-  /0N!"check_match" ;
-  /n: 1|"J"$algo 1 ;
-	qry: exec first qid, first query from queries where location=`master;  /oldest query
-	hfree: asc where 0=count each h ;                                      /free servant handles
-  if[ (null qry `qid) or 0=count hfree; :(::)];                          /if no unsent query or no free servant ? return 
+  nextCheck::0Wp ; /disable call on timer
 
-  rt: `. ^ getRoutingSymbol qry `query ;                                 /get routing symbol from query (use `. for "non-specific")
-  update route:rt from `queries where qid= qry `qid ;                    /save routing symbol for info
-  hmatch: $[rt= `.; hfree where {0=count x except `.} each h2route hfree; hfree where rt in/: h2route hfree] ; 
-  /prefer to send a query with a specific route to a servant which has previously seen this routing symbol
-  /prefer to send a query with a non-specific route to a servant which has not previously seen any specific routing symbol
+  /compute routing symbol for any queries which lack it
+  update route:getRoutingSymbol each query from `queries where location=`master, null route ;
 
-  if[0<count hmatch; hfree: hmatch] ;         /if any matching, consider only those.
-  hdl: first hfree where hfree>lasthdl ;      /if any beyond last servent dispatched in the list, use first of those.
-  if[null hdl; hdl: first hfree] ;            /otherwize use first remaining.
-  lasthdl:: hdl; send_query[hdl; qry `qid] ;  /save handle as last dispathed servant, and send query to it.
+  /dispatch first enqueued query for which some non-busy handle has the same routing symbol, to the first such handle
+  match: select qid, hdl:{first (where x in/: h2route) inter (where 0=count each h) } each route from queries where location=`master ;
+  match: select from match where not null hdl ;
+  if[0<count match; 0N!(`match; match[0;`qid]; match[0;`hdl]);  :send_query[ match[0;`hdl]; match[0;`qid] ]] 
+
+  /dispactch first enqueued query for which no handle has the same routing symbol
+  /to first non-busy handle whos routing symbol is unset or expired
+  qry: exec first qid from queries where location=`master, not route in raze h2route ;
+  hdl: first where (0=count each h) and h2idle< addMs[neg routeExpireMs;.z.P] ;
+  if[(not null qry) and not null hdl; 0N!(`claim; qry; hdl); :send_query[hdl; qry] ];
+
+  /If queue not empty, but nothing dispatched, request call on timer
+  if[`master in (value queries) `location; 
+    nextCheck:: addMs[routeExpireMs; min .z.P, value h2idle]; 0N!(`wait; qry; tms nextCheck-.z.P)
+  ]
  };
 
 / select dispatch algorithm
@@ -246,9 +256,16 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
  };
 
 / Purge completed queries from the table
-retainCompletedMs:60000* 30^ "J"$ getenv `MSERVE_RETAIN_COMPLETED ;  /default 30 minutes
-.z.ts:{ delete from `queries where location=`client, retainCompletedMs< tms .z.P - time_returned ;}
-system "t ", string (60000*600) & retainCompletedMs div 12 ;  /1 min -> check every 5 sec;  1+ hrs ->  max interval 5 min;  0-> no timer!
+nextCheck:0Wp ;  /check on timer (set by dispatch algo) default +infinity (never check)
+lastPurge:.z.P ;  /purge completed queries every 5 minutes
+purgeCompletedMs:60000* 30^ "J"$ getenv `MSERVE_PURGE ;  /default 30 minutes
+purgeCompleted:{ delete from `queries where location=`client, purgeCompletedMs< tms .z.P - time_returned } ;
+
+.z.ts:{
+  if[nextCheck<.z.P; check[]] ;
+  if[600000<.z.P-lastPurge; purgeCompleted[]; lastPurge::.z.P]
+ };
+\t 5000
 
 / Load plugins
 if[0<count getenv `MSERVE_PLUGINS;   {system "l ",x;} each "," vs getenv `MSERVE_PLUGINS];
