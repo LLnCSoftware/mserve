@@ -1,0 +1,1 @@
+../01quickstart/qs.q

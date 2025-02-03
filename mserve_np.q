@@ -193,12 +193,14 @@ check_match:{[]
 
 / select dispatch algorithm
 algo: " " vs (ssr[;"  "; " "]/) getenv `MSERVE_ALGO ;
-check:(check_match; check_orig; check_even; check_match; (::)) ``orig`even`match? `$ algo 0 ;
+if[0=count algo 0; algo:enlist "match"];
+
+check:(check_orig; check_even; check_match; (::)) `orig`even`match? `$ algo 0 ;
 if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
--1 "Using dispatch algorithm: '",$[""~getenv `MSERVE_ALGO; "match"; getenv `MSERVE_ALGO], "'" ;
 
 / default routing string is first argument to api command
 fixarg:{$[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
+getArguments:{[cmd] if[10=type cmd; cmd:parse cmd]; arg:fixarg each 1_ cmd; (cmd[0], arg) };
 getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str fixarg cmd[1]} ;
 if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTING] ;
 
@@ -269,5 +271,6 @@ purgeCompleted:{ delete from `queries where location=`client, purgeCompletedMs< 
 
 / Load plugins
 if[0<count getenv `MSERVE_PLUGINS;   {system "l ",x;} each "," vs getenv `MSERVE_PLUGINS];
+-1 "Using dispatch algorithm: '",(" " sv algo), "'" ;
 0N!"mserve_np.q loaded" ;
 
