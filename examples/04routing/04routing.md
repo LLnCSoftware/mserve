@@ -2,9 +2,12 @@
 
 ## About this Example
 
-We show how to implement a dispatch algorithm as a plugin.  TODO: dispatch seems a better word than routing. Is there a good reason to use two words for this one idea?
+We show how to implement a dispatch algorithm as a plugin.  
 
-TODO: Put in a section that says, in general, to write a dispatching plugin, you should do the following: 1-Add a file to the xyx directory that starts with "dispatch-" 2-Add a function to that file that will be called with the following arguments... make it a step-by-step process, ok? Or is this in there already? 
+TODO: dispatch seems a better word than routing. Is there a good reason to use two words for this one idea?
+TODO: Put in a section that says, in general, to write a dispatching plugin, you should do the following: 
+ 1-Add a file to the xyx directory that starts with "dispatch-"
+ 2-Add a function to that file that will be called with the following arguments... make it a step-by-step process, ok? Or is this in there already? 
 
 This example uses the same client and servant as the examples 02quickauth and 03multihost,
 including secure\_invocation.q but without the authentication and authorization plugins.
@@ -12,7 +15,8 @@ including secure\_invocation.q but without the authentication and authorization 
 ## New/Modified Files
 
 match.q - An mserve plugin implementing a dispatch algorithm (actually the same as the included "match" algorithm,
-but displays the name "match-plugin" on startup).  TODO: But it is not, it uses sysmbols insgtead of dates? 
+but displays the name "match-plugin" on startup).  
+TODO: But it is not, it uses sysmbols insgtead of dates? 
 
 ## How it Works
 
@@ -28,7 +32,7 @@ In the case of match.q and mserve\_np.q:
    - **string "algo"**     - provides the name of the dispatch algorithm displayed on startup
    - **function "check"**  - provides the algorithm itself
 
- - The following global variables are intended to be used: TODO: 1: **used** by whom to do what? 2: Are these vars about this one specific plugin or vars that all plugins will need to use? No idea. (Perhaps I'm reading too fast?)
+ - The following global variables are intended to be used: 
    - **function "getArguments"** - parses specified command, always interpreting symbols as literals, not variables
      and rejecting expressions that contain functions or function evaluation in their arguments.
    - **dictionary "h"**        - maps each handle to the list of queries pending on that handle.
@@ -36,6 +40,8 @@ In the case of match.q and mserve\_np.q:
    - **dictionary "hidle"**    - maps each handle to its idle timestamp (when last query finished).
    - **timestamp "nextCheck"** - schedules a call to "check" at the specified time (+infinity 0Wp to surpress)
    - **function "addMs"**      - adds milliseconds to a timestamp.
+
+TODO: 1: **used** by whom to do what? 2: Are these vars about this one specific plugin or vars that all plugins will need to use? No idea. (Perhaps I'm reading too fast?)
 
 ### Understanding match.q
 
@@ -107,9 +113,11 @@ slave_handle| route
 Note that it did a pretty good job of keeping the same symbols on the same slave, but was not perfect.
 It misplaced one `GS on the same server with `IBM
 
-Its performance can actually vary quite a bit based on the order of the requests received. TODO: THIS IS NOT A POINT ABOUT HOW TO WRITE A DISPATCHING PLUGIN SO I AM NOT SURE IT BELONGS. 
+Its performance can actually vary quite a bit based on the order of the requests received. 
+TODO: THIS IS NOT A POINT ABOUT HOW TO WRITE A DISPATCHING PLUGIN SO I AM NOT SURE IT BELONGS. 
+TODO: NOW YOU ARE TALKING ABOUT THIS SPEICFIC PLUGIN? BUT THAT IS OFF TOPIC. 
 
-It will generally perform perfectly when: TODO: NOW YOU ARE TALKING ABOUT THIS SPEICFIC PLUGIN? BUT THAT IS OFF TOPIC. 
+It will generally perform perfectly when: 
 1. The number of distinct routes is no more than the number of servants.
 2. The first requests submitted are for all the distinct routes with no duplicates.
 
