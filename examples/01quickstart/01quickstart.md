@@ -64,7 +64,7 @@ The servant code is complicated by two features.
 
 ### details
 
-* qs.q begins by creating a "trade" table to be used as test data, on load. 
+* qsvr.q begins by creating a "trade" table to be used as test data, on load. 
 * .z.exit is configured to output a message when the servant closes.
 * The api functions are provided in the main namespace.
 * .z.pg is configured to disallow synchronous requests, by always returning "USE ASYNC".
