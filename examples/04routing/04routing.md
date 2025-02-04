@@ -95,7 +95,9 @@ After all requests have finished, in the mserve terminal, enter the following qu
 select route by slave_handle from queries
 ```
 
-You are likely to see something like the following:
+You are likely to see something like the below. 
+
+The first row, for example, means that the server with handle -13 got quires with the symbols which were `gs repeatedly in sequence. 
 
 ```
 slave_handle| route                                                                 
