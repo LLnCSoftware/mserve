@@ -4,6 +4,8 @@
 
 We show how to implement a dispatch algorithm as a plugin.  TODO: dispatch seems a better word than routing. Is there a good reason to use two words for this one idea?
 
+TODO: Put in a section that says, in general, to write a dispatching plugin, you should do the following: 1-Add a file to the xyx directory that starts with "dispatch-" 2-Add a function to that file that will be called with the following arguments... make it a step-by-step process, ok? Or is this in there already? 
+
 This example uses the same client and servant as the examples 02quickauth and 03multihost,
 including secure\_invocation.q but without the authentication and authorization plugins.
 
@@ -40,7 +42,7 @@ In the case of match.q and mserve\_np.q:
 The algorithm can be briefly described as follows:
 1. Attempt to send query to a servant with the same routing symbol. 
 2. If some servant has the same routing symbol but is busy, do nothing (wait for it to finish).
-3. Otherwise, attempt to send query to a servant with an unset or expired routing symbol.
+3. Otherwise, attempt to send query to a servant without a routing symbol (or expired routing symbol.)
 4. Otherwise, set "nextCheck" to request a call on the timer (wait for some routing symbol to expire).
 
 The algorithm is installed as the "check" function of mserve\_np.q which is called:
