@@ -134,6 +134,8 @@ slave_handle| route
 -6          | `MSFT`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG
 ```
 
+TODO: THE BELOW DOES NOT MAKE SENSE AS THE APPLICATION PROGRAMMER DOES NOT CONTROL WHEN THE REQUESTS WILL HAPPEN. 
+
 That can generally be corrected by submitting the requests faster so as to build up
 a larger backlog, or allowing more time for routing symbols to expire.
 
