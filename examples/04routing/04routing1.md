@@ -26,7 +26,7 @@ To provide a dispatch plugin you would:
 ### The "check" function
 
 - The check function takes no arguments and returns no value. 
-- The check function examines the enqueued queries, and attemps to match some query with an available server.
+- The check function examines the enqueued queries, and attempts to match some query with an available server.
 - If successful, it calls the "send\_query" function, providing the server handle and query id as arguments. 
 
 ### Resources available in mserve\_np.q
@@ -57,16 +57,16 @@ To provide a dispatch plugin you would:
 ### Understanding the example "match.q"
 
 The algorithm may be briefly described as follows:
-1. Compute a routing symbol for any queries for which "route" is null in the queries table.
-2. Find all queries whos routing symbol is also held by some not-busy servant handle
+1. Compute a routing symbol for any queries for which "route" is null in the queries table. TODO: DEFINE SOMEWHERE. 
+2. Find all queries whose routing symbol is also held by some not-busy servant handle
 3. If any found, dispatch the first such query to the first such handle, and return.
-4. Otherwise, find all queries whos routing symbol is NOT held by any servant (busy or not).
-5. Also, find all handles which are not busy and whos routing symbol is unset or expired
+4. Otherwise, find all queries whose routing symbol is NOT held by any servant (busy or not).
+5. Also, find all handles which are not busy and whose routing symbol is unset or expired
 6. If both found, dispatch the first such query to the first such handle, and return.
-7. Otherwize, If the queue is not empty, request a call on the timer.
+7. Otherwise, If the queue is not empty, request a call on the timer.
 
 
-## To Do and Observe
+## How to test match.q: To Do and Observe
 
 **start the server**
 
@@ -75,8 +75,7 @@ MSERVE\_PLUGINS='match.q' q mserve\_np.q 8 servant.q -p 5000
 ```
 
 We run with 8 servants on localhost. 
-We use 8 servants because the client submits queries for 8 distinct symbols on the timer,
-and we want each symbol to be routed to its own servant.
+We use 8 servants because the client submits queries for 8 distinct symbols on the timer, and we want each symbol to be routed to its own servant.
 
 **start the client**
 
@@ -85,7 +84,8 @@ and we want each symbol to be routed to its own servant.
  \t 2000                  /start the timer
 ```
 
-Let it run about 60 queries then stop the timer and let the backlog clear.
+Let it run about 60 queries then stop the timer and let the backlog clear,
+a few minutes in general. 
 
 **Check results using the mserve console**
 
@@ -95,7 +95,9 @@ After all requests have finished, in the mserve terminal, enter the following qu
 select route by slave_handle from queries
 ```
 
-You are likely to see something like the following:
+You are likely to see something like the following.
+
+Note: The first row, for example, means that the server with handle -13 got quires with the symbols which were `gs repeatedly in sequence. 
 
 ```
 slave_handle| route                                                                 
