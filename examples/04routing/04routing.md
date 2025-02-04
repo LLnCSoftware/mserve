@@ -107,9 +107,9 @@ slave_handle| route
 Note that it did a pretty good job of keeping the same symbols on the same slave, but was not perfect.
 It misplaced one `GS on the same server with `IBM
 
-Its performance can actually vary quite a bit based on the order of the requests received.
+Its performance can actually vary quite a bit based on the order of the requests received. TODO: THIS IS NOT A POINT ABOUT HOW TO WRITE A DISPATCHING PLUGIN SO I AM NOT SURE IT BELONGS. 
 
-It will generally perform perfectly when:
+It will generally perform perfectly when: TODO: NOW YOU ARE TALKING ABOUT THIS SPEICFIC PLUGIN? BUT THAT IS OFF TOPIC. 
 1. The number of distinct routes is no more than the number of servants.
 2. The first requests submitted are for all the distinct routes with no duplicates.
 
