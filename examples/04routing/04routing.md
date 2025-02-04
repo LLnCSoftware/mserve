@@ -2,7 +2,7 @@
 
 ## About this Example
 
-We show how to implement a dispatch algorithm as a plugin.
+We show how to implement a dispatch algorithm as a plugin.  TODO: dispatch seems a better word than routing. Is there a good reason to use two words for this one idea?
 
 This example uses the same client and servant as the examples 02quickauth and 03multihost,
 including secure\_invocation.q but without the authentication and authorization plugins.
@@ -10,23 +10,23 @@ including secure\_invocation.q but without the authentication and authorization 
 ## New/Modified Files
 
 match.q - An mserve plugin implementing a dispatch algorithm (actually the same as the included "match" algorithm,
-but displays the name "match-plugin" on startup).
+but displays the name "match-plugin" on startup).  TODO: But it is not, it uses sysmbols insgtead of dates? 
 
 ## How it Works
 
-### Plugin Environment
+### Plugin Environment  
 
- - A given plugin can generally only be used by a program that has been specifically designed to accomodate it.
- - Accomodation is usually provided as particular global variables that are intended to be overwritten by the plugin.
- - Accomodation may also include particular global variables intended to be used by the plugin.
+ - A given plugin can generally only be used by a program that has been specifically designed to accommodate it. TODO: What do you mean by this? Why would you say this? I could have a catchall servant and a special servant for queries that are entirely about year 2025, another for 2024, etc. What would need to be specifically designed to accommodate what? 
+ - Accommodation is usually provided as particular global variables that are intended to be overwritten by the plugin. TODO: Not clear to me. Perhaps say "see section X for an example of accommodating a foo to a bar so that baz will happen. 
+ - Accommodation may also include particular global variables intended to be used by the plugin. TODO: to permiatierizer the behvaior of the routing / dispatching? Add a "for example"? 
 
 In the case of match.q and mserve\_np.q:
 
- - The following global variables are intended to be overwitten:
+ - The following global variables are intended to be overwritten:
    - **string "algo"**     - provides the name of the dispatch algorithm displayed on startup
    - **function "check"**  - provides the algorithm itself
 
- - The following global variables are intended to be used:
+ - The following global variables are intended to be used: TODO: 1: **used** by whom to do what? 2: Are these vars about this one specific plugin or vars that all plugins will need to use? No idea. (Perhaps I'm reading too fast?)
    - **function "getArguments"** - parses specified command, always interpreting symbols as literals, not variables
      and rejecting expressions that contain functions or function evaluation in their arguments.
    - **dictionary "h"**        - maps each handle to the list of queries pending on that handle.
