@@ -11,7 +11,7 @@
 /6. function "addMs" which adds milliseconds to a timestamp
 
 algo: enlist "match-plugin" ;              /plugin name and options (no options in this case)
-routeExpireMs:12000 ;                      /handles allowed to change routes after this many idle ms
+routeExpireMs:32000 ;                      /handles allowed to change routes after this many idle ms
 getRoutingSymbol:{(getArguments x) 1} ;    /use first argument to api command as routing symbol (start of date range).
 check:{[]
   nextCheck::0Wp ; /disable call on timer
