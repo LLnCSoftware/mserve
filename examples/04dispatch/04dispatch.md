@@ -33,31 +33,25 @@ To provide a dispatch plugin you would:
 
 - **getArguments** - function which parses specified command, which must be the invocation of a user-defined function,
    always interpreting symbols in arguments as literals, not variables; and rejecting function evaluation in the arguments.
+   (In match.q, used to obtain the routing string as the first argument to the command).
 - **h**            - dictionary which maps each servant handle to the list of queries pending on that handle.
+                     (In match.q, used to determin if a particular servant is busy.) 
 - **hroute**       - dictionary which maps each servant handle to its last routing symbol.
-- **hidle**        - dictionary which maps each servant handle to its idle timestamp (when last query finished).
-- **nextCheck**    - timestamp which schedules a call to "check" at the specified time (+infinity 0Wp to surpress)
+                     (In match.q, used to determine which queries a particular servant may accept.)
+- **hidle**        - dictionary which maps each servant handle to its idle timestamp, i.e. when last query finished.
+                     (In match.q, used to reset the "hroute" value of a servant to "allow any query" after a period of inactivity.
 - **addMs**        - function which adds milliseconds to a timestamp.
-
-### Use of these resources
-
-- **getArguments** - used to create a routing string from the arguments of the command.
-- **h**            - used to determine if a particular server is busy.
-- **hroute**       - used to determine which queries a particular server is eligable to process
-- **hidle**        - used to reset the "hroute" value of a particular server to "allow any query" after a period of inactivity.
-- **nextCheck**    - used to request a call to "check" on the timer. Normally the check function is called when a new query
-                     or response is received. However, it may be that when a response is received, all the enqueued queries
-                     have routes that are not eligable for that server, and so must wait for the route to expire. In this 
-                     case, without a call on the timer, the algorithm could hang until the next query is received,
-                     which might never happen.
-- **addMS**        - used to compute the "nextCheck" timestamp.
-
-
+- **nextCheck**    - timestamp which schedules a call to "check" at the specified time (+infinity 0Wp to surpress)
+                     (In match.q, schedules a call on the timer when "check" fails to dispatch a request although
+                      the queue is not empty. Normally the check function is called when a new query or response 
+                      is received. However it may happen that none of the enqueued queries are eligable for any servant,
+                      and no servants are busy. In that case, without a call on the timer, the remaining queries could
+                      not run until a new query is received, which might not happen).
 
 ### Understanding the example "match.q"
 
 The algorithm may be briefly described as follows:
-1. Compute a routing symbol for any queries for which "route" is null in the queries table. TODO: DEFINE SOMEWHERE. 
+1. Compute a routing symbol for any queries for which "route" is null in the queries table.  
 2. Find all queries whose routing symbol is also held by some not-busy servant handle
 3. If any found, dispatch the first such query to the first such handle, and return.
 4. Otherwise, find all queries whose routing symbol is NOT held by any servant (busy or not).
@@ -88,6 +82,11 @@ Let it run about 60 queries then stop the timer and let the backlog clear,
 a few minutes in general. 
 
 **Check results using the mserve console**
+
+To check results we use the fact that mserve\_np.q does not purge queries
+from its internal table until 30 minutes after they finish. So after running
+the test you can query this internal table "queries" to see which servant
+processed each request.
 
 After all requests have finished, in the mserve terminal, enter the following query:
 

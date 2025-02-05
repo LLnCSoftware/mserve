@@ -65,6 +65,7 @@ is selected by copying it to the global variable "check". Currently, there are 3
 - **match**: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
 
 The "match" algorithm is the default, which may be changed by setting the MSERVE_ALGO env variable to "orig" or "even".
+New dispatch algorithms may be added as plugins.
    
 **Routing String** A string (or symbol) derived from a query expression which is used to help select the best servant 
 on which to run that query. Only the "match" dispatch algorithm uses a routing string.
