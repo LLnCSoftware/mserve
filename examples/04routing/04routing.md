@@ -4,11 +4,6 @@
 
 We show how to implement a dispatch algorithm as a plugin.  
 
-TODO: dispatch seems a better word than routing. Is there a good reason to use two words for this one idea?
-TODO: Put in a section that says, in general, to write a dispatching plugin, you should do the following: 
- 1-Add a file to the xyx directory that starts with "dispatch-"
- 2-Add a function to that file that will be called with the following arguments... make it a step-by-step process, ok? Or is this in there already? 
-
 This example uses the same client and servant as the examples 02quickauth and 03multihost,
 including secure\_invocation.q but without the authentication and authorization plugins.
 
@@ -16,57 +11,62 @@ including secure\_invocation.q but without the authentication and authorization 
 
 match.q - An mserve plugin implementing a dispatch algorithm (actually the same as the included "match" algorithm,
 but displays the name "match-plugin" on startup).  
-TODO: But it is not, it uses sysmbols insgtead of dates? 
 
 ## How it Works
 
-### Plugin Environment  
+To provide a dispatch plugin you would:
 
- - A given plugin can generally only be used by a program that has been specifically designed to accommodate it. TODO: What do you mean by this? Why would you say this? I could have a catchall servant and a special servant for queries that are entirely about year 2025, another for 2024, etc. What would need to be specifically designed to accommodate what? 
- - Accommodation is usually provided as particular global variables that are intended to be overwritten by the plugin. TODO: Not clear to me. Perhaps say "see section X for an example of accommodating a foo to a bar so that baz will happen. 
- - Accommodation may also include particular global variables intended to be used by the plugin. TODO: to permiatierizer the behvaior of the routing / dispatching? Add a "for example"? 
+- Write a new "q-file" (in our example "match.q") which defines two global variables
+  - check: function implementing your new dispatch algorithm
+  - algo:  provides a name for your algorithm which is displayed on the console at startup
 
-In the case of match.q and mserve\_np.q:
+- Include your filename in the MSERVE\_PLUGINS environment variable when starting mserve\_np.q
+  - for example:  'MSERVE\_PLUGINS="match.q" q mserve\_np.q 2 servant.q'
 
- - The following global variables are intended to be overwritten:
-   - **string "algo"**     - provides the name of the dispatch algorithm displayed on startup
-   - **function "check"**  - provides the algorithm itself
+### The "check" function
 
- - The following global variables are intended to be used: 
-   - **function "getArguments"** - parses specified command, always interpreting symbols as literals, not variables
-     and rejecting expressions that contain functions or function evaluation in their arguments.
-   - **dictionary "h"**        - maps each handle to the list of queries pending on that handle.
-   - **dictionary "hroute"**   - maps each handle to its last routing symbol.
-   - **dictionary "hidle"**    - maps each handle to its idle timestamp (when last query finished).
-   - **timestamp "nextCheck"** - schedules a call to "check" at the specified time (+infinity 0Wp to surpress)
-   - **function "addMs"**      - adds milliseconds to a timestamp.
+- The check function takes no arguments and returns no value. 
+- The check function examines the enqueued queries, and attempts to match some query with an available server.
+- If successful, it calls the "send\_query" function, providing the server handle and query id as arguments. 
 
-TODO: 1: **used** by whom to do what? 2: Are these vars about this one specific plugin or vars that all plugins will need to use? No idea. (Perhaps I'm reading too fast?)
+### Resources available in mserve\_np.q
 
-### Understanding match.q
+- **getArguments** - function which parses specified command, which must be the invocation of a user-defined function,
+   always interpreting symbols in arguments as literals, not variables; and rejecting function evaluation in the arguments.
+- **h**            - dictionary which maps each servant handle to the list of queries pending on that handle.
+- **hroute**       - dictionary which maps each servant handle to its last routing symbol.
+- **hidle**        - dictionary which maps each servant handle to its idle timestamp (when last query finished).
+- **nextCheck**    - timestamp which schedules a call to "check" at the specified time (+infinity 0Wp to surpress)
+- **addMs**        - function which adds milliseconds to a timestamp.
 
-The algorithm can be briefly described as follows:
-1. Attempt to send query to a servant with the same routing symbol. 
-2. If some servant has the same routing symbol but is busy, do nothing (wait for it to finish).
-3. Otherwise, attempt to send query to a servant without a routing symbol (or expired routing symbol.)
-4. Otherwise, set "nextCheck" to request a call on the timer (wait for some routing symbol to expire).
+### Use of these resources
 
-The algorithm is installed as the "check" function of mserve\_np.q which is called:
-1. When a query is received from a client
-2. When a response is received from a servant
-3. On a timer tick that finds the "nextCheck" timestamp in the past.
+- **getArguments** - used to create a routing string from the arguments of the command.
+- **h**            - used to determine if a particular server is busy.
+- **hroute**       - used to determine which queries a particular server is eligable to process
+- **hidle**        - used to reset the "hroute" value of a particular server to "allow any query" after a period of inactivity.
+- **nextCheck**    - used to request a call to "check" on the timer. Normally the check function is called when a new query
+                     or response is received. However, it may be that when a response is received, all the enqueued queries
+                     have routes that are not eligable for that server, and so must wait for the route to expire. In this 
+                     case, without a call on the timer, the algorithm could hang until the next query is received,
+                     which might never happen.
+- **addMS**        - used to compute the "nextCheck" timestamp.
 
-This algorithm attempts to keep api requests with the same routing symbol on the same server.
-In order to do that it may:
-1. Not dispatch requests in the order they are received.
-2. Make requests wait for a server with their route even when another server is available.
-3. Once all servers have been assigned a route, make any requests for additional routes,
-   wait some server's route to expire.
 
-It still finishes each batch of requests in about 1/3 the time of the "even" algorithm,
-because most requests run with a warm cache.
 
-## To Do and Observe
+### Understanding the example "match.q"
+
+The algorithm may be briefly described as follows:
+1. Compute a routing symbol for any queries for which "route" is null in the queries table. TODO: DEFINE SOMEWHERE. 
+2. Find all queries whose routing symbol is also held by some not-busy servant handle
+3. If any found, dispatch the first such query to the first such handle, and return.
+4. Otherwise, find all queries whose routing symbol is NOT held by any servant (busy or not).
+5. Also, find all handles which are not busy and whose routing symbol is unset or expired
+6. If both found, dispatch the first such query to the first such handle, and return.
+7. Otherwise, If the queue is not empty, request a call on the timer.
+
+
+## How to test match.q: To Do and Observe
 
 **start the server**
 
@@ -75,8 +75,7 @@ MSERVE\_PLUGINS='match.q' q mserve\_np.q 8 servant.q -p 5000
 ```
 
 We run with 8 servants on localhost. 
-We use 8 servants because the client submits queries for 8 distinct symbols on the timer,
-and we want each symbol to be routed to its own servant.
+We use 8 servants because the client submits queries for 8 distinct symbols on the timer, and we want each symbol to be routed to its own servant.
 
 **start the client**
 
@@ -85,7 +84,8 @@ and we want each symbol to be routed to its own servant.
  \t 2000                  /start the timer
 ```
 
-Let it run about 60 queries then stop the timer and let the backlog clear.
+Let it run about 60 queries then stop the timer and let the backlog clear,
+a few minutes in general. 
 
 **Check results using the mserve console**
 
@@ -95,9 +95,9 @@ After all requests have finished, in the mserve terminal, enter the following qu
 select route by slave_handle from queries
 ```
 
-You are likely to see something like the below. 
+You are likely to see something like the following.
 
-The first row, for example, means that the server with handle -13 got quires with the symbols which were `gs repeatedly in sequence. 
+Note: The first row, for example, means that the server with handle -13 got quires with the symbols which were `gs repeatedly in sequence. 
 
 ```
 slave_handle| route                                                                 
@@ -115,11 +115,9 @@ slave_handle| route
 Note that it did a pretty good job of keeping the same symbols on the same slave, but was not perfect.
 It misplaced one `GS on the same server with `IBM
 
-Its performance can actually vary quite a bit based on the order of the requests received. 
-TODO: THIS IS NOT A POINT ABOUT HOW TO WRITE A DISPATCHING PLUGIN SO I AM NOT SURE IT BELONGS. 
-TODO: NOW YOU ARE TALKING ABOUT THIS SPEICFIC PLUGIN? BUT THAT IS OFF TOPIC. 
+Its performance can actually vary quite a bit based on the order of the requests received.
 
-It will generally perform perfectly when: 
+It will generally perform perfectly when:
 1. The number of distinct routes is no more than the number of servants.
 2. The first requests submitted are for all the distinct routes with no duplicates.
 
@@ -143,8 +141,6 @@ slave_handle| route
 -7          | `GS`MSFT`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA                           
 -6          | `MSFT`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG
 ```
-
-TODO: THE BELOW DOES NOT MAKE SENSE AS THE APPLICATION PROGRAMMER DOES NOT CONTROL WHEN THE REQUESTS WILL HAPPEN. 
 
 That can generally be corrected by submitting the requests faster so as to build up
 a larger backlog, or allowing more time for routing symbols to expire.
