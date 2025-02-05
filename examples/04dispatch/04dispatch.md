@@ -93,58 +93,23 @@ After all requests have finished, in the mserve terminal, enter the following qu
 
 ```
 select route by slave_handle from queries
-```
 
-You are likely to see something like the following.
-
-Note: The first row, for example, means that the server with handle -13 got queries with the symbols which were `gs repeatedly in sequence. 
-
-```
 slave_handle| route                                                                 
 ------------| ----------------------------------------------------------------------
--13         | `GS`GS`GS`GS`GS`GS`GS`GS`GS`GS                                        
--12         | `UBS`UBS`UBS`UBS`UBS`UBS`UBS                                          
--11         | `GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG     
--10         | `VOD`VOD`VOD`VOD`VOD                                                  
+-13         | `IBM`IBM`IBM`IBM`IBM`IBM`IBM`IBM`IBM                                  
+-12         | `UBS`UBS`UBS`UBS`UBS`UBS                                              
+-11         | `GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG          
+-10         | `VOD`VOD`VOD`VOD                                                      
 -9          | `AAPL`AAPL`AAPL`AAPL`AAPL`AAPL`AAPL`AAPL`AAPL`AAPL                    
--8          | `BA`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA                         
--7          | `GS`IBM`IBM`IBM`IBM`IBM`IBM`IBM`IBM`IBM                               
+-8          | `BA`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA                               
+-7          | `GS`GS`GS`GS`GS`GS`GS`GS`GS`GS                                        
 -6          | `MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT
 ```
 
-Note that it did a pretty good job of keeping the same symbols on the same slave, but was not perfect.
-It misplaced one `GS on the same server with `IBM
+The column in the queries table that identifies the servant process is "slave\_handle",
+(that name goes back to the original). We could get the host and port using the dictionary
+h2addr, but really we don't care.
 
-Its performance can actually vary quite a bit based on the order of the requests received.
-
-It will generally perform perfectly when:
-1. The number of distinct routes is no more than the number of servants.
-2. The first requests submitted are for all the distinct routes with no duplicates.
-
-In that case the first requests establish each route on a particular servant and subsequent
-requests for that route wait for that servant to be available.
-
-There is also an interaction between the amount of time we allow for a route to expire
-and the rate at which requests are submitted.
-
-If you are getting poor results like you see below:
-
-```
-slave_handle| route                                                            
-------------| -----------------------------------------------------------------
--13         | `MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT`MSFT          
--12         | `IBM`IBM`IBM`IBM`IBM`IBM`IBM                                     
--11         | `UBS`MSFT`VOD`VOD`VOD`VOD                                        
--10         | `VOD`AAPL`AAPL`AAPL`AAPL`AAPL`AAPL`AAPL`AAPL                     
--9          | `AAPL`AAPL`IBM`IBM`UBS`UBS`UBS`UBS`UBS                           
--8          | `BA`BA`BA`BA`GS`GS`GS`GS`GS`GS`GS`GS`GS                          
--7          | `GS`MSFT`BA`BA`BA`BA`BA`BA`BA`BA`BA`BA                           
--6          | `MSFT`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG`GOOG
-```
-
-That can generally be corrected by submitting the requests faster so as to build up
-a larger backlog, or allowing more time for routing symbols to expire.
-
-
-
+The point (with match.q) is just to verify that each servant processed queries for only one route.
+If you were testing a more sophisticated algorithm, you would use similar queries to verify that it is behaving as expected.
 
