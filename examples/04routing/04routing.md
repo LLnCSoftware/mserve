@@ -97,7 +97,7 @@ select route by slave_handle from queries
 
 You are likely to see something like the following.
 
-Note: The first row, for example, means that the server with handle -13 got quires with the symbols which were `gs repeatedly in sequence. 
+Note: The first row, for example, means that the server with handle -13 got queries with the symbols which were `gs repeatedly in sequence. 
 
 ```
 slave_handle| route                                                                 
