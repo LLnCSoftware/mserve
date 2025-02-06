@@ -17,21 +17,10 @@ When Q\_SERVANTOF is not set, "exit on close" is NOT implemented in servant.q, a
 
 ## New/Modified Files
 
-_secure_invocation.q:_
+secure\_invocation.q - Implements "secure invocation" (preventing execution of arbitrary code) as described in
+            the glossary section of README.md. This module is discussed in detail at the bottom of this file.
 
-See "secure invocation" in the Glossary section of readme.md.
-
-* .si.validate - Allow execution only of designated api functions, without function evaluation in their arguments                        
-* .si.parse    - Parse a string returning a general list representing a command in which all arguments are taken as literals.                   
-* .si.fixarg   - Enables .si.parse by unmangling the arguments returned by the standard "q" parse command.
-* getrole      - Stub to be overridden by authentication plugin. Gets user role given authenticated user name. 
-* allowedfn    - Stub to be overridden by authorization plugin. Get list of allowed function names from user role.
-* Q\_PLUGINS   - Environment variable providing list of plugin "q" files to be loaded.
-* Q\_SERVANTOF - Enviornment variable providing the only IP address from which servant may accept a connection. 
-                 When present, only one such connection is allowed, and servant terminates upon disconnect.
-                 When not present, all connections are allowed and servant stays up when they close.
-
-servant.q - Same API as in qsvr.q, but with client interface implemented using secure\_invocation.q
+ervant.q - Same API as in qsvr.q, but with client interface implemented using secure\_invocation.q
 authent.q - Plugin providing authentication based on the username, password, and role in the file users.csv
 authriz.q - Plugin providing the allowed function names for each user role as specified in the file roles.csv
 
@@ -122,12 +111,33 @@ Q\_PLUGINS="authent.q"  q servant.q -p 5001
 
 This is the same client as in 01quickstart.
 
+
 ## The servant servant.q
 
-### Plugins
+This servant is built around the services provided in secure\_invocation.q:
 
-The servant has modifications which allow it to load and utilize plugins
-to optionally implement authentication and authorization.
+1. A means of restringing remote execution to only user-defined functions in a ".api" namespace.
+2. A means of invoking an api commands without using "eval" so as to prevent execution of arbitary code in arguments.
+3. A means of restricting access to the api to a single connection, in this case from mserve,
+   and terminating the servant when that connection closes.
+4. A means of loading "plugins" to provide optional or enhanced functionality. 
+5. Stub functions designed to be overridden by plugins providing authentication and authorization.
+
+The module secure\_invocation.q is intended to be used as follows:
+
+1. Start with an ordinary unsecured api which just executes whatever comes in using "value" (the default).
+2. Load secure\_invocation.q at the bottom of your api q-file.
+3. Set .z.ps=validateAndRunAsync to use the provided asynchronous protocol.
+4. Set .z.pg=validateAndRunSync to use the provided synchronous protocol.
+5. Or use the provided utilities to write your own invocation protocol.
+
+### Invocation Protocol
+
+Commands are sent as a 3 part general list: (id; query; options)
+
+
+
+### Plugins
 
 Plugins are q-files intended to be listed in an environment variable, when launching a 
 q-file that is configured look at that variable of a list of additional files to load.
@@ -144,16 +154,19 @@ if[0<count getenv `Q_PLUGINS; {system "l ",x} "," vs getenv `Q_PLUGINS] ;
 
 A similar line is included in mserve\_np.q itself, but using the varible MSERVE\_PLUGINS.
 
-### Adaptations in servant.q
+### Stub functions for authentication and authorization
 
-The changes in servant.q to support these plugins are related to the stubs "getrole" and "allowedfn"
-provided in secure\_invocation.q
+The secure\_invocation.q module provides two functions designed to be overridden by plugins providing
+authentication and authorization.
 
-The "getrole" function coded there is a default that is used when authentication is not provided in servant.q
+The **"getrole"** function returns a symbol representing the role corresponding to the authenticated user name.
+The default in secure\_invocation.q simply return 
+
+
 Note that when running with mserve\_np.q, authentication is done there and only authorization is done in servant.q.
 In that case we get the role from the options dictionary of the request, returning a null symbol when it is not provided.
 
-The "allowedfn" function coded there is a default that is used when authorization is not provided in servant.q.
+The **"allowedfn"** function coded there is a default that is used when authorization is not provided in servant.q.
 While it accepts a "role" argument, it always returns all the functions in the .api namespace.
 
 ### Authentication
@@ -198,6 +211,19 @@ if[0<count getenv `Q_SERVANTOF;                                                /
 ```
 
 ## Understanding secure_invocation.q
+
+See "secure invocation" in the Glossary section of readme.md.
+
+* .si.validate - Allow execution only of designated api functions, without function evaluation in their arguments                        
+* .si.parse    - Parse a string returning a general list representing a command in which all arguments are taken as literals.                   
+* .si.fixarg   - Enables .si.parse by unmangling the arguments returned by the standard "q" parse command.
+* getrole      - Stub to be overridden by authentication plugin. Gets user role given authenticated user name. 
+* allowedfn    - Stub to be overridden by authorization plugin. Get list of allowed function names from user role.
+* Q\_PLUGINS   - Environment variable providing list of plugin "q" files to be loaded.
+* Q\_SERVANTOF - Enviornment variable providing the only IP address from which servant may accept a connection. 
+                 When present, only one such connection is allowed, and servant terminates upon disconnect.
+                 When not present, all connections are allowed and servant stays up when they close.
+
 
 ## The q parse command is really designed for use with eval
 
