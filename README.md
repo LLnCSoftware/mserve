@@ -10,7 +10,7 @@ The diagram below shows the messages exchanged in the demo above
 ![Sequence Diagram](img/sequencediagram.png)
 
 * When you run ``send proc1 `IBM`` in the quickstart demo:
-    * The message ``(1234; "proc1 `IBM")`` is sent from the client to mserve\_np.
+    * The message ``(1234; "proc1 `IBM")`` is sent from the client to mserve\_np, which is the client's way of saying to the load ballencer "execute the function 'proc1' with argument `IBM and return the result to me with id 1234".
     * mserve\_np sends the query to an internal function (denoted "match dispatcher")
     * which sends back a "routing string" in this case the first argument to the query: `IBM.   
 
