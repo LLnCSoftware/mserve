@@ -11,7 +11,7 @@ The diagram below shows the messages exchanged in the demo above
 
 * When you run ``send proc1 `IBM`` in the quickstart demo:
     * The message ``(1234; "proc1 `IBM")`` is sent from the client to mserve\_np, which is the client's way of saying to the load ballencer "execute the function 'proc1' with argument `IBM and return the result to me with id 1234".
-    * mserve\_np sends the query to an internal function (denoted "match dispatcher")
+    * mserve\_np sends the query to an internal function (denoted "match dispatcher"). (To see how to select or develop a different method of dispatch, see "examples/04dispatch/04dispatch.md".)
     * which sends back a "routing string" in this case the first argument to the query: `IBM.   
 
 2. When this message is ready to be sent:
@@ -50,6 +50,8 @@ _key characteristics_
 
 See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe/#119-interprocess-communication-101)  
 
+Also for more details about **Secure Invocation** see: "Understanding secure_invocation.q" in examples/04dispatch/04dispatch.md.
+
 **Servant** An instance of your api server managed my mserve. When used by itself "servant" might refer to either
 a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
 
@@ -61,17 +63,29 @@ while the variable MSERVE_PLUGINS lists the plugins for mserve_np.q itself.
 **Dispatch Algorithm** A means of selecting a servant to run a particular query. In mserve_np.q, a dispatch algorithm
 is selected by copying it to the global variable "check". Currently, there are 3 dispatch algorithms available:
 - **orig**: From the original. Always select the first not-busy server from the top of the list.
-- **even**: Avoids unused or under-utilized servants. Always select the next not-busy server futher down the list from last dispatch. 
+- **even**: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch. 
 - **match**: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
 
-The "match" algorithm is the default, which may be changed by setting the MSERVE_ALGO env variable to "orig" or "even".
-New dispatch algorithms may be added as plugins.
+The "match" algorithm is the default, which may be changed by setting the MSERVE_ALGO env variable to "orig" or "even" like so:
+
+```
+MSERVE_ALGO="even"
+
+```
+
+You can run an instance with a specific algo with 5 servants running out example servant code ("servant.q") on 
+port 5000, you can type:
+
+```
+MSERVE_ALGO="even" q mserve-np.q 5 servant.q -p 5000
+
+```
+
+New dispatch algorithms may be added as plugins, see "examples/04dispatch/04dispatch.md."
    
 **Routing String** A string (or symbol) derived from a query expression which is used to help select the best servant 
 on which to run that query. Only the "match" dispatch algorithm uses a routing string.
 
 The default routing string is just the first argument to the command. That may be changed by setting the MSERVE_ROUTING 
 env variable to "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
-
-
 

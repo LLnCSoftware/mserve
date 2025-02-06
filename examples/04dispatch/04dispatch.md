@@ -1,8 +1,20 @@
-# 04routing
+# 04dispatch
 
 ## About this Example
 
 We show how to implement a dispatch algorithm as a plugin.  
+
+The current default dispatch algorithm is "match" which attempts to provide 
+[Locality of reference](https://en.wikipedia.org/wiki/Locality_of_reference)) 
+by using the first argument to pack a servant. The match algo is both the default and the algo
+discussed in this example because Locality of Reference is a very powerful optimization for
+many KDB applications. 
+
+To pick a built in dispatch algo, see
+"MServe Glossary" entry on **Dispatch Algorithm** in readme.md. 
+
+If you don't like any of the included dispatch algorithms ('orig', 'even', 'match')
+you could implement you own, as suggested in this example.
 
 This example uses the same client and servant as the examples 02quickauth and 03multihost,
 including secure\_invocation.q but without the authentication and authorization plugins.

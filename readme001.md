@@ -1,5 +1,9 @@
 ## For Eric
 
+Nearly all the text of this has been copied into the bottom of examples/04dispatch/04dispatch.md
+
+-------------
+
 TODO: WHEN DO PEOPLE NEED TO UNDERSTAND THIS? WHEN WRITING A SERVANT? IF SO, HAVE A SECTION
 CALLED COMPLEXITIES OF WRITING A SERVANT. OR GIVE THEM A COVERING FUNCTION SO THEY DONT NEED T
 UNDERSTAND THIS. 
