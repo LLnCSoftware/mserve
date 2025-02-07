@@ -14,17 +14,17 @@
 / 2. Support query options other than "role"
 / 3. Return "info" in addition to the query "result".
 
-/synchronous (use as .z.pg)
+/ To access your api functions synchronously use the following as .z.pg
 / request: query OR (query; options) (options might contain role)
 / response result ;
 validateAndRunSync:{[req]  
-  if[-11=req 0; req:(req; (::))] ; /when request begins with a symbol assume its a query with no options
+  if[10=type req; req:(req; (::))];     /when request is a string assume its a query with no options
+  if[-11=type req 0; req:(req; (::))] ; /when request begins with a symbol assume its a query with no options
   cmd:.[.si.validate; (req 0; req 1); {"Error: ",x}]; if[10=type cmd; :cmd]; /validate command; if string returned its an error.
   .[cmd 0; cmd 1; {[nam;e] "Error: in ",nam, ", ", e}[cmd 2;]];             /run command; return result or error
  };
 
-/TODO: Explain what this function does and who should use it and why. 
-/asynchronous (use as .z.ps)
+/ To access your api functions asynchronously use the following as .z.ps
 / request: (id; query; [options])
 / response: (id; result) 
 validateAndRunAsync:{[req] 
@@ -37,7 +37,7 @@ validateAndRunAsync:{[req]
 /--utilities--
 
 /This allows testing of an asynchronous protocol from the servant console, using handle zero.
-/Given a handle and data, it sends the data to the handle, but instead displays the data for handle zero.
+/Given a handle and data, it displays rather than sends the data for handle zero.
 .si.send:{[h;data] if[h=0; -1 "\nresult:"; :show each data]; (neg h) data} ;  
 
 /This enforces the restrictions implied by "secure_invocation".
