@@ -20,7 +20,7 @@ When Q\_SERVANTOF is not set, "exit on close" is NOT implemented in servant.q, a
 secure\_invocation.q - Implements "secure invocation" (preventing execution of arbitrary code) as described in
             the glossary section of README.md. This module is discussed in detail at the bottom of this file.
 
-ervant.q - Same API as in qsvr.q, but with client interface implemented using secure\_invocation.q
+servant.q - Same API as in qsvr.q, but with client interface implemented using secure\_invocation.q
 authent.q - Plugin providing authentication based on the username, password, and role in the file users.csv
 authriz.q - Plugin providing the allowed function names for each user role as specified in the file roles.csv
 
@@ -34,12 +34,12 @@ authriz.q - Plugin providing the allowed function names for each user role as sp
 MSERVE\_PLUGINS='authent.q' Q_PLUGINS='authriz.q' q mserve\_np.q 1 servant.q -p 5000
 ```
 
-Note that mserve\_np.q always provides the Q\_PLUGINS env variable when launching a servant,
-If that variable is not set when launching mserve\_np.q, Q\_PLUGINS will be passed as an empty string.
+Authentication happens when the client connects to mserve, verifying the user's identity and establishing their "role".
+Subsequently, mserve will pass role to the servant in the "options dictionary" associated with each request. 
+Authorization happens when the servant uses the "role" to determine which api endpoints are allowed for the request. 
 
-However we want authentication to happen when the client connects to mserve, not when mserve connects
-to the servants. To facilitate that, mserve looks for its own plugins in a different env variable,
-MSERVE\_PLUGINS.
+Because Authentication happens in mserve, it is requested using the MSERVE\_PLUGINS env variable.
+Because Authorization happens in the servant, it is requested using the Q\_PLUGINS env variable.
 
 
 **Start the client without valid credentials** 
@@ -98,7 +98,7 @@ Q\_PLUGINS="authent.q"  q servant.q -p 5001
 ```
 
 * q qs.q localhost 5001 -> no credentials 'access error
-* q.qs.q localhost 5001 dan dan -> ordinary user can run both proc1 and proc2 (no authorization)
+* q.qs.q localhost 5001 ken ken -> ordinary user can run both proc1 and proc2 (no authorization)
 
 **Start the servant with no plugins:** q servant.q -p 5001
 
@@ -111,13 +111,18 @@ Q\_PLUGINS="authent.q"  q servant.q -p 5001
 
 This is the same client as in 01quickstart.
 
+### The servant servant.q
 
-## The servant servant.q
+This servant supports the same api as in 01quickstart, but is built around 
+the services provided by secure\_invocation.q, described in detail below.
 
-This servant is built around the services provided in secure\_invocation.q:
+
+## Understanding secure\_invocation.q
+
+The following services are provided in secure\_invocation.q:
 
 1. A means of restringing remote execution to only user-defined functions in a ".api" namespace.
-2. A means of invoking an api commands without using "eval" so as to prevent execution of arbitary code in arguments.
+2. A means of invoking api commands without using "eval" so as to prevent execution of arbitary code in arguments.
 3. A means of restricting access to the api to a single connection, in this case from mserve,
    and terminating the servant when that connection closes.
 4. A means of loading "plugins" to provide optional or enhanced functionality. 
@@ -125,22 +130,51 @@ This servant is built around the services provided in secure\_invocation.q:
 
 The module secure\_invocation.q is intended to be used as follows:
 
-1. Start with an ordinary unsecured api which just executes whatever comes in using "value" (the default).
-2. Load secure\_invocation.q at the bottom of your api q-file.
-3. Set .z.ps=validateAndRunAsync to use the provided asynchronous protocol.
-4. Set .z.pg=validateAndRunSync to use the provided synchronous protocol.
-5. Or use the provided utilities to write your own invocation protocol.
+1. Start with an ordinary unsecured api which executes whatever comes in using "value" (the default).
+2. Provide a ".api" namespace containing exactly those functions you want to expose.
+3. Load secure\_invocation.q at the bottom of your api q-file.
+4. Provide an invocation protocol
+   - Set .z.ps=validateAndRunAsync to use the included asynchronous protocol.
+   - Set .z.pg=validateAndRunSync to use the included synchronous protocol.
+   - Or use the utilities in the ".si" namespace to create your own protocol.
+5. Provide authentication and authorization 
+   - Adapt the 'authriz.q' plugin to implement your authentication scheme.
+   - Adapt the 'authriz.q' plugin to implement your authorization scheme.
 
 ### Invocation Protocol
 
-Commands are sent as a 3 part general list: (id; query; options)
+In the asynchronous protocol, the client supplies an id in the request,
+which will be sent back in the response, to identify which request it came from:
 
+  - Requests are sent as a 2 or 3 part general list: (id; query [; options])
+  - Responses are sent back as a 2 or 3 part general list: (id; result [; info])
 
+The options and info, when they are included, should be dictionaries.
+
+When authentication has provided a user role, the user name and role will be
+added to the options dictionary before forwarding it on to the servant.
+
+When a role has been provided, but the request has no third item, or that third item 
+is not a dictionary, a new dictionary will be passed, containing just the user's role.
+In this case any original third item is silently lost.
+
+The info dictionary can include anything the servant wishes to send back
+in addition to the actual result, such as benchmarking or accounting information.
+
+When the servant does not include a third item in its response, or that third item
+is not a dictionary, mserve\_np.q will return its own "info" dictionary, containing
+benchmarking information. In this case any original third item is silently lost.
+
+When the servant does include an "info" dictionary in its response, mserve\_np.q
+will add the following items to it:
+  * route - the routing symbol for the request (null symbol when routing not in effect).
+  * backlog - the number queries enqueued ahead of this one.
+  * remaining - the number of queries enqueued behind this one.
 
 ### Plugins
 
 Plugins are q-files intended to be listed in an environment variable, when launching a 
-q-file that is configured look at that variable of a list of additional files to load.
+q-file that is configured look at that variable for a list of additional files to load.
 
 In general we use the variable Q\_PLUGINS, but since we must distinguish plugins intended
 for mserve from those intended for the servant, we use the variable MSERVE\_PLUGINS for mserve.
@@ -152,22 +186,25 @@ The following line of code is used to load the plugins in secure\_invocation.q.
 if[0<count getenv `Q_PLUGINS; {system "l ",x} "," vs getenv `Q_PLUGINS] ;
 ```
 
-A similar line is included in mserve\_np.q itself, but using the varible MSERVE\_PLUGINS.
+A similar line is included in mserve\_np.q itself, but using the variable MSERVE\_PLUGINS.
 
 ### Stub functions for authentication and authorization
 
 The secure\_invocation.q module provides two functions designed to be overridden by plugins providing
 authentication and authorization.
 
-The **"getrole"** function returns a symbol representing the role corresponding to the authenticated user name.
-The default in secure\_invocation.q simply return 
+**getrole** - returns "role" from the options dictionary of the request (null when no dictionary).
+
+This default supports the case where authentication is NOT provided in the servant, but might be
+provided in mserve\_np.q, with the role passed to the servent in the options dictionary of each request.
+When there is no authentication at all the client may assume any role by passing it in the options dictionary. 
 
 
-Note that when running with mserve\_np.q, authentication is done there and only authorization is done in servant.q.
-In that case we get the role from the options dictionary of the request, returning a null symbol when it is not provided.
+- **allowedfn** - returns all functions in the .api namespace.                
 
-The **"allowedfn"** function coded there is a default that is used when authorization is not provided in servant.q.
-While it accepts a "role" argument, it always returns all the functions in the .api namespace.
+This default supports the case where authorization is NOT provided in the servant.
+In that case any user who authenticates successfully may run any of the functions in the .api namespace.
+
 
 ### Authentication
 
@@ -193,58 +230,50 @@ In our example "authriz.q" the data is provided by the file roles.csv. (delimite
 This is read in as a table with 2 columns, the role, and the list of function names (delimited by ,).
 That is converted to a dictionary that maps the role name as a symbol to the function names as a list of symbols.
 
-In the 'allowedfn' function, we filter the dictionary representing the .api namespace to the list of functions 
+In the 'allowedfn' function, we filter the dictionary representing the .api namespace to those function names 
 allowed by the role. 
 
-### Exit on close
+### Restricting to a single connection
 
 The Q\_SERVANTOF env variable instructs the "q" program to behave as a servant of the specified IP address.
 When launching servants, mserve\_np.q always sets this variable to its own IP address which is the value of ".z.a".
-The code implementing this in secure_invocation.q is shown below:
+The code implementing this in secure\_invocation.q is shown below:
 
 ```
-if[0<count getenv `Q_SERVANTOF;                                                /when Q_SERVANTOF specified:
-  .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .z.a};          / accept connectinon only from specified ip.
-  .z.po:{.z.pw:{[u;p] 0b}; .z.pc:{exit 0}} ;                                     / accept only single connection, terminate on close
+if[0<count getenv `Q_SERVANTOF;                                            /when Q_SERVANTOF specified:
+  .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .z.a};    / accept connectinon only from specified ip.
+  .z.po:{.z.pw:{[u;p] 0b}; .z.pc:{exit 0}} ;                               / accept only single connection, terminate on close
  ];
 
 ```
 
-## Understanding secure_invocation.q
+## Appendex: Validation of requests in secure\_invocation.q
 
-See "secure invocation" in the Glossary section of readme.md.
+The .si.validate function is called with the query and options dictionary as arguments, and will either: 
 
-* .si.validate - Allow execution only of designated api functions, without function evaluation in their arguments                        
-* .si.parse    - Parse a string returning a general list representing a command in which all arguments are taken as literals.                   
-* .si.fixarg   - Enables .si.parse by unmangling the arguments returned by the standard "q" parse command.
-* getrole      - Stub to be overridden by authentication plugin. Gets user role given authenticated user name. 
-* allowedfn    - Stub to be overridden by authorization plugin. Get list of allowed function names from user role.
-* Q\_PLUGINS   - Environment variable providing list of plugin "q" files to be loaded.
-* Q\_SERVANTOF - Enviornment variable providing the only IP address from which servant may accept a connection. 
-                 When present, only one such connection is allowed, and servant terminates upon disconnect.
-                 When not present, all connections are allowed and servant stays up when they close.
+- throw an error 'unknown function' if the request is not for a permitted function in the .api namespace.
+- throw an error 'nested evaluation' if the request contains any function or variable evaluation in its arguments.
+- return a triple (fn; arg; nam) including the function to invoke, its arguments, and name. 
 
+The query may have been specified either as a string or as a general list.
+If the query is a general list:
 
-## The q parse command is really designed for use with eval
+- The first element is expected to be the function name as a symbol.
+- Additional elements are expected to be argument values containing no variable or function evaluation.
+- In particular argument values which are symbols or lists of symbols are always taken as literals not variables.
 
-The problem is that "parse" mangles arguments which are symbols, lists of symbols, or general lists.
+If the query is a string, we need to parse it to obtain the function name and argument values.
+
+The problem is that the "parse" command mangles arguments which are symbols, lists of symbols, or general lists.
 It "enlists" symbols and lists of symbols, and encodes a general list as an "enlist" command.
 It uses symbol atoms to represent undecorated words like "abc", i.e. global variable names.
 
 Most likely it does this so that "eval" can distinguish symbols used as variable names from those used as literals,
 and so that general lists used as literals are not mistaken for commands.
 
-In the servant **"qsvr.q" from 01quickstart**, Instead of explictily unmangling the argument (which is a symbol)
-I just changed the where clause of each query to use "in" instead of "=" to match what is received from parse.
-
-This also generalized the function to handle queries for more than one symbol.
-Note that it does not mess up the case where the command is a general list and all symbols are literals,
-because "in" treates a right argument which is an atom as a singleton.  
-
-The rest of the examples use the server **"servant.q" from 02quickauth**. 
-This server implements its calling convention using the "validateAndRunAsync" function from **secure_invocation.q**,
-which explicitly unmangles the arguments. That is done in the covering function .si.parse, which applies
-the following ".si.fixarg" function to each of the arguments obtained from "parse".
+For this reason .si.validate uses the covering function .si.parse to parse queries received as strings.
+What .si.parse does is invoke the standard "parse" command, and then apply the function .si.fixarg 
+to unmangle each of the resulting arguments.
 
 ```
 .si.fixarg:{[x]
@@ -260,9 +289,9 @@ the following ".si.fixarg" function to each of the arguments obtained from "pars
 ```
 
 Here we throw a "nested evaluation" error whenever a argument is:
-* A symbol atom
-* A general list starting with a symbol atom
-* A general list starting with a function other than "enlist"
+- A symbol atom
+- A general list starting with a symbol atom
+- A general list starting with a function other than "enlist"
 
 Regardless of whether the command is parsed from a string or provided as a general list,
 we disallow function types anywhere in any argument. That is enforced by the following
@@ -271,20 +300,4 @@ line in .si.validate:
 ```
 if[100<=any type each (raze/) arg; "nested evaluation"]; 
 ```
-
-### PLUGINS and SERVANTOF
-
-When you run the examples you will see that two environment variables are set when launching the servant.
-Specifically: *Q_SERVANTOF='an ip address'; Q_PLUGINS='list of q-files*
-
-For simplicity these environment variables are ignored in the simple servant "qsvr.q".
-
-The environment variable Q\_PLUGINS is supplies a list of "q-files" to be loaded after the main servant module.
-We have plugins to implement authentication and authorization, as you will see in the next example.
-
-The environment variable Q\_SERVANTOF provides the known IP address of the mserve machine.
-This is used to provide a stronger variant of "exit on close" which only allows a single
-connection from this IP address to each servant.
-
-
 
