@@ -1,7 +1,7 @@
 # mserve
 Enhanced mserve load balanced solution
 
-Enhanced mserve load balanced solution based on [mserve_np](https://github.com/nperrem/mserve) which was based on [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) adding "servants" on multiple remote hosts, and providing for query locality. Also designed to provide benchmarking information.
+Enhanced mserve load balanced solution based on [mserve\_np](https://github.com/nperrem/mserve) which was based on [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) adding "servants" on multiple remote hosts, and providing for query locality. Also designed to provide benchmarking information.
 
 ### Example Sequence Diagram
 
@@ -50,35 +50,28 @@ _key characteristics_
 
 See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe/#119-interprocess-communication-101)  
 
-Also for more details about **Secure Invocation** see: "Understanding secure_invocation.q" in examples/04dispatch/04dispatch.md.
+Also for more details about **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
 
 **Servant** An instance of your api server managed my mserve. When used by itself "servant" might refer to either
 a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
 
 **Plugin** A program that provides some optional functionality to a "main" program without modifying the main program's source code.
 The "main" program may provide code to load the plugins, but which plugins get loaded is determined at launch time,
-in our case by an environment variable. The environment variable Q_PLUGINS lists the plugins for the servant processes,
-while the variable MSERVE_PLUGINS lists the plugins for mserve_np.q itself.
+in our case by an environment variable. The environment variable Q\_PLUGINS lists the plugins for the servant processes,
+while the variable MSERVE\_PLUGINS lists the plugins for mserve\_np.q itself.
  
-**Dispatch Algorithm** A means of selecting a servant to run a particular query. In mserve_np.q, a dispatch algorithm
+**Dispatch Algorithm** A means of selecting a servant to run a particular query. In mserve\_np.q, a dispatch algorithm
 is selected by copying it to the global variable "check". Currently, there are 3 dispatch algorithms available:
 - **orig**: From the original. Always select the first not-busy server from the top of the list.
 - **even**: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch. 
 - **match**: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
 
-The "match" algorithm is the default, which may be changed by setting the MSERVE_ALGO env variable to "orig" or "even" like so:
-
-```
-MSERVE_ALGO="even"
-
-```
-
-You can run an instance with a specific algo with 5 servants running out example servant code ("servant.q") on 
-port 5000, you can type:
+The "match" algorithm is the default.
+To use a different one, set the environment variable 'MSERVE\_ALGO' when launching mserve.
+For example, to run with 5 instances of "servant.q" using the 'even' algorithm you could type:
 
 ```
 MSERVE_ALGO="even" q mserve-np.q 5 servant.q -p 5000
-
 ```
 
 New dispatch algorithms may be added as plugins, see "examples/04dispatch/04dispatch.md."
@@ -88,4 +81,7 @@ on which to run that query. Only the "match" dispatch algorithm uses a routing s
 
 The default routing string is just the first argument to the command. That may be changed by setting the MSERVE_ROUTING 
 env variable to "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
+You can also override the "getRoutingSymbol" function from a plugin. 
+
+
 
