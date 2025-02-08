@@ -1,0 +1,21 @@
+action,ms,bytes,lang,code,repeat,minver,comment
+comment,,,,,,,Tests for secure_invocation.q
+fail,0,0,q,.si.fixarg `one,1,,Symbol argument is global variable
+fail,0,0,q,.si.fixarg (+;2;2),1,,Argument evaluates built-in function
+fail,0,0,q,.si.fixarg (`one; 2; 3),1,,Argument evaluates user-defined function
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,,
+,,,,,,`,
