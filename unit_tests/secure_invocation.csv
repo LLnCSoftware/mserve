@@ -3,15 +3,15 @@ comment,,,,,,,Tests for secure_invocation.q
 fail,0,0,q,.si.fixarg `one,1,,Symbol argument is global variable
 fail,0,0,q,.si.fixarg (+;2;2),1,,Argument evaluates built-in function
 fail,0,0,q,.si.fixarg (`one; 2; 3),1,,Argument evaluates user-defined function
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
+fail,0,0,q,.si.fixarg (1; (2; 2+3)),1,,Nested argument evaluates built in function
+fail,0,0,q,.si.fixarg (1; (2; (`echo; 23))),1,,Nested argument evaluates user-defined function
+fail,0,0,q,.si.fixarg (1; (enlist; 1; 2; 2+3))),1,,Arg nested in enlist evaluates built in function
+fail,0,0,q,.si.fixarg (1; (enlist; 1; 2; (`echo; 23))),1,,Arg nested in enlist evaluates user defined function
+true,0,0,q,`one ~ .si.fixarg(enlist `one),1,,Enlisted symbol is its content
+true,0,0,q,(`one`two) ~ .si.fixarg(enlist `one`two),1,,Enlisted list of symbols is its content
+true,0,0,q,“one” ~ .si.fixarg( “one” ),1,,String ok
+true,0,0,q,3.4 ~ .si.fixarg( 3.4 ),1,,Number ok
+true,0,0,q,(1 2 3) ~.si.fixarg( 1 2 3),1,,Number List Ok
 ,,,,,,,
 ,,,,,,,
 ,,,,,,,
