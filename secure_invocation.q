@@ -29,7 +29,7 @@ validateAndRunSync:{[req]
 / response: (id; result) 
 validateAndRunAsync:{[req] 
   cmd:.[.si.validate; (req 1; req 2); {x}];       /validate command
-  if[10=type cmd; :.si.send[.z.w;] 0N!(req 0; cmd)];  /if string returned its an error
+  if[10=type cmd; :.si.send[.z.w;] (req 0; cmd)];  /if string returned its an error
   res: .[cmd 0; cmd 1; {[nam;e] "Error: in ",nam, ", ", e}[cmd 2;]] ; /invoke command
   .si.send[.z.w;] (req 0; res) ;                      /return result or error
  };
@@ -42,14 +42,15 @@ validateAndRunAsync:{[req]
 
 /This enforces the restrictions implied by "secure_invocation".
 .si.validate:{[query; options]
-  role:getrole options ;                                   /get role from options 
-  if[10=type query; query:.si.parse query];                /when query is a string, parse it
-  fn: allowedfn[role] {$[-11=type x; x; `]} query 0 ;      /Function name is symbol from first item of parsed query; otherwize null.
-  if[null fn; '"unknown command: ", .Q.s1 query 0] ;       /Accept only function names in .api namespace, AND allowed by role.
-  arg: 1_ query ;                                          /Remaining query items are arguments.
-  if[100<=any type each (raze/) arg; "nested evaluation"]; /Reject query with any function type anywhere in any argument
-  (fn; arg; query 0)                                       /return: function; arguments; function name
+  role:getrole options ;                                     /get role from options 
+  if[10=type query; query:.si.parse query];                  /when query is a string, parse it
+  fn: allowedfn[role] {$[-11=type x; x; `]} query 0 ;        /Function name is symbol from first item of parsed query; otherwize null.
+  if[null fn; '"unknown command: ", .Q.s1 query 0] ;         /Accept only function names in .api namespace, AND allowed by role.
+  arg: 1_ query ;                                            /Remaining query items are arguments.
+  if[any 100<=type each (raze/) arg; '"nested evaluation"];  /Reject query with any function type anywhere in any argument
+  (fn; arg; query 0)                                         /return: function; arguments; function name
  };
+.si.valid:.si.validate[;(::)] ;                              /useful for manual testing
 
 /This parses a query intended to be run without using "eval" - treating all symbols as literals.
 /It invokes the usual "q" parse function, and then applies "fixarg" below to each argument.
@@ -68,21 +69,37 @@ validateAndRunAsync:{[req]
 /For that it uses a trick: representing a literal general list as an "enlist" command.
 /Normally, this "mangling" is undone by "eval", but since we are avoiding "eval" we do it here.
 .si.fixarg:{[x]
-  if[-11=type x; '"nested evaluation"];     /symbol atom is global variable
+  0N!(`fixarg; x) ;
+  if[-11=type x; '"nested evaluation1"];    /symbol atom is global variable
   if[(11=type x) and 1=count x; :x 0];      /enlisted symbol is its content
   if[0<>type x; :x];                        /not general list - ok
   if[(1=count x) and 11=type x 0; :x 0];    /enlisted list of symbols is its content
-  if[-11=type x 0; '"nested evaluation"];   /symbol atom at index 0 is global variable (user-defined function)
+  if[-11=type x 0; '"nested evaluation2"];  /symbol atom at index 0 is global variable (user-defined function)
   if[100> type x 0; :x] ;                   /not a built-in function at index 0 - ok
-  if[enlist~ x 0; :1_ x] ;                  /"enlist" function at index 0 ? just drop it.
-  '"nested evaluation"                      /you might want to evaluate + - * % etc. but you would need to validate their arguments.                                         
+  if[enlist~ x 0; :raze each 1_ x] ;        /"enlist" function at index 0 ? just drop it.
+  '"nested evaluation3"                     /you might want to evaluate + - * % etc. but you would need to validate their arguments.                                         
  };
+
+.si.fixarg2:{[x]
+  0N!(`fixarg2;x);
+  if[100<=type x; '"nested evaluation1"] ;  /function type
+  if[-11=type x; '"nested evaluation2"];    /symbol atom is global variable
+  if[(1=count x) and 11=type x; :x 0];      /enlisted symbol is its content
+  if[(1=count x) and 11=type x 0; :x 0];    /enlisted list of symbols is its content
+  if[0<>type x; :x];                        /not general list - ok
+  if[enlist~ x 0; x: 1_ x] ;                /enlist function at index 0 ? just drop it.
+  .si.fixarg2 each x                        /recurse
+ };
+
+  
+
 
 /---- setup ----
 
 /Defaults for override by plugins
 getrole:{[opt] $[99=type opt; opt `role; `]} ;   /overridden in authent.q
 allowedfn:{[role] value `.api} ;                 /overridden in authriz.q
+.api.echo:{x} ;                                  /for testing connectivity
 
 / Environment Options
 if[0<count getenv `Q_PLUGINS; {system "l ", x} each "," vs getenv `Q_PLUGINS] ; /When Q_PLUGINS specified, load listed "q-files".                                                                                 /When Q_SERVANTOF specified,
