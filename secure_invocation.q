@@ -64,7 +64,7 @@ validateAndRunAsync:{[req]
 /In order to distinguish symbols representing global variable names from literals,
 /the "parse" function represents symbols and lists of symbols as singletons containing the symbol or list.
 /That allows it to use symbol atoms to represent undecorated words like "xyz", namely global variables.
-/Similary, it must distinguish a literal general list in an argument from a command to be evaluated.
+/Similarly, it must distinguish a literal general list in an argument from a command to be evaluated.
 /For that it uses a trick: representing a literal general list as an "enlist" command.
 /Normally, this "mangling" is undone by "eval", but since we are avoiding "eval" we do it here.
 .si.fixarg:{[x]
