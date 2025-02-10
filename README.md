@@ -85,6 +85,73 @@ You can also override the "getRoutingSymbol" function from a plugin.
 
 ![Load-Balancing Decision Tree](img/LBT_Decision_Tree01.png)
 
+## Understanding the Load Balancing Decision Tree
+
+### 1. Handling Multiple Queries (10-30)
+The first decision is whether multiple queries need to be handled efficiently. If not, socket sharding (20) on a single machine may be sufficient. Otherwise, multiple computers should be considered (30).
+
+### 2. Asymmetric Resources (40-50)
+If the system has asymmetric computing resources, such as machines with varying RAM, GPUs, or SSD access speeds, LBT with a resource-aware dispatching plugin (50) is recommended. If resources are uniform, data distribution is the next consideration (60).
+
+### 3. Data Location Optimization (60-70)
+When different machines hold distinct data resources, such as separate historical and real-time data repositories, LBT should be used to direct queries to the appropriate host (70). If all machines access the same data, the system should be examined for regional balancing opportunities (80).
+
+### 4. Geographic Optimization (80-90)
+If reducing latency for users in different locations is a priority, multiple load balancers should be deployed near users (90). Otherwise, focus shifts to handling slow query performance caused by data paging (100).
+
+### 5. Managing Memory & Paging (100-110)
+For systems experiencing slowdowns due to data paging, segmenting requests and optimizing memory residency (110) can improve performance. If paging is not an issue, the next concern is handling potential load spikes (120).
+
+### 6. Handling Spikes (120-130)
+To manage unpredictable usage spikes, serverless computing or backup servers should be used for load surge handling (130). If spikes are not a major concern, the system's CPU utilization is assessed (140).
+
+### 7. CPU Utilization (140-150)
+When CPU cores are underutilized, increasing KDB’s parallelism or using LBT within a single machine (150) can enhance performance. If CPU efficiency is already optimal, the focus shifts to query patterns and data subsets (160).
+
+### 8. Locality of Reference (160-170)
+If queries frequently target specific subsets of data, specialized machines should be used with a fallback for general queries (170). Otherwise, general redundancy and monitoring should be ensured (180).
+
+### 9. High Availability (180-200)
+For systems requiring high availability, failover to other Availability Zones should be implemented with geographical load balancing (190). If redundancy is not a priority, a single-region setup may suffice (210).
+
+### 10. Canary Deployments (220-230)
+For controlled feature rollouts, LBT can route a subset of users to upgraded servers for gradual rollout (220). Performance monitoring and rollback mechanisms (230) should be in place before full deployment.
+
+## Load Balancing for a Hedge Fund Trading System Example  
+
+A hedge fund operating a high-frequency trading (HFT) system needs to ensure ultra-low latency execution while handling massive data volumes from multiple exchanges. The architecture choices in this decision tree guide the firm through setting up an optimized and resilient trading infrastructure.
+
+### 1. Handling Multiple Queries (10-30)
+The hedge fund must process thousands of trades per second while running analytics on historical data. Since a single machine cannot handle this efficiently, step **30** leads to deploying multiple computers.
+
+### 2. Asymmetric Resources (40-50)
+The fund's risk management system runs on GPU-accelerated servers, while order execution uses CPU-optimized machines. Step **50** recommends using LBT with a dispatching plugin to allocate workloads accordingly.
+
+### 3. Data Location Optimization (60-70)
+Live trading data is stored in RDBs, while historical analytics use HDBs. Following step **70**, LBT routes historical queries to the correct HDB partitions, minimizing data movement and improving response times.
+
+### 4. Geographic Optimization (80-90)
+Traders in New York, London, and Hong Kong require the lowest latency possible. Step **90** suggests using multiple load balancers close to each location to minimize network delays.
+
+### 5. Managing Memory & Paging (100-110)
+Simulations on years of tick data can overwhelm RAM, causing performance drops. Step **110** recommends segmenting requests to keep active datasets in memory and preloading frequently accessed data.
+
+### 6. Handling Spikes (120-130)
+Market events like Fed announcements lead to huge spikes in trading activity. Step **130** ensures that serverless resources and autoscaling clusters back up the main trading system during peak loads.
+
+### 7. CPU Utilization (140-150)
+Not all cores are utilized during off-peak hours. Step **150** improves efficiency by increasing KDB’s parallelism and using core-aware query scheduling.
+
+### 8. Locality of Reference (160-170)
+Traders often request data from specific time ranges or securities. Step **170** optimizes queries by directing them to specialized machines while ensuring a fallback option for uncategorized requests.
+
+### 9. High Availability (180-200)
+To prevent downtime, Step **190** introduces LBT’s failover feature, allowing failover across multiple AWS Availability Zones. Step **200** distributes hot servers across multiple data centers to ensure redundancy.
+
+### 10. Canary Deployments (220-230)
+The fund is rolling out an AI-based execution algorithm but wants to test it on a small subset of trades before full deployment. Step **230** enables controlled rollout via LBT, gradually increasing traffic while monitoring performance.
+
+By following this structured approach, the hedge fund ensures a **highly optimized, scalable, and fault-tolerant trading infrastructure** that meets the needs of modern electronic trading.
 
 
 
