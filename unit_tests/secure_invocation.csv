@@ -3,19 +3,31 @@ comment,,,,,,,Tests for secure_invocation.q
 fail,0,0,q,.si.fixarg `one,1,,Symbol argument is global variable
 fail,0,0,q,.si.fixarg (+;2;2),1,,Argument evaluates built-in function
 fail,0,0,q,.si.fixarg (`one; 2; 3),1,,Argument evaluates user-defined function
-fail,0,0,q,.si.fixarg (1; (2; 2+3)),1,,Nested argument evaluates built in function
+fail,0,0,q,.si.fixarg (1; (2; (+;2;3)),1,,Nested argument evaluates built in function
 fail,0,0,q,.si.fixarg (1; (2; (`echo; 23))),1,,Nested argument evaluates user-defined function
-fail,0,0,q,.si.fixarg (1; (enlist; 1; 2; 2+3))),1,,Arg nested in enlist evaluates built in function
+fail,0,0,q,.si.fixarg (1; (enlist; 1; 2; (+;2;3))),1,,Arg nested in enlist evaluates built in function
 fail,0,0,q,.si.fixarg (1; (enlist; 1; 2; (`echo; 23))),1,,Arg nested in enlist evaluates user defined function
 true,0,0,q,`one ~ .si.fixarg(enlist `one),1,,Enlisted symbol is its content
 true,0,0,q,(`one`two) ~ .si.fixarg(enlist `one`two),1,,Enlisted list of symbols is its content
-true,0,0,q,“one” ~ .si.fixarg( “one” ),1,,String ok
+true,0,0,q, "one" ~ .si.fixarg( "one" ),1,,String ok
 true,0,0,q,3.4 ~ .si.fixarg( 3.4 ),1,,Number ok
-true,0,0,q,(1 2 3) ~.si.fixarg( 1 2 3),1,,Number List Ok
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,,
-,,,,,,`,
+true,0,0,q,(1 2 3) ~.si.fixarg( 1 2 3),1,,List of Numbers Ok
+true,0,0,q,((1 2 3);(4 5 6); (7 8 9)) ~ .si.fixarg ((1 2 3);(4 5 6); (7 8 9)), 1,,Number Matrix ok
+true,0,0,q,(((1 2);(3 4));((5 6);(7 8))) ~ .si.fixarg (((1 2);(3 4));((5 6);(7 8))), 1,,List of Number Matrixes ok
+true,0,0,q,(`a`b`c) ~.si.fixarg parse "`a`b`c", 1,,List of symbols Ok
+true,0,0,q,(`a`b`c;`d`e`f;`g`h`i) ~ .si.fixarg  parse "(`a`b`c;`d`e`f;`g`h`i)", 1,,Symbol Matrix ok
+true,0,0,q,((`a`b;`c`d);(`e`f;`g`h)) ~ .si.fixarg parse "((`a`b;`c`d);(`e`f;`g`h))",1,,List of Symbol Matrixes ok
+fail,0,0,q,.si.parse "myfn[1; two]",1,,Api command accessing global variable 
+fail,0,0,q,.si.parse "myfn[two 1],1,,Api command with nested function call
+fail,0,0,q,.si.parse "myfn[1; 2; {x+3} 3],1,, Api command with nested explicit function call
+fail,0,0,q,.si.parse "myfn[1; (2; (3; system "date")),1,, Api command with nested system call
+true,0,0,q,(`myfn;`one;`two;`three)~ .si.parse "myfn[`one;`two;`three]",1,,Api command with 3 symbol arguments
+true,0,0,q,(`myfn;"one";22;3.3)~ .si.parse "myfn[\"one\";22;3.3]",1,,Api command with 3 various arguments
+true,0,0,q,(`myfn ; ((1 2);(3 4)) ; (`a;(`b;(`c;`d;`e))) )~ .si.parse "myfn[((1 2);(3 4)) ; (`a;(`b;(`c;`d;`e))) ]",1,,Complex args
+fail,0,0,q,.si.valid "echo[1; two]",1,,Api command accessing global variable 
+fail,0,0,q,.si.valid "echo[echo 1],1,,Api command with nested function call
+fail,0,0,q,.si.valid "echo[1; 2; {x+3} 3],1,, Api command with nested explicit function call
+fail,0,0,q,.si.valid "echo[1; (2; (3; system "date")),1,, Api command with nested system call
+true,0,0,q,(`one`two`three)~ {(x 0) . (x 1)} .si.valid "echo `one`two`three",1,,Api command with 3 symbol arguments
+true,0,0,q,("one";22;3.3)~ {(x 0) . (x 1)} .si.valid "echo (\"one\"; 22; 3.3)",1,,Api command with 3 various arguments
+true,0,0,q,(((1 2);(3 4));(`a;(`b;(`c;`d;`e))) )~ {(x 0) . (x 1)} .si.valid "echo ( ((1 2);(3 4)) ; (`a;(`b;(`c;`d;`e))) )",1,,Complex args
