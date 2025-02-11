@@ -57,6 +57,7 @@ validateAndRunAsync:{[req]
 .si.parse:{  
  cmd: parse x; 
  arg:1_ cmd; cmd:cmd 0;
+ if[-11<>type cmd; '"Invalid api command name"] ;
  arg:.si.fixarg each arg ;
  raze (cmd; arg) 
  };
@@ -69,30 +70,15 @@ validateAndRunAsync:{[req]
 /For that it uses a trick: representing a literal general list as an "enlist" command.
 /Normally, this "mangling" is undone by "eval", but since we are avoiding "eval" we do it here.
 .si.fixarg:{[x]
-  0N!(`fixarg; x) ;
-  if[-11=type x; '"nested evaluation1"];    /symbol atom is global variable
-  if[(11=type x) and 1=count x; :x 0];      /enlisted symbol is its content
-  if[0<>type x; :x];                        /not general list - ok
-  if[(1=count x) and 11=type x 0; :x 0];    /enlisted list of symbols is its content
-  if[-11=type x 0; '"nested evaluation2"];  /symbol atom at index 0 is global variable (user-defined function)
-  if[100> type x 0; :x] ;                   /not a built-in function at index 0 - ok
-  if[enlist~ x 0; :raze each 1_ x] ;        /"enlist" function at index 0 ? just drop it.
-  '"nested evaluation3"                     /you might want to evaluate + - * % etc. but you would need to validate their arguments.                                         
- };
-
-.si.fixarg2:{[x]
   0N!(`fixarg2;x);
   if[100<=type x; '"nested evaluation1"] ;  /function type
   if[-11=type x; '"nested evaluation2"];    /symbol atom is global variable
   if[(1=count x) and 11=type x; :x 0];      /enlisted symbol is its content
-  if[(1=count x) and 11=type x 0; :x 0];    /enlisted list of symbols is its content
   if[0<>type x; :x];                        /not general list - ok
+  if[(1=count x) and 11=type x 0; :x 0];    /enlisted list of symbols is its content
   if[enlist~ x 0; x: 1_ x] ;                /enlist function at index 0 ? just drop it.
-  .si.fixarg2 each x                        /recurse
+  .si.fixarg each x                        /recurse
  };
-
-  
-
 
 /---- setup ----
 
