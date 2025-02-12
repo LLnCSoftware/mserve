@@ -1,0 +1,5 @@
+comment,0,0,q,,,,,,Tests for role validation in secure_invocation.q
+before,0,0,q,allowedfn:{[role] fn:([user:enlist `echo]) role; fn!(value `.api) fn},1,,Allow role=user to run "echo"
+fail,0,0,q,(1 2 3)~ {(x 0) . (x 1)} .si.validate["echo 1 2 3"; ()!()],1,,Missing role 
+fail,0,0,q,(1 2 3)~ {(x 0) . (x 1)} .si.validate["echo 1 2 3"; ([role:`none])],1,,Invalid role 
+true,0,0,q,(1 2 3)~ {(x 0) . (x 1)} .si.validate["echo 1 2 3"; ([role:`user])],1,,Valid role
