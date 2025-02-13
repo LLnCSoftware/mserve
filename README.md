@@ -13,14 +13,24 @@ We are calling this version LBT for Load Balancing Technology
 | NP      | .367 | 1    | NA  | 19 of 30 had zero at ms percision      |
 | AW      | .696 | .921 | NA  | All 30 exceeded .5 ms                  |
 | SS      |      |      |     |                                        |
-| Other 1 |      |      |     |                                        |
-| Other 2 |      |      |     |                                        |
+| Direct  |      |      |     |                                        |
+| Nginx ? |      |      |     |                                        |
 
-TODO: Comments SHOULD explain:
+In the above we attemp to compare the overhead associated with several different load balancing techniques
+We estimate the overhead as the round trip elapsed time of an "echo" command that just returns its argument.
+For each technique we obtain the average and maximum elapsed time, and fraction of the requests taking less than .5 ms.
 
-* how many invocations
-* which used secure invocation 
-* how it all worked 
+* LBT - My most recent version of mserve\_np.q using secure invocation.
+* NP  - My starting point, the original mserve\_np.q by Nathan Pareem
+* AW  - Arthur's original mserve
+
+We plan to add results for:
+
+* SS - Socket Sharding
+* Direct - No load balancer at all
+* Nginx  - Use Nginx as a tcp load ballancer.
+
+(more ?) (details ?) 
 
 ### Example Sequence Diagram
 
