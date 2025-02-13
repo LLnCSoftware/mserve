@@ -30,7 +30,14 @@ We plan to add results for:
 * Direct - No load balancer at all
 * Nginx  - Use Nginx as a tcp load ballancer.
 
-(more ?) (details ?) 
+In the LBT and NP versions the numbers were obtained from the timestamps in the queries table (time\_returned - time\_received)
+The NP version uses the datatype "time" which has millisecond precision, while the LBT version 
+uses the datatype "timestamp" with nanosecond precision. I multiply by .000001 to get milliseconds.
+
+The AW version does not have a queries table, and hence no timestamps.
+In that case I create a timestamp on the client and send it in the argument to the "echo" command.
+When it arrives in .z.ps on the client I subtract this timestamp from the current timestamp.
+
 
 ### Example Sequence Diagram
 
