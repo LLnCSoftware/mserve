@@ -8,36 +8,33 @@ Enhanced mserve load balanced solution based on [mserve\_np](https://github.com/
 We are calling this version LBT for Load Balancing Technology
 
 | System  | Avg  | Max  | Min | Comment                                |
-|---------|------|------|-----|----------------------------------------|
+|---------|---------|---------|--------|----------------------------------------|
 | LBT     | .411 | .515 | NA  | 30 queries and 28 took less than .5 ms |
 | NP      | .367 | 1    | NA  | 19 of 30 had zero at ms percision      |
 | AW      | .696 | .921 | NA  | All 30 exceeded .5 ms                  |
 | SS      |      |      |     |                                        |
 | Direct  |      |      |     |                                        |
-| Nginx ? |      |      |     |                                        |
+| Nginx   |      |      |     |                                        |
 
-In the above we attemp to compare the overhead associated with several different load balancing techniques
-We estimate the overhead as the round trip elapsed time of an "echo" command that just returns its argument.
-For each technique we obtain the average and maximum elapsed time, and fraction of the requests taking less than .5 ms.
+In the above we attempt to compare the overhead associated with several different load balancing techniques. We estimate the overhead as the round trip elapsed time of an "echo" command that just returns its argument. For each technique we obtain the average and maximum elapsed time, and fraction of the requests taking less than .5 ms.
 
 * LBT - My most recent version of mserve\_np.q using secure invocation.
-* NP  - My starting point, the original mserve\_np.q by Nathan Pareem
+* NP  - My starting point, the original mserve\_np.q by Nathan Perrem
 * AW  - Arthur's original mserve
 
 We plan to add results for:
 
-* SS - Socket Sharding
+* SS - [Socket sharding with kdb+ and Linux](https://code.kx.com/q/wp/socket-sharding/)
 * Direct - No load balancer at all
-* Nginx  - Use Nginx as a tcp load ballancer.
+* Nginx  - [Use Nginx as a tcp load balancer](https://iceburn.medium.com/nginx-tcp-load-balancing-6f9509b772f2).
 
 In the LBT and NP versions the numbers were obtained from the timestamps in the queries table (time\_returned - time\_received)
 The NP version uses the datatype "time" which has millisecond precision, while the LBT version 
 uses the datatype "timestamp" with nanosecond precision. I multiply by .000001 to get milliseconds.
 
 The AW version does not have a queries table, and hence no timestamps.
-In that case I create a timestamp on the client and send it in the argument to the "echo" command.
+In that case we create a timestamp on the client and send it in the argument to the "echo" command.
 When it arrives in .z.ps on the client I subtract this timestamp from the current timestamp.
-
 
 ### Example Sequence Diagram
 
