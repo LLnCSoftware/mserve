@@ -378,7 +378,7 @@ By following this structured approach, the hedge fund ensures a **highly optimiz
 **IF** you want to minimize risk when rolling out new features, database upgrades, or infrastructure changes, **THEN** implement Canary Deployment by routing a subset of users to the upgraded servers and monitoring performance before full deployment.  
 **WHY?** This allows early detection of potential issues, enabling a rollback before the change affects all users.
 
-## Load-Balancing for KDB: Common Situation and Practical Recommendations 
+## Load-Balancing for KDB: Common Situation and Practical Options to Consider 
 
 Machine learning should be included!
 
