@@ -3,6 +3,25 @@ Enhanced mserve load balanced solution
 
 Enhanced mserve load balanced solution based on [mserve\_np](https://github.com/nperrem/mserve) which was based on [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) adding "servants" on multiple remote hosts, and providing for query locality. Also designed to provide benchmarking information.
 
+## Speed of LBT vs Earlier 
+
+We are calling this version LBT for Load Balancing Technology
+
+| System  | Avg  | Max  | Min | Comment                                |
+|---------|------|------|-----|----------------------------------------|
+| LBT     | .411 | .515 | NA  | 30 queries and 28 took less than .5 ms |
+| NP      | .367 | 1    | NA  | 19 of 30 had zero at ms percision      |
+| AW      | .696 | .921 | NA  | All 30 exceeded .5 ms                  |
+| SS      |      |      |     |                                        |
+| Other 1 |      |      |     |                                        |
+| Other 2 |      |      |     |                                        |
+
+TODO: Comments SHOULD explain:
+
+* how many invocations
+* which used secure invocation 
+* how it all worked 
+
 ### Example Sequence Diagram
 
 The diagram below shows the messages exchanged in the demo above
