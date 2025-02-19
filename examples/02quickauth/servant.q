@@ -10,6 +10,7 @@ portfolio:`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
 .z.exit:{-1 "servant closed"} ;
 
 /api endpoints
+.api.echo:{x} ;
 
 .api.proc1:{[s]do[100;
 		res:0!select MAX:max price,MIN:min price,OPEN:first price,CLOSE:last price,
