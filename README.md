@@ -10,7 +10,7 @@ to that of invocation via socket sharding (direct invocation with reuse port).
 [Socket sharding with kdb+ and Linux](https://code.kx.com/q/wp/socket-sharding/)
 
 
-| System  |  Min  | Avg   | Max   | trials   Comment                                  |
+| System  |  Min  | Avg   | Max   | trials |  Comment                                 |
 |---------|-------|-------|-------|--------|------------------------------------------|
 | LBT     | 0.990 | 1.256 | 1.425 | 50     |                                          |
 | NP      | 1.014 | 1.209 | 1.316 | 50     |                                          |
