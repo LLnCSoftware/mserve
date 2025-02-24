@@ -10,13 +10,12 @@ to that of invocation via socket sharding (direct invocation with reuse port).
 [Socket sharding with kdb+ and Linux](https://code.kx.com/q/wp/socket-sharding/)
 
 
-| System  |  Min  | Avg   | Max   | trials   Comment                                  |
+| System  |  Min  | Avg   | Max   | trials |  Comment                                 |
 |---------|-------|-------|-------|--------|------------------------------------------|
 | LBT     | 0.990 | 1.256 | 1.425 | 50     |                                          |
 | NP      | 1.014 | 1.209 | 1.316 | 50     |                                          |
 | AW      | 0.696 | 0.870 | 0.940 | 50     |                                          |
 | SS      | 0.339 | 0.490 | 0.547 | 50     |                                          |
-| Direct  |       |       |       |        |                                          |
 
 These numbers were obtained by timing a round trip to the servant for an "echo" query
 (which just returns its single argument).
@@ -26,9 +25,7 @@ except in the case of "NP" (the original mserve\_np.q by Nathan Perrem). That ve
 to use it own servant because it sends a function to be evaluated which is not allowed by
 secure invocation.
 
-
------
-previous text
+## Previous Tests
 
 We are calling this version LBT for Load Balancing Technology
 
