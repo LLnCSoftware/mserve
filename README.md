@@ -3,11 +3,12 @@ Enhanced mserve load balanced solution
 
 Enhanced mserve load balanced solution based on [mserve\_np](https://github.com/nperrem/mserve) 
 by Nathan Perrem, formerly of First Derivatives, in tern was based on [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) 
-Here we are adding
+
+Here we are adding:
 
 * "servants" on multiple remote hosts
-* providing for programmable dispatch to allow for such things as improved query locality, and 
-* provide benchmarking information.
+* providing for programmable dispatch to allow for such things as improved data locality, and 
+* providing benchmarking information for easier tuning. 
 
 ### Example Sequence Diagram
 
@@ -91,15 +92,6 @@ on which to run that query. Only the "match" dispatch algorithm uses a routing s
 The default routing string is just the first argument to the command. That may be changed by setting the MSERVE_ROUTING 
 env variable to "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
 You can also override the "getRoutingSymbol" function from a plugin. 
-
-----------------------
-
-Below is a **Markdown**-formatted list of scenarios and corresponding options to consider, grouped by the four main categories you mentioned. Each bullet follows the format:
-
-> **When you think you are in *\<situation description\>***  
-> *Consider option:* *\<option description\>*
-
-Feel free to add, remove, or modify entries as you refine your decision-making framework.
 
 ## When do use this Technology?
 
@@ -228,203 +220,3 @@ uses the datatype "timestamp" with nanosecond precision. I multiply by .000001 t
 The AW version does not have a queries table, and hence no timestamps.
 In that case we create a timestamp on the client and send it in the argument to the "echo" command.
 When it arrives in .z.ps on the client I subtract this timestamp from the current timestamp.
-
----------
-
-## IF-THEN Rules for KDB Load Balancing and Concurrency
-
-### **Concurrency & Performance (10-50)**
-
-**10. Handling Concurrent Requests Efficiently**  
-**IF** you need to serve multiple concurrent KDB requests rapidly, **THEN** consider either scaling up hardware or using Single KDB Instance Concurrency Capabilities.
-
-**20. Long Execution Times for Single Requests**  
-**IF** single requests take too long to execute, **THEN** improve performance using more hardware and/or Single KDB Instance Concurrency Capabilities such as `peach`, SIMD, or multi-threaded primitives.
-
-**30. Multiple Machines for Scaling**  
-**IF** a single machine cannot efficiently handle the workload, **THEN** consider distributing work across multiple computers.
-
-**40. Asymmetric Resource Optimization**  
-**IF** your machines have different capabilities (e.g., some with more RAM, GPUs, or SSD access speed), **THEN** use Load Balancing Technology (LBT) with resource-aware dispatching to send requests where they are best handled.
-
-**50. Optimizing Data Location for Queries**  
-**IF** different machines have different data resources (e.g., separate HDBs or RDBs), **THEN** intelligently route queries to the machine storing the relevant data.
-
----
-
-### **Load Management (60-100)**
-
-**60. Reducing Latency by Moving Computation Closer**  
-**IF** you can push computation closer to the user (e.g., regional balancing), **THEN** deploy multiple load balancers near users to reduce network latency.
-
-**70. Addressing Slow Queries Due to Data Paging**  
-**IF** slow queries are caused by paging from SSD to RAM, **THEN** optimize memory residency by segmenting requests and preloading frequently accessed data.
-
-**80. Managing Sudden Load Spikes**  
-**IF** you are concerned about slowness or failure due to load spikes, **THEN** use serverless computing or backup servers with autoscaling to handle peak loads.
-
-**90. Improving CPU Utilization**  
-**IF** you have unused CPU cores, **THEN** use Single KDB Instance Concurrency Capabilities and/or load balancing on a single machine or socket sharding.
-
----
-
-### **Redundancy & Failover (110-150)**
-
-**110. Improving Locality of Reference**  
-**IF** queries frequently target specific subsets of data (e.g., by time range, columns, or symbols), **THEN** optimize query routing by using specialized machines with a fallback for general queries.
-
-**120. Load Balancing Among Homogeneous KDB Instances**  
-**IF** you have multiple homogeneous KDB instances on a single server, **THEN** balance load among them to optimize performance.
-
-**130. Adding Failover for High Availability**  
-**IF** you need high availability, **THEN** also employ failover to other availability zones to ensure seamless continuity in case of failures.
-
----
-
-### **Deployment Strategies (160-200)**
-
-**160. Canary Deployments for Risk Mitigation**  
-**IF** you want to minimize risk when rolling out new features, **THEN** add Canary Deployment by routing a subset of users to the upgraded servers and monitoring performance before full deployment.
-
-**170. Multi-Region Deployment for Reliability**  
-**IF** you need a globally distributed system, **THEN** distribute hot servers across multiple data centers or cloud availability zones to minimize latency and improve redundancy.
-
-
-
-* Current performance 
-* Scalability and Future-Proofing
-* Improved Availability
-* Use of special hardware 
-
-
----------
-
-## IF-THEN Rules for KDB Load Balancing and Concurrency
-
-### **Concurrency & Performance**
-
-**10. Handling High Query Volume**  
-**IF** your priority challenge is addressing the need to serve multiple concurrent KDB requests, **THEN** consider scaling up hardware and/or using Single KDB Instance Concurrency Capabilities.  
-**WHY?** This ensures that your system can efficiently handle multiple queries in parallel without significant delays.
-
-**20. Optimizing Long-Running Queries**  
-**IF** single requests take too long to execute, **THEN** optimize performance using additional hardware and/or Single KDB Instance Concurrency Capabilities such as `peach`, SIMD, or multi-threaded primitives.  
-**WHY?** Improving execution speed minimizes latency and ensures responsiveness for critical operations.
-
-**30. Scaling Beyond a Single Machine**  
-**IF** your workload exceeds the capacity of a single machine, **THEN** distribute queries across multiple computers.  
-**WHY?** A multi-machine setup allows for greater scalability and redundancy, preventing bottlenecks.
-
-**40. Optimizing Asymmetric Resources**  
-**IF** you have machines with different capabilities (e.g., some with more RAM, GPUs, or SSD access speed), **THEN** use Load Balancing Technology (LBT) with resource-aware dispatching to route requests where they are best handled.  
-**WHY?** Leveraging specialized resources ensures that each query is executed in the most efficient environment.
-
-**50. Directing Queries to the Right Data Store**  
-**IF** your architecture includes separate HDBs and RDBs, **THEN** use LBT to intelligently route queries to the correct data host.  
-**WHY?** This avoids unnecessary data movement and speeds up query execution.
-
----
-
-### **Load Management**
-
-**60. Reducing Latency with Regional Load Balancing**  
-**IF** your users are geographically distributed, **THEN** deploy multiple load balancers closer to the users to reduce network latency.  
-**WHY?** Shorter network paths improve response times and user experience.
-
-**70. Optimizing Memory Residency**  
-**IF** slow queries are caused by paging from SSD to RAM, **THEN** optimize memory residency by segmenting requests and preloading frequently accessed data.  
-**WHY?** Keeping active datasets in memory reduces costly disk reads and speeds up queries.
-
-**80. Managing Sudden Load Spikes**  
-**IF** you are concerned about slowness or failure due to load spikes, **THEN** use serverless computing or backup servers with autoscaling to handle peak loads.  
-**WHY?** Dynamic scaling ensures that your system remains responsive during high-demand events.
-
-**90. Improving CPU Utilization**  
-**IF** you have unused CPU cores, **THEN** use Single KDB Instance Concurrency Capabilities and/or load balancing on a single machine or socket sharding.  
-**WHY?** Efficient CPU usage maximizes processing power and improves throughput.
-
----
-
-### **Redundancy & Failover**
-
-**100. Optimizing Locality of Reference**  
-**IF** queries frequently target specific subsets of data (e.g., by time range, columns, or symbols), **THEN** optimize query routing by using specialized machines with a fallback for general queries.  
-**WHY?** This ensures that frequently accessed data remains quickly available while still allowing for broader queries.
-
-**110. Load Balancing Among Homogeneous KDB Instances**  
-**IF** you have multiple homogeneous KDB instances on a single server, **THEN** balance load among them to optimize performance.  
-**WHY?** Distributing workloads evenly prevents bottlenecks and improves system efficiency.
-
-**120. Adding Failover for High Availability**  
-**IF** you need high availability, **THEN** also employ failover to other availability zones to ensure seamless continuity in case of failures.  
-**WHY?** Geographic redundancy protects against localized outages and enhances system reliability.
-
----
-
-### **Deployment Strategies**
-
-**130. Canary Deployments for Risk Mitigation**  
-**IF** you want to minimize risk when rolling out new features, **THEN** add Canary Deployment by routing a subset of users to the upgraded servers and monitoring performance before full deployment.  
-**WHY?** This allows you to detect potential issues early and roll back changes without affecting all users.
-
-**140. Multi-Region Deployment for Reliability**  
-**IF** you need a globally distributed system, **THEN** distribute hot servers across multiple data centers or cloud availability zones to minimize latency and improve redundancy.  
-**WHY?** Spreading resources across multiple locations improves fault tolerance and disaster recovery.
------------
-
-## IF-THEN Rules for KDB Load Balancing and Concurrency
-
-### **Concurrency & Scaling**
-
-**10. Efficiently Handling High Query Volume and Scaling Needs**  
-**IF** your system needs to serve multiple concurrent KDB requests efficiently and scale beyond a single machine, **THEN** distribute workloads across multiple computers and optimize execution using Single KDB Instance Concurrency Capabilities.  
-**WHY?** This ensures that queries are handled efficiently, leveraging the best hardware and concurrency techniques while distributing load where necessary.
-
-**20. Optimizing Long-Running Queries**  
-**IF** single queries take too long to execute, **THEN** optimize performance using additional hardware and/or Single KDB Instance Concurrency Capabilities such as `peach`, SIMD, or multi-threaded primitives.  
-**WHY?** Improving execution speed minimizes latency and ensures responsiveness for critical operations.
-
----
-
-### **Load Management**
-
-**60. Optimizing Data Locality and Memory Residency**  
-**IF** slow queries are caused by inefficient data access patterns, **THEN** optimize query locality by routing requests to the right data host and improving memory residency through preloading frequently accessed data.  
-**WHY?** Keeping active datasets in memory and ensuring queries reach the most relevant host minimizes costly data movement and speeds up execution.
-
-**80. Using Edge Computing for Faster Response Times**  
-**IF** computation can be pushed closer to the user, **THEN** use edge computing and deploy load balancers regionally.  
-**WHY?** Shorter network paths improve response times and reduce congestion at centralized locations.
-
----
-
-### **Redundancy & Failover**
-
-**100. Intelligent Query Routing & Load Balancing Among Homogeneous KDB Instances**  
-**IF** queries frequently target specific subsets of data or you are running multiple KDB instances on the same server, **THEN** optimize query routing by balancing workloads among homogeneous instances.  
-**WHY?** Efficient query routing and instance load balancing ensure system efficiency, reduce contention, and prevent performance bottlenecks.
-
-**120. Implementing Failover for High Availability**  
-**IF** you need high availability, **THEN** implement failover to other availability zones to ensure seamless continuity in case of failures.  
-**WHY?** Geographic redundancy protects against localized outages and enhances system reliability.
-
----
-
-### **Deployment & Infrastructure Management**
-
-**140. Pre-Allocating Resources to Handle Load Spikes**  
-**IF** you expect sudden increases in query volume or compute-intensive operations, **THEN** pre-allocate resources rather than relying solely on autoscaling.  
-**WHY?** Pre-allocated resources ensure stability during peak demand without the latency of scaling operations.
-
-**160. Multi-Region Deployment for Reliability**  
-**IF** your system needs global distribution and resilience, **THEN** distribute hot servers across multiple data centers or cloud availability zones.  
-**WHY?** This improves fault tolerance, reduces latency, and prevents single-region failures from affecting system uptime.
-
-**190. Canary Deployments for Feature & Infrastructure Changes**  
-**IF** you want to minimize risk when rolling out new features, database upgrades, or infrastructure changes, **THEN** implement Canary Deployment by routing a subset of users to the upgraded servers and monitoring performance before full deployment.  
-**WHY?** This allows early detection of potential issues, enabling a rollback before the change affects all users.
-
-## Load-Balancing for KDB: Common Situation and Practical Options to Consider 
-
-Machine learning should be included!
-
