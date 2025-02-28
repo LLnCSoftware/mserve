@@ -42,6 +42,32 @@ $ q qs.q localhost 5000
 
 This launches a client, qs.q, and tells it to send its requests to the load balancer on localhost port 5000.
 
+**Step 3 - send some queries:**
+
+The program should prompt for input:
+
+```
+Try a single query:  send["proc1 `IBM"]
+Try a series of queries by setting the timer: \t 3000
+```
+When you set the timer it will submit queries faster than they execute so as to build up a backlog.
+
+The number reported as "backlog" in the info printed along with the result, is the number of 
+requests that were enqueued ahead of this one when it was received, and the number reported as
+"remaining" is the number enqueued behind this one when the responce was received by mserve.
+
+The number reported as "elapsed" time includes the time in queue, while the "execution" time does not.
+
+**Step 4 - Try the whole thing again with more servers**
+
+The above test ran the load balancer with only one server, which is kind of trivial.
+To run with 5 servers change the command issued in step 1 to:
+
+```
+$ q mserve_np.q 5 qsvr.q -p 5000
+```
+
+
 ## How it Works
 
 ### The client qs.q

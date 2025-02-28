@@ -76,12 +76,22 @@ The algorithm may be briefly described as follows:
 
 **start the server**
 
+We run with 8 servants on localhost. 
+We use 8 servants because the client submits queries for 8 distinct symbols on the timer, 
+and we want each symbol to be routed to its own servant.
+
 ```
 MSERVE\_PLUGINS='match.q' q mserve\_np.q 8 servant.q -p 5000
 ```
 
-We run with 8 servants on localhost. 
-We use 8 servants because the client submits queries for 8 distinct symbols on the timer, and we want each symbol to be routed to its own servant.
+Make sure to wait for the end of the startup messages and be sure it says at the bottom: 
+
+```
+Connect to servants
+OK
+Using dispatch algorithm: 'match-plugin'
+"mserve_np.q loaded"
+```
 
 **start the client**
 
@@ -89,7 +99,6 @@ We use 8 servants because the client submits queries for 8 distinct symbols on t
  q qs.q localhost 5000    /start the client
  \t 2000                  /start the timer
 ```
-
 Let it run about 60 queries then stop the timer and let the backlog clear,
 a few minutes in general. 
 
@@ -123,4 +132,45 @@ h2addr, but really we don't care.
 
 The point (with match.q) is just to verify that each servant processed queries for only one route.
 If you were testing a more sophisticated algorithm, you would use similar queries to verify that it is behaving as expected.
+
+**Compare to the "even" algorithm**
+
+Repeat the above, changing the command issued in step 1 to:
+
+```
+MSERVE_ALGO='even' q mserve\_np.q 8 servant.q -p 5000
+```
+
+Make sure to wait for the end of the startup messages and be sure it says at the bottom: 
+
+```
+Connect to servants
+OK
+Using dispatch algorithm: 'even'
+"mserve_np.q loaded"
+```
+
+Then start the client as above and again let it run for about 60 requests.
+Then stop the timer and let the backlog clear.
+
+If you were to do the same query as before "select route by slave\_handle from queries"
+You would see a blank result for each "slave\_handle", becuase no routing string is provided 
+by the "even" algorithm.
+
+But you can still check which requests ran where by showing the actual query.
+
+```
+select query by slave_handle from queries
+
+slave_handle| query                                                                                             ..
+------------| --------------------------------------------------------------------------------------------------..
+-13         | "proc1 `MSFT" "proc1 `BA"   "proc1 `GS"   "proc1 `GS"   "proc1 `GOOG" "proc1 `BA"   "proc1 `IBM"  ..
+-12         | "proc1 `GS"   "proc1 `GOOG" "proc1 `GOOG" "proc1 `AAPL" "proc1 `IBM"  "proc1 `MSFT" "proc1 `GOOG" ..
+-11         | "proc1 `BA"   "proc1 `MSFT" "proc1 `BA"   "proc1 `IBM"  "proc1 `AAPL" "proc1 `GOOG" "proc1 `GOOG" ..
+-10         | "proc1 `AAPL" "proc1 `UBS"  "proc1 `MSFT" "proc1 `AAPL" "proc1 `BA"   "proc1 `MSFT" "proc1 `GS"   ..
+-9          | "proc1 `BA"   "proc1 `GOOG" "proc1 `GOOG" "proc1 `BA"   "proc1 `UBS"  "proc1 `IBM"  "proc1 `IBM"  ..
+-8          | "proc1 `AAPL" "proc1 `IBM"  "proc1 `AAPL" "proc1 `AAPL" "proc1 `VOD"  "proc1 `MSFT" "proc1 `GOOG" ..
+-7          | "proc1 `BA"   "proc1 `IBM"  "proc1 `BA"   "proc1 `GS"   "proc1 `MSFT" "proc1 `MSFT" "proc1 `UBS"  ..
+-6          | "proc1 `VOD"  "proc1 `AAPL" "proc1 `UBS"  "proc1 `GS"   "proc1 `MSFT" "proc1 `BA"   "proc1 `BA"   pro..
+```
 
