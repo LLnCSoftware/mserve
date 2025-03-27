@@ -10,7 +10,7 @@ Here we are adding:
 * providing for programmable dispatch to allow for such things as improved data locality, and 
 * providing benchmarking information for easier tuning. 
 
-### Example Sequence Diagram
+### Example Sequence Diagram.
 
 The diagram below shows the messages exchanged in the demo above
 
