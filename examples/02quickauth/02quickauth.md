@@ -31,7 +31,7 @@ authriz.q - Plugin providing the allowed function names for each user role as sp
 **start the server:** 
 
 ```
-MSERVE\_PLUGINS='authent.q' Q_PLUGINS='authriz.q' q mserve\_np.q 1 servant.q -p 5000
+MSERVE_PLUGINS='authent.q' Q_PLUGINS='authriz.q' q mserve_np.q 1 servant.q -p 5000
 ```
 
 Authentication happens when the client connects to mserve, verifying the user's identity and establishing their "role".
@@ -84,7 +84,7 @@ That's because the "Q\_SERVANTOF" environment variable is NOT set !
 **Start the servant with auth/auth:** 
 
 ```
-Q\_PLUGINS="authent.q,authriz.q"  q servant.q -p 5001
+Q_PLUGINS="authent.q,authriz.q"  q servant.q -p 5001
 ```
 
 * q qs.q localhost 5001  -> no credentials 'access error
@@ -94,7 +94,7 @@ Q\_PLUGINS="authent.q,authriz.q"  q servant.q -p 5001
 **Start the sevant with authentication only:** 
 
 ```
-Q\_PLUGINS="authent.q"  q servant.q -p 5001
+Q_PLUGINS="authent.q"  q servant.q -p 5001
 ```
 
 * q qs.q localhost 5001 -> no credentials 'access error
