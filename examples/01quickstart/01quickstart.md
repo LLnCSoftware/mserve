@@ -52,6 +52,9 @@ The program should prompt for input:
 Try a single query:  send["proc1 `IBM"]
 Try a series of queries by setting the timer: \t 3000
 ```
+
+TODO: What exactly are these queries doing? What is proc1? Does "proc" stand for "process"? What results am I actually getting, and where does the data come from? Clarifying these points would help beginners and make the reading experience smoother for more experienced developers. I initially struggled to distinguish between what belongs to kdb/q, what is part of the load balancer, and what is unique to this example. While this is likely due to my own lack of familiarity, it may also suggest a need for greater clarity.
+
 When you set the timer it will submit queries faster than they execute so as to build up a backlog.
 
 The number reported as "backlog" in the info printed along with the result, is the number of 
