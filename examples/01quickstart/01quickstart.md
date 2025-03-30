@@ -12,6 +12,8 @@ execution of only the functions defined in an ".api" namespace, preventing evalu
 and optionally implementing authentication and authorization. That example implements "secure invocation"
 (See Glossary in readme.md) which is generally **very** important. 
 
+TODO: I think going into this much depth about the next example detracts from the readability of this section. The next example should only be briefly alluded to in a short sentence to address the security concern but no terms only relevant to example two should be introduced here. SUGGESTION: "In the next example, we will demonstrate a more secure approach that restricts execution to predefined functions and can include authentication and authorization." or: "We address this in 02quickauth by introducing safeguards that restrict execution to predefined functions and can include authentication and authorization." This would be tacked onto the previous paragraph rather than stand on its own.
+
 ## About the Files
 
 **qs.q**: Simple client used for examples 1-3 ("quickstart client").  
