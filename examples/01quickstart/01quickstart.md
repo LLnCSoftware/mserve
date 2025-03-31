@@ -12,13 +12,25 @@ execution of only the functions defined in an ".api" namespace, preventing evalu
 and optionally implementing authentication and authorization. That example implements "secure invocation"
 (See Glossary in readme.md) which is generally **very** important. 
 
-TODO: I think going into this much depth about the next example detracts from the readability of this section. The next example should only be briefly alluded to in a short sentence to address the security concern but no terms only relevant to example two should be introduced here. SUGGESTION: "In the next example, we will demonstrate a more secure approach that restricts execution to predefined functions and can include authentication and authorization." or: "We address this in 02quickauth by introducing safeguards that restrict execution to predefined functions and can include authentication and authorization." This would be tacked onto the previous paragraph rather than stand on its own.
+TODO: I think going into this much depth about the next example detracts from the readability of this section. The next example should only be briefly alluded to in a short sentence to address the security concern but no terms only relevant to example two should be introduced here. SUGGESTION: "In the next example, we will demonstrate a more secure approach that restricts execution to predefined functions and can include authentication and authorization." or: "We address this in 02quickauth by introducing safeguards that restrict execution to predefined functions and can include authentication and authorization." This would be tacked onto the previous paragraph rather than stand on its own. This also makes clear that this is a limitation of the present example not a limitation on q or the load balancer itself. 
+
+TODO: Perhaps could to be more clear about the learning outcomes of this example. This goes for all examples. It would help the reader tune into the right information as they go. Example Phrase: "This example introduces the basics of client-server interaction in Q, while subsequent examples will demonstrate how MServe enables secure and scalable request handling."
 
 ## About the Files
 
 **qs.q**: Simple client used for examples 1-3 ("quickstart client").  
 **qsvr.q**: Simple servant used for this demo ("quick server").  
 **mserve_np.q**: Symlink to the mserve load balancer at the root of the repo.
+
+TODO: Would it be useful to point to resources for learning more about implementation of this functionality in native Q (qs.q, qsvr.q)? And to clarify that precise purpose of each script: 
+
+- qs.q Sends requests and receives responses (client-side logic).
+- qsvr.q processes requests and executes functions (server-side logic).
+- mserve_np.q routes requests and balances load across multiple qsvr.q instances.
+
+Perhaps link to https://code.kx.com/q/basics/ipc/ for implementing server - client communication without a load balancer.
+
+
 
 ## To Do and Observe
 
@@ -63,6 +75,8 @@ requests that were enqueued ahead of this one when it was received, and the numb
 
 The number reported as "elapsed" time includes the time in queue, while the "execution" time does not.
 
+TODO: I think this backlog idea could be made clearer as I am not fully grasping how this results in delayed, regular execution of the queries.
+
 **Step 4 - Try the whole thing again with more servers**
 
 The above test ran the load balancer with only one server, which is kind of trivial.
@@ -71,7 +85,7 @@ To run with 5 servers change the command issued in step 1 to:
 ```
 $ q mserve_np.q 5 qsvr.q -p 5000
 ```
-
+TODO: Why might I want to run multiple servers? Beginner question but would be useful to clarify if the intent is to appeal to a broad range of experience levels. 
 
 ## How it Works
 
@@ -81,6 +95,8 @@ $ q mserve_np.q 5 qsvr.q -p 5000
 * Client (qs.q) provides a "send" method, which generates a query id, and sends the id and query as a general list.
 * qs.q provides a [.z.ps](https://code.kx.com/q/ref/dotz/#zps-set) handler which displays the received response.
 * qs.q also provides a [.z.ts](https://code.kx.com/q/ref/dotz/#zts-timer) handler to run a series of queries with random inputs on the timer. (If you type ``\t 1000`` then this code will run one query per second.)
+
+TODO: The How, Why, and What of this example should be integrated to improve the pedagogical value. Separating them makes it more difficult for learners to build an intuitive understanding of what is happening. It's important to connect the explanation of how the components work with the purpose they serve and the expected results, so that the reader can see the full picture as they progress.
 
 ## The servant qsvr.q
 
@@ -92,6 +108,8 @@ The servant code is complicated by two features.
 
 1. Calling convention: Allow only async requests of the form (id; query), returning the same id in the response (id; result).
 2. Exit on Close - Expect only one connection (to mserve). Exit when it closes.
+
+TODO: Why? Where is the calling convention coming from? Is that useful? Same for exit on close. Are these just default limitations of this example that are going to be rectified later?
 
 ### details
 
@@ -108,3 +126,7 @@ The servant code is complicated by two features.
 
 Note: This example is simple and **very insecure** as described at the start of this file. See examples/02quickauth
 for a much more practical example of how to use this load balancer. 
+
+
+TODO: I suggest a general structure:
+about the example -> how, why, what (nonseparate) -> in the next example (preview the next example to hint at how the present concepts will be built on). Also, some diagrams would be cool. 
