@@ -45,6 +45,32 @@ The diagram below shows the messages exchanged in the demo above
 
 ## MServe Glossary  
 
+**API Version:** An API specifies exactly what functions are documented to be supported 
+by a server, what arguments they take and what it means to run this function, including what
+it returns. A servant could be documented to support more than one API Version which it could support 
+by shunting the calls to different name spaces depending on what API version the client 
+request says it is expecting to support. 
+
+**Server Type Name:** Say I am at hedge fund named HF and we have some code we use to do RDB computations 
+and some to do HDB computations. Mserver could be configured with a plugin to know which queries should be
+sent to which servers. Press we realized that it is valuable to keep the data for the last 48 hours in RDB 
+and the older information in HDB. This could turn out to be a major performance enhancement. It is powerful to allow 
+mserve to rout the query to the right server without having to change the client, just based on
+things like start and end date of the query API call. A server type named HF_RDB and another HF_HDB, 
+a dispatch alog could know that we expanded what we expanded from 24 hours in the RDB to 48 in the RDB 
+at a certain point adn dispatch accordingly. 
+
+**Server Type Version:** We might want to gradually replace one server with another server because any of a number issues:
+
+* A code change that supports a new API, but still supports the old API. 
+* A code change that supports a new API, but does not supports the old API. 
+* A code change that improves efficiency or fix a bug and does not change any of the operation names, the arguments they take, what they do or what they return, so no need for any client to change and thus no need to have a new API ID.
+* A configuration change, such as moving from one EC2 instance type to another or changing an environment var 
+  that impacts how much memory the KTV instance is allowed to grow to use. 
+
+When a server administrator deploys a new servant, and wants to do it using canary capability, 
+mserver needs a way to know which servant is intended to replace what other servant. 
+
 **Secure Invocation:** The practice of executing q functions or operations in a controlled manner, 
 without evaluating arbitrary expressions. This mitigates security risks associated with executing 
 client-provided strings, which might contain malicous code. Instead, Secure Invocation only allows 
