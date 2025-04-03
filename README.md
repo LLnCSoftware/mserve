@@ -53,14 +53,15 @@ request says it is expecting to support.
 
 **Server Type Name:** Say I am at hedge fund named HF and we have some code we use to do RDB computations 
 and some to do HDB computations. Mserver could be configured with a plugin to know which queries should be
-sent to which servers. Press we realized that it is valuable to keep the data for the last 48 hours in RDB 
+sent to which servers because we realized that it is valuable to keep the data for the last 48 hours in RDB 
 and the older information in HDB. This could turn out to be a major performance enhancement. It is powerful to allow 
 mserve to rout the query to the right server without having to change the client, just based on
 things like start and end date of the query API call. A server type named HF_RDB and another HF_HDB, 
 a dispatch alog could know that we expanded what we expanded from 24 hours in the RDB to 48 in the RDB 
 at a certain point adn dispatch accordingly. 
 
-**Server Type Version:** We might want to gradually replace one server with another server because any of a number issues:
+**Server Type Version:** We might want to gradually replace one server with another
+server because any of a number issues:
 
 * A code change that supports a new API, but still supports the old API. 
 * A code change that supports a new API, but does not supports the old API. 
