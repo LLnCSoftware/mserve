@@ -55,11 +55,12 @@ ssh mserver
 ```
 ## Step 4 - Transfer your KDB+ Set Up to mserver
 Assuming you have KDB+ installed and have attained a personal license key:  
-1. Use `scp` to transfer your q directory to mserve
+1. Use `scp` to transfer your q directory to mserver
     ```bash
     scp -r ~/q mserver:~ 
     ```
 The `-r` (recursive) flag is used to copy the entire directory.
+See https://code.kx.com/q/learn/install/ for further installation instructions for KDB+ (setting environment variables, installing rlwrap, etc). 
 
 ## Step 6 - Clone the MServe GitHub Repo
 1. SSH into your EC2 instance:
@@ -74,3 +75,4 @@ The `-r` (recursive) flag is used to copy the entire directory.
     ```bash
     git clone https://github.com/LLnCSoftware/mserve.git
     ```
+## Step 7 - Create an EC2 AMI from the mserver Instance or Repeat above steps twice more???
