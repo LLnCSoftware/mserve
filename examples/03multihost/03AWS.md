@@ -75,4 +75,9 @@ See https://code.kx.com/q/learn/install/ for further installation instructions f
     ```bash
     git clone https://github.com/LLnCSoftware/mserve.git
     ```
-## Step 7 - Create an EC2 AMI from the mserver Instance or Repeat above steps twice more???
+## Step 7 - Create an EC2 AMI from the mserver Instance
+1. Navigate to the EC2 Dashboard and click on **Instances** (should now indicate at least 1 instance running). 
+2. Select the mserver instance (checkbox) and **select actions > Images and Templates > Create Image**.
+3. Name the image mserve_example03 and click **Create Image**. This should take around 15 minutes.
+
+## Step 8 - Launch Servant Instances
