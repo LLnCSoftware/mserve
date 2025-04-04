@@ -53,14 +53,13 @@ Now you can connect to your server with a simple command from any directory:
 ```bash
 ssh mserver
 ```
-## Step 4 - Transfer your KDB+ Set Up to Mserver
-
-## Step 5 - Transfer Your License Key to the Instances
-1. Use `scp` to transfer your personal license key to the mserver instance:
+## Step 4 - Transfer your KDB+ Set Up to mserver
+Assuming you have KDB+ installed and have attained a personal license key:  
+1. Use `scp` to transfer your q directory to mserve
     ```bash
-    scp /path/to/license.key mserver:~/q
+    scp -r ~/q mserver:~ 
     ```
-Once these steps are completed, your AWS infrastructure will be set up and ready to run the 03multihost example.
+The `-r` (recursive) flag is used to copy the entire directory.
 
 ## Step 6 - Clone the MServe GitHub Repo
 1. SSH into your EC2 instance:
