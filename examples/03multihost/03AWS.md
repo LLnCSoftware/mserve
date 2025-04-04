@@ -84,3 +84,11 @@ See https://code.kx.com/q/learn/install/ for further installation instructions f
 
 
 ## Step 8 - Launch Servant Instances
+1. Navigate to the EC2 dashboard and select **Launch Instance**. 
+2. Name this instance `servant1`.
+3. Under the **Application and OS Images (Amazon Machine Image)** section, select the **My AMIs** tab and choose `mserve_example03`.
+4. Under the **Key Pair (login)** section, select the `mserve` key pair created earlier.
+5. Click **Launch Instance** as before.
+6. Repeat these steps to create a third instance named `servant2`.
+
+TODO: Add instructions throughout for setting up a security group configured properly for the example
