@@ -6,6 +6,8 @@ This example uses the same client as in 01quickstart (qs.q) but a different serv
 which loads the module "secure\_invocation.q" to prevent requests from running arbitrary code
 on the servant, and loads plugins to optionally implement authentication and authorization.
 
+TODO: The introduction in this example should not stand alone but instead respond to the concerns raised in the previous example (eg insecure invocation). By framing it this way, the reader will feel like they’re building a conceptual framework, step by step. This method ensures the reader is constantly contextualizing new knowledge within the broader framework being developed. It also reinforces their comprehension and engagement with the material, making continued engagement more likely.
+
 The servant will obtain its plugins from the env variable Q\_PLUGINS (for authorization).
 The load balancer mserve will obtain its plugins from the env variable MSERVE\_PLUGINS (for authentication).
 
@@ -15,6 +17,8 @@ from the specified IP address, and ensures that only one such connection is made
 
 When Q\_SERVANTOF is not set, "exit on close" is NOT implemented in servant.q, allowing it to run independently.
 
+TODO: As in the previous example, learning goals should be clearly stated to set expectations for the reader and to set the stage for subsequent examples.
+
 ## New/Modified Files
 
 secure\_invocation.q - Implements "secure invocation" (preventing execution of arbitrary code) as described in
@@ -22,7 +26,10 @@ secure\_invocation.q - Implements "secure invocation" (preventing execution of a
 
 servant.q - Same API as in qsvr.q, but with client interface implemented using secure\_invocation.q
 authent.q - Plugin providing authentication based on the username, password, and role in the file users.csv
+
 authriz.q - Plugin providing the allowed function names for each user role as specified in the file roles.csv
+
+TODO: I think actually showing a table describing the structure of users.csv and roles.csv would be very useful here. This would especially be useful in the case of putting these examples on a github pages or wiki instead of directly in the repo. 
 
 ## To Do and Observe
 
@@ -38,8 +45,12 @@ Authentication happens when the client connects to mserve, verifying the user's 
 Subsequently, mserve will pass role to the servant in the "options dictionary" associated with each request. 
 Authorization happens when the servant uses the "role" to determine which api endpoints are allowed for the request. 
 
+TODO: What is the options dictionary? How does the servant use the role?
+
 Because Authentication happens in mserve, it is requested using the MSERVE\_PLUGINS env variable.
 Because Authorization happens in the servant, it is requested using the Q\_PLUGINS env variable.
+
+TODO: This sentence makes me confused. I don't see "Authorization happens on servant" as IMPLYING the use of environment variables.
 
 
 **Start the client without valid credentials** 
@@ -79,7 +90,9 @@ You will be able to run both "proc1" and "proc2"
 
 The point here is that the authentication and authorization plugins will work directly on a servant not running under mserve. 
 Note that in each case below the servant will stay up when the client disconnects.
-That's because the "Q\_SERVANTOF" environment variable is NOT set ! 
+That's because the "Q\_SERVANTOF" environment variable is NOT set !
+
+**TODO (INCOMPLETE): ADD TODO HERE**
 
 **Start the servant with auth/auth:** 
 
@@ -103,6 +116,8 @@ Q_PLUGINS="authent.q"  q servant.q -p 5001
 **Start the servant with no plugins:** q servant.q -p 5001
 
 * q qs.q localhost 5001 -> can run both proc1 and proc2
+
+TODO: OKAY THIS WHOLE SECTION CLEARLY NEEDS WORK
 
 
 ## How it Works

@@ -84,11 +84,33 @@ See https://code.kx.com/q/learn/install/ for further installation instructions f
 
 
 ## Step 8 - Launch Servant Instances
-1. Navigate to the EC2 dashboard and select **Launch Instance**. 
-2. Name this instance `servant1`.
-3. Under the **Application and OS Images (Amazon Machine Image)** section, select the **My AMIs** tab and choose `mserve_example03`.
+1. Navigate to the EC2 dashboard and click **Launch Instance**. 
+2. Name the instance `servant1`.
+3. In the **Application and OS Images (Amazon Machine Image)** section, select the **My AMIs** tab and choose `mserve_example03`.
 4. Under the **Key Pair (login)** section, select the `mserve` key pair created earlier.
-5. Click **Launch Instance** as before.
-6. Repeat these steps to create a third instance named `servant2`.
+5. Click **Launch Instance**.
+6. Repeat these steps to launch a third instance named `servant2`.
 
 TODO: Add instructions throughout for setting up a security group configured properly for the example
+
+
+## Step 9 - Update your SSH Config File
+
+Next, update your SSH configuration file (`~/.ssh/config`) to include entries for each instance.
+
+```bash
+Host mserver
+  HostName <mserver-instance-public-ip>
+  User ec2-user
+  IdentityFile ~/.ssh/mserve.pem
+
+Host servant1
+  HostName <servant1-instance-public-ip>
+  User ec2-user
+  IdentityFile ~/.ssh/mserve.pem
+
+Host servant2
+  HostName <servant2-instance-public-ip>
+  User ec2-user
+  IdentityFile ~/.ssh/mserve.pem
+  ```

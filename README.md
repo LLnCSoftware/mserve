@@ -93,6 +93,8 @@ The default routing string is just the first argument to the command. That may b
 env variable to "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
 You can also override the "getRoutingSymbol" function from a plugin. 
 
+TODO: define host, server, servant,...
+
 ## When do use this Technology?
 
 ### Current Performance
