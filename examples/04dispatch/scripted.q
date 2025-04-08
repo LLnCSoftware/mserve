@@ -48,8 +48,8 @@ canaryFilter:{[tbl]
   update condition:0b from tbl where stype like cn_server_type and sversion=ignore_version 
  } ;
 
-/Load Routing Table
-routingTable:("SSJ**"; enlist "|") 0: `:script.csv ;   /routing table (host:port|stype|sversion|condition|qfile)
+/Load Routing Table (afile= file name from command line) 
+routingTable:("SSJ**"; enlist "|") 0: `$":",afile ;    /routing table (host:port|stype|sversion|condition|qfile)
 servant: (":" vs/: string routingTable `address);      /servants to be loaded by the mserve startup
 servant: servant ,' enlist each routingTable `qfile ;  /append q-file to load.
 
