@@ -22,6 +22,7 @@ check:{[]
   /For each enqueued query, find the first matching row corresponding to a not-busy handle 
   notbusy: enlist busyBitVector[] ;
   hit: select qid, rtRow:first each where each (("1"= string route) and' ((count qid)#notbusy)) from queries where location=`master ;
+  hit: select from hit where not null rtRow ;
   if[0<count hit; qid:(hit 0)`qid; hdl:(key h) (hit 0)`rtRow;  0N!(hdl;qid);  send_query[hdl; qid]] ;
  };
 
