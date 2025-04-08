@@ -35,64 +35,40 @@
 
 \c 10 133
 
-/ get servant addresses from arguments
+/ Ingest Arguments
+/ Delay startup until after application and plugins are loaded
+/ to allow a plugin to change the startup procedure
+
+myq: .z.X 0 ;              /Path to "q" interpreter
+mys: string system "s" ;   /Servants will have same s-value as mserve
+acount: "J"$ .z.x 0 ;      /Number of servants
+afile:  .z.x 1 ;           /File to load
+
+/When using scripted dispatch method, omit or specify the number of servers as zero,
+/and provide the dispatch csv file instead of a servant "q-file".
+/A servant will be started for each row in the dispatch table, using the q-file in the row.
+if[null acount; acount:0; afile:.z.x 0] ;  /First arg not numeric ? Assume omitted. Use zero.
+
 port: system "p"; 
 if[port=0i; system "p 5000"; port:5000i] ;
 
 hosts: {$[x~"localhost"; ""; x]} each 2_ .z.x ;
 if[0=count hosts; hosts: enlist ""] ;
 
-servant: port+ {1+ x-first x} each (count hosts; 0N)# til "J"$ .z.x 0 ;
+servant: port+ {1+ x-first x} each (count hosts; 0N)# til acount ;
 servant: raze {(enlist first x),/: enlist each string 1_ x} each (enlist each hosts) ,' servant ;
--1 "servant addresses" ;
--1 each .Q.s1 each servant ;
--1 "" ;
+servant: {x, enlist afile} each servant ;
 
-/ launch servants 
-/ expect "launcher" listening on port 5999 on each host other than "localhost".
-mycode: .z.x 1 ;
-myq: .z.X 0 ;
-mys: string system "s" ;
-str: {$[10=type x; x; string x]} ;
-tms: { `long$ .000001 * x } ;  /convert timestamp difference to ms
-addMs:{y+1000000*x} ;  /add ms to timestamp
+/ utilities
+str: {$[10=type x; x; string x]} ;         /convert non-string to string
+tms: { `long$ .000001 * x } ;              /convert timestamp difference to ms
+addMs:{y+1000000*x} ;                      /add ms to timestamp
 ip2string:{"." sv string `int$ 0x0 vs x} ; /convert ip address from integer to string
-servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
-local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
-launch:{value 0N!"system \"", local_env, " ", (.z.X 0), " ", x, " &\"" ;} ;
 
-h:{-1 "mserve_np.q: Launch ", mycode, " on `:", (x 0), ":", (x 1); 
-  cmd: mycode, " -s ", mys, " -p ", (x 1) ;  
-  if[""~(x 0); launch cmd; :0N] ;
-  hh:hopen `$":",(x 0), ":5999" ; 
-  hh "setEnvString \"", servant_env, "\"" ; 
-  (neg hh) cmd; (neg hh)[]; 
-  hh 
- } each servant ; 
+/** Synchronous interface **
+z.pg:{:"SEND MESSAGE ASYNCH!"};
 
--1 "Wait 5 seconds" ;
-system "sleep 5"
-hclose each h where not null h ;
-h:() ;
-
-/ hopen handle to each servant
--1 "Connect to servants" ;
-h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
--1 "OK" ;
-
-/ map each servant handle back to the servant address
-h2addr:h!servant ; 
-
-/ map each servant handle to a list of routing symbols from previous queries (initialize to empty)
-h2route: h!(count h)# enlist `$() ;
-h2idle:  h!(count h)# 0Np ;
-
-/map each servant asynch handle to an empty list and assign resultant dictionary back to h
-/The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
-h!:()
- 
-.z.pg:{:"SEND MESSAGE ASYNCH!"};
-
+/** Query table **
 queries:([qid:`u#`int$()]
   query:();
   client_qid: `int$() ;
@@ -106,11 +82,11 @@ queries:([qid:`u#`int$()]
   slave_handle:`int$();
   location:`symbol$() 
  );
-
 /update `u#qid from `queries;	
 
+/** Send Query to Servant **
 send_query:{[hdl; qid]
-	/if there is an outstanding query to be sent, try to send it
+  0N!(`send_query; hdl; qid) ;
 	if[not null qid;
   	query:queries[qid;`query];
     options: queries[qid; `client_options];
@@ -124,6 +100,7 @@ send_query:{[hdl; qid]
 	];
  };
 
+/** Send Result (or error) to Client **
 send_result:{[qid;result;info]
 	query:queries[qid;`query] ;
 	queries[qid;`location`time_returned]:(`client;.z.P);
@@ -141,6 +118,9 @@ send_result:{[qid;result;info]
 	client_handle (client_queryid; result; info);
   h2idle[ queries[qid; `slave_handle] ]: .z.P ;
  }; 
+
+
+/** Built-in dispatch methods **
  
 /original: check if free slave. If free slave exists -> try to send oldest query 
 /this tends to put too many queries on the same slave
@@ -223,11 +203,11 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; query; options)	
     0N!(`mservereq; x) ;
-    cqid:x[0]; query:x[1]; options: x[2]; 
-    sqid: 1^1+exec last qid from queries;                                 /server id for new query
-    bklg: exec count i from queries where location in `master`servant ;   /queries in queue ahead of this one
-    role:getrole[];                                                       /overridden in authent.q plugin
-    if[not null role; if[99<>type options; options:()!()]; options[`user]:.z.u; options[`role]:role];
+    cqid:x[0]; query:x[1]; options: x[2]; if[99<>type options; options:([])]; /options must be a dictionary
+    sqid: 1^1+exec last qid from queries;                                     /server id for new query
+    bklg: exec count i from queries where location in `master`servant ;       /queries in queue ahead of this one
+    role:getrole[];                                                           /overridden in authent.q plugin
+    if[not null role; options[`user]:.z.u; options[`role]:role];
 
     `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; `; bklg; 0N; `master); 
     /check for a free slave.If one exists,send oldest query to that slave
@@ -269,8 +249,54 @@ purgeCompleted:{ delete from `queries where location=`client, purgeCompletedMs< 
  };
 \t 5000
 
+
+/******* Startup below this point *****
+
 / Load plugins
 if[0<count getenv `MSERVE_PLUGINS;   {system "l ",x;} each "," vs getenv `MSERVE_PLUGINS];
+
+
+-1 "servant addresses" ;
+-1 each .Q.s1 each servant ;
+-1 "" ;
+
+/ launch servants 
+/ expect "launcher" listening on port 5999 on each host other than "localhost".
+servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
+local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
+launch:{value 0N!"system \"", local_env, " ", (.z.X 0), " ", x, " &\"" ;} ;
+
+h:{-1 "mserve_np.q: Launch ", (x 2), " on `:", (x 0), ":", (x 1); 
+  cmd:(x 2), " -s ", mys, " -p ", (x 1) ;  
+  if[(x 0) in (""; "localhost"); launch cmd; :0N] ;
+  hh:hopen `$":",(x 0), ":5999" ; 
+  hh "setEnvString \"", servant_env, "\"" ; 
+  (neg hh) cmd; (neg hh)[]; 
+  hh 
+ } each servant ; 
+
+-1 "Wait 5 seconds" ;
+system "sleep 5"
+hclose each h where not null h ;
+h:() ;
+
+/ hopen handle to each servant
+-1 "Connect to servants" ;
+h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
+-1 "OK" ;
+
+/ map each servant handle back to the servant address
+h2addr:h!servant ; 
+
+/ map each servant handle to a list of routing symbols from previous queries (initialize to empty)
+h2route: h!(count h)# enlist `$() ;
+h2idle:  h!(count h)# 0Np ;
+
+/map each servant asynch handle to an empty list and assign resultant dictionary back to h
+/The values in this dictionary will be the unique query ids currently outstanding on that servant (should be max of one)
+h!:()
+ 
 -1 "Using dispatch algorithm: '",(" " sv algo), "'" ;
 0N!"mserve_np.q loaded" ;
+
 

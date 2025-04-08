@@ -1,3 +1,4 @@
-localhost:5001,(symbol=`IBM)
-localhost:5002,(symbol=`AAPL)
-localhost:5003,(1b)
+address|stype|sversion|condition|qfile
+localhost:5001|IBM|1|(symbol=`IBM)|servant.q
+localhost:5002|AAPL|1|(symbol=`AAPL)|servant.q
+localhost:5003|other|1|(1b)|servant.q
