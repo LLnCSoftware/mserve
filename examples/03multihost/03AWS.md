@@ -6,22 +6,17 @@
 
 ## Step 2 - Create Security Group to Configure Network Access
 
-1. **Navigate to the EC2 Dashboard**: Under **Resources** click on **Security Groups**.
+1. Navigate to the EC2 Dashboard. Under **Resources** click on **Security Groups**.
 
-2. **Create a New Security Group**: Click on the **Create Security Group** button. Name the security group `mserve_security_group`. 
+2. Click on the **Create Security Group** button. Name the security group `mserve_security_group`. 
 
-3. **Configure Inbound Rules**:  
-   - Under the **Inbound Rules** section, click **Add Rule**. Using the **Type** dropdown, select **SSH**. Under **Source**, select **My IP**. 
-   - Add another rule. Select the **Custom UDP** type and, under **Port Range**, enter `5000-5999`. 
+3. Under the **Inbound Rules** section, click **Add Rule**. Using the **Type** dropdown, select **SSH**. Under **Source**, select **My IP**. Add another rule, select the **Custom UDP** type and, under **Port Range**, enter `5000-5999`. 
 
-4. **Configure Outbound Rules**:  
-   Leave the default **Outbound** rule set to allow all traffic. 
+4. Leave the default **Outbound** rule set to allow all traffic. If this is not set already, then do so.
 
-5. **Click Create Security Group**:  
-   Click **Create Security Group** to finalize the creation of your security group.
+5. Click **Create Security Group** to finalize the creation of the security group.
 
-6. **Assign the Security Group to Instances**:  
-   When launching your EC2 instances (Step 3), ensure that you select this security group under the **Configure Security Group** section. This will apply the security group settings to your instances.
+    This will allow you to easily assign the proper network access configuration to each EC2 instance in later steps. 
 
 
 ## Step 2 - Launch EC2 Instance  
@@ -31,44 +26,42 @@
 4. Select the Amazon Linux 2 AMI.
 5. Choose the free tier eligible instance type under the **Quick Start** tab (typically t2.micro or t3.micro, depending on availability in your region).
 6. In the **Key Pair (login)** section, click **Create new key pair**.
-Give it the name `mserve_keypair`, make sure .pem is selected as the private key file format, and then click "Create key pair".
-The file `mserve_keypair.pem` will be automatically downloaded to your Downloads folder.
-7. Click **Launch Instance** at the bottom right side of the page.
+Give it the name `mserve_keypair`, make sure .pem is selected as the private key file format, and then click **Create key pair**.
+The file `mserve_keypair.pem` will automatically be downloaded to your Downloads folder.
+7. Click **Launch Instance** at the bottom right side of the page. You should now be able to see the instance running in your EC2 dashboard.
 
 
 ## Step 3 – Configure SSH for Simplicity
 
-1. **Move the `.pem` file to your SSH directory**:  
-   If the `.ssh` directory does not exist, create it first:
+1. On your local machine, move the .pem file just downloaded to your `.ssh` directory. If it does not exist, create it first. In your terminal:
    ```bash
    mkdir -p ~/.ssh
    mv ~/Downloads/mserve.pem ~/.ssh/
    ```
 
-2. **Set the correct permissions** (SSH will reject overly permissive keys):  
+2. Ensure the correct permissions are set for the .pem file (SSH will reject overly permissive keys):  
    ```bash
    chmod 400 ~/.ssh/mserve.pem
    ``` 
 
-3. **Create an SSH alias** to simplify access:  
-   Open the SSH config file:
+3. To simplify access, add an ssh alias to your `.ssh/config` file. Open the file with:
    ```bash
    nano ~/.ssh/config
    ```
    `nano` will create the file if it does not already exist.   
 
 
-   Add the following block (replace `<mserve-instance-public-ip>` with your actual EC2 public IP):
+   Add the following block to the bottom of the file Make sure to replace `<mserve-instance-public-ip>` with the public IP of the EC2 server:
    ```bash
    Host mserver
        HostName <mserve-instance-public-ip>
        User ec2-user
        IdentityFile ~/.ssh/mserve.pem
    ```
-   You can find the public IP by navigating to the EC2 dashboard, clicking on **Instances**, and clicking on the instance ID of the instance just created. This will open the **Instance Summary** for mserver and the public IPv4 address will be listed. You can copy this and paste it under `HostName` in the above configuration.
+   You can find the public IP by navigating to the EC2 dashboard, clicking on **Instances**, and clicking on the instance ID of the mserver instance (just created). This will open the **Instance Summary** for mserver and the public IPv4 address will be listed. Simply copy and past.
 
 4. **Save and exit**:  
-   Press `CTRL+X`, then `Y`, then `Enter` to save the file.
+   After adding the proper IP address to the `.ssh/config` file, Press `CTRL+X`, then `Y`, then `Enter` to save the file.
 
 ---
 
@@ -79,20 +72,16 @@ ssh mserver
 ```
 ## Step 4 - Transfer Your KDB+ Setup to mserver
 
-Assuming you have already installed KDB+ and obtained a personal license key, follow these steps to transfer your KDB+ setup:
+Make sure you have KDB+ installed and have obtained a personal license key for the following steps. For installation instructions, refer to the official KDB+ installation guide: [KDB+ Installation Guide](https://code.kx.com/q/learn/install/).
 
-1. **Transfer the KDB+ `q` directory to mserver**:
-   Use `scp` to securely copy the `q` directory to your mserver instance. The `-r` (recursive) flag is used to copy the entire directory:
+1. Use `scp` to securely copy the `q` directory to your mserver instance. The `-r` (recursive) flag is used to copy the entire directory:
    ```bash
    scp -r ~/q mserver:~
    ```
 
-2. **KDB+ Installation Documentation**:
-   For additional installation instructions, such as setting environment variables or installing `rlwrap`, refer to the official KDB+ installation guide:  
-   [KDB+ Installation Guide](https://code.kx.com/q/learn/install/)
+2. Refer to the official KDB+ installation guide (linked above) for guidance on setting environment variables, installing `rlwrap`, etc. It may be necessary to install `rlwrap` manually which you can do by following the instructions on the [rlwrap github repository](https://github.com/hanslub42/rlwrap).
 
-3. **For Non-Linux Environments**:
-If you're working on a non-Linux environment (e.g., macOS), download the **l64** (Linux 64-bit) version of KDB+ and place it in the `q` directory where the **m64** file would normally reside. Then remove **m64**. You can accomplish this in one command:
+3. If you're working on a non-Linux environment (e.g., macOS), download the **l64** (Linux 64-bit) version of KDB+ and place it in the `q` directory where the **m64** file would normally reside. Then remove **m64**. You can accomplish this in one command:
 
     ```bash
     ssh mserver "rm ~/q/m64" && scp ~/path/to/l64 mserver:~/q
@@ -118,23 +107,20 @@ If you're working on a non-Linux environment (e.g., macOS), download the **l64**
 
 1. Navigate to the EC2 Dashboard and click on **Instances** (you should now see at least 1 instance running).
 2. Select the mserver instance by checking the checkbox next to it, then go to **Actions > Images and Templates > Create Image**. 
-3. Following the prompt, name the image `mserve_example03` and click **Create Image**. This will.... . This process may take approximately 15 minutes.
-
+3. Following the prompt, name the image `mserve_example03` and click **Create Image**. This will create a reusable AMI that includes all the changes we've made. It is decoupled from the network configuration.
 
 ## Step 8 - Launch Servant Instances
 1. Navigate to the EC2 dashboard and click **Launch Instance**. 
 2. Name the instance `servant1`.
 3. In the **Application and OS Images (Amazon Machine Image)** section, select the **My AMIs** tab and choose `mserve_example03`.
 4. Under the **Key Pair (login)** section, select the `mserve_keypair` key pair created earlier.
-5. Click **Launch Instance**.
-6. Repeat these steps to launch a third instance named `servant2`.
-
-TODO: Add instructions throughout for setting up a security group configured properly for the example
-
+5. Under **Network Settings** click **Select existing security group**. In the dropdown menu titled **Common security groups**, select the security group defined earlier, `mserve_security_group`.
+6. Click **Launch Instance**.
+7. Repeat these steps to launch a third instance named `servant2`.
 
 ## Step 9 - Update your SSH Config File
 
-Next, update your SSH configuration file (`~/.ssh/config`) to include entries for each instance.
+Update your SSH configuration file (`~/.ssh/config`) to include entries for the instances we just added. It should look like this:
 
 ```bash
 Host mserver
