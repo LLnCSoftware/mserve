@@ -16,9 +16,6 @@
 
 5. Click **Create Security Group** to finalize the creation of the security group.
 
-    This will allow you to easily assign the proper network access configuration to each EC2 instance in later steps. 
-
-
 ## Step 2 - Launch EC2 Instance  
 1. Go to the EC2 Dashboard.
 2. Click on "Launch Instance" to create a new EC2 instance.
