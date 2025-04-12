@@ -102,7 +102,8 @@ setRule:{[pos;routing;canary]
   if[hit=len; routing[`h]: connectServant routing; routingTable,:routing] ;    /no:  connect servant then add row w new handle
   if[hit<>pos; routingTable::moveItemInList[routingTable;hit;pos]];  /if not in requested position, move.
   /clear previous routing symbol in enqueued queries (recompute upon next "check[]")
-  update route:` from `queries where location=`master ;
+  update route:` from `queries where location=`master ; 
+  fallbackPos::(::) ;  
   /start canary (if any)
   if[0<count canary; cn_server_type:routing `stype; cn_new_version:routing `sversion; cn_start:.z.P] ; 
  } ;
