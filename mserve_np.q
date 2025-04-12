@@ -250,30 +250,34 @@ purgeCompleted:{ delete from `queries where location=`client, purgeCompletedMs< 
 \t 5000
 
 
+/ Launch to servants
+/ expect "launcher" listening on port 5999 on each host other than "localhost".
+servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
+local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
+loclaunch:{value 0N!"system \"", local_env, " ", (.z.X 0), " ", x, " &\"" ;} ;
+
+launch:{-1 "mserve_np.q: Launch ", (x 2), " on `:", (x 0), ":", (x 1); 
+  cmd:(x 2), " -s ", mys, " -p ", (x 1) ;  
+  if[(x 0) in (""; "localhost"); loclaunch cmd; :0N] ;
+  hh:hopen `$":",(x 0), ":5999" ; 
+  hh "setEnvString \"", servant_env, "\"" ; 
+  (neg hh) cmd; (neg hh)[]; 
+  hh 
+ } ; 
+
+readyCallback:{} ; /pass handles back to (scripted.q) plugin after startup
+
+
 /******* Startup below this point *****
 
 / Load plugins
 if[0<count getenv `MSERVE_PLUGINS;   {system "l ",x;} each "," vs getenv `MSERVE_PLUGINS];
 
-
 -1 "servant addresses" ;
 -1 each .Q.s1 each servant ;
 -1 "" ;
 
-/ launch servants 
-/ expect "launcher" listening on port 5999 on each host other than "localhost".
-servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
-local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
-launch:{value 0N!"system \"", local_env, " ", (.z.X 0), " ", x, " &\"" ;} ;
-
-h:{-1 "mserve_np.q: Launch ", (x 2), " on `:", (x 0), ":", (x 1); 
-  cmd:(x 2), " -s ", mys, " -p ", (x 1) ;  
-  if[(x 0) in (""; "localhost"); launch cmd; :0N] ;
-  hh:hopen `$":",(x 0), ":5999" ; 
-  hh "setEnvString \"", servant_env, "\"" ; 
-  (neg hh) cmd; (neg hh)[]; 
-  hh 
- } each servant ; 
+h: launch each servant ; 
 
 -1 "Wait 5 seconds" ;
 system "sleep 5"
@@ -283,6 +287,7 @@ h:() ;
 / hopen handle to each servant
 -1 "Connect to servants" ;
 h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
+readyCallback h ;
 -1 "OK" ;
 
 / map each servant handle back to the servant address
