@@ -47,9 +47,9 @@ The diagram below shows the messages exchanged in the demo above
 
 **Secure Invocation:** The practice of executing q functions or operations in a controlled manner, 
 without evaluating arbitrary expressions. This mitigates security risks associated with executing 
-client-provided strings, which might contain malicous code. Instead, Secure Invocation only allows 
+client-provided strings, which might contain malicious code. Instead, Secure Invocation only allows 
 execution of a limited number pre-defined functions, as in a conventional API call. In addition,
-Secure invocation must prevent execution of arbitary expressions which might appear in the
+Secure invocation must prevent execution of arbitrary expressions which might appear in the
 arguments to the functions.
 
 _key characteristics_
@@ -67,7 +67,7 @@ REWRITE:
 #### Secure Invocation: 
 
 Secure Invocation:
-The practice of executing only a limited set of pre-defined q functions in a controlled manner, disallowing arbitrary string evaluation. This mitigates security risks such as code injection, which can arise from evaluating client-provided strings containing malicious code. Like conventional API calls, Secure Invocation ensures that only registered and explicitly permitted functions can be executed, and that their arguments are properly validated or sanitized. It also prevents the execution of arbitrary expressions passed as arguments.
+The practice of executing only a limited set of pre-defined q functions in a ?? controlled manner, disallowing arbitrary string evaluation. This reduces security risks such as code injection, which can arise from evaluating client-provided strings containing potentially malicious code. Like conventional API calls, Secure Invocation ensures that only registered and explicitly permitted functions can be executed, and that their arguments are properly validated (and potentially sanitized.) It also prevents the execution of arbitrary expressions passed as arguments.
 
 _Security Guarantees_ ??? (need to rethink this part maybe)
 
