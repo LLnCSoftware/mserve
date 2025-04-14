@@ -86,7 +86,7 @@ queries:([qid:`u#`int$()]
 
 /** Send Query to Servant **
 send_query:{[hdl; qid]
-  0N!(`send_query; hdl; qid) ;
+  -1 ts[], "-> Forward Request: #", (str qid), " to handle ", (str hdl) ;
 	if[not null qid;
   	query:queries[qid;`query];
     options: queries[qid; `client_options];
@@ -114,7 +114,7 @@ send_result:{[qid;result;info]
   route:queries[qid; `route] ;
   if[ 99<>type info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
   info,: `route`backlog`remaining!(route; backlog; remaining) ;
-  0N!(`mserversp; client_handle; (client_queryid; result; info)) ;
+  -1 ts[], "-> Return Response: #", (str client_queryid), "  ", describeResult[result;info] ;
 	client_handle (client_queryid; result; info);
   h2idle[ queries[qid; `slave_handle] ]: .z.P ;
  }; 
@@ -202,7 +202,7 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
 .z.ps:{[x]
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; query; options)	
-    0N!(`mservereq; x) ;
+    -1 ts[], "-> Receive Request: #", (" " sv str each x) ; 
     cqid:x[0]; query:x[1]; options: x[2]; if[99<>type options; options:([])]; /options must be a dictionary
     sqid: 1^1+exec last qid from queries;                                     /server id for new query
     bklg: exec count i from queries where location in `master`servant ;       /queries in queue ahead of this one
@@ -265,10 +265,43 @@ launch:{-1 "mserve_np.q: Launch ", (x 2), " on `:", (x 0), ":", (x 1);
   hh 
  } ; 
 
-readyCallback:{} ; /pass handles back to (scripted.q) plugin after startup
+/****** Formatting for log messages *******
 
+/timestamp
+lastout:0Np ;
+addMinutes:{y+ x*3600000000000} ; /x*60*60000*1000000
+ts:{
+  stime:.z.P ;
+  if[lastout< addMinutes[-15] stime; lastout::stime; -1  ssr[;"D";"  "] -10_ (string stime)];
+  14_ -6_ string .z.P 
+ };
+
+/describe result
+describeResult:{[x;y] 
+  t:gettype x; if[t in ("null"; "empty"); :t];
+  $[(0>type x); ""; (string count x)," "], t, $[0>type x; " atom"; 0<type x; "s"; ""] 
+  , "  server=", (1_ str y `qsvr), " route=", (str y `route), " elapsed= ", (str y `elapsed)
+ } ; 
+
+gettype:{[x]
+  num:abs type x ; 
+  if[x~(::); :"null"] ;
+  if[0>num; if[null x; :"null"]] ;
+  if[(0=num) & 0=count x; :"empty"] ;
+  if[num<20; :alltypes num] ;
+  if[num within (20;76); :"enum"] ;
+  if[num within (77;97); :"type ", num] ;
+  if[num=98; :"table row"] ;
+  if[num=99; :$[98= type key x; "keyed row"; "dict item"]] ;
+  if[num within (100;111); :"function"] ;
+  if[num>111; :"type ", num] ;
+ };
+alltypes:(0 1 2 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19h)!("mixed"; "boolean"; "guid"; "byte"; 
+  "short"; "int"; "long"; "real"; "float"; "char"; "symb"; "timestamp"; "month"; "date"; "datetime";
+  "timespan"; "minute"; "second"; "time") ; 
 
 /******* Startup below this point *****
+readyCallback:{} ; /pass handles back to (scripted.q) plugin after startup
 
 / Load plugins
 if[0<count getenv `MSERVE_PLUGINS;   {system "l ",x;} each "," vs getenv `MSERVE_PLUGINS];
