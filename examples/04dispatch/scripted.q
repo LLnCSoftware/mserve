@@ -87,11 +87,11 @@ getRule:{1_ "," 0: select from (delete h from routingTable) where address like s
 setRule:{[pos;routing;canary] 
   if[10=type pos; pos: "J"$ pos] ;
   if[0<count canary;
-    if[3<>count canary; :"phase-in requires 3 settings: oldversion, percentage, per-interval (suffix: m=minutes, h=hours, d=days)"] ;
     canary: "," vs canary ;
-    cn_old_version: "J"$ canary 0 ;
-    cn_increment:   "J"$ ssr[;"%";""] canary 1 ;
-    cn_interval:    interval canary 2 ;
+    if[3<>count canary; :"phase-in requires 3 settings: oldversion, percentage, per-interval (suffix: m=minutes, h=hours, d=days)"] ;
+    cn_old_version::"J"$ canary 0 ;
+    cn_increment::   "J"$ ssr[;"%";""] canary 1 ;
+    cn_interval::    interval canary 2 ;
     if[any null (cn_old_version; cn_increment; cn_interval); :"Invalid phase-in specification."] ;
   ] ;
   /update routing table
@@ -105,7 +105,7 @@ setRule:{[pos;routing;canary]
   update route:` from `queries where location=`master ; 
   fallbackPos::(::) ;  
   /start canary (if any)
-  if[0<count canary; cn_server_type:routing `stype; cn_new_version:routing `sversion; cn_start:.z.P] ; 
+  if[0<count canary; cn_server_type::routing `stype; cn_new_version::routing `sversion] ; 
  } ;
 
 interval:{u:last x; x: -1_ x; ("J"$x)* $[u="m"; 60000; u="h"; 60*60000; u="d"; 24*60*60000; 0N]}
