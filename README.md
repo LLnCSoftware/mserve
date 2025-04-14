@@ -62,19 +62,87 @@ See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe
 
 Also for more details about **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
 
+-----------
+REWRITE:  
+#### Secure Invocation: 
+
+Secure Invocation:
+The practice of executing only a limited set of pre-defined q functions in a controlled manner, disallowing arbitrary string evaluation. This mitigates security risks such as code injection, which can arise from evaluating client-provided strings containing malicious code. Like conventional API calls, Secure Invocation ensures that only registered and explicitly permitted functions can be executed, and that their arguments are properly validated or sanitized. It also prevents the execution of arbitrary expressions passed as arguments.
+
+_Security Guarantees_ ??? (need to rethink this part maybe)
+
+- Prevents code injection by disallowing arbitrary q code evaluation.
+
+- Limits execution to a pre-defined, registered set of safe functions.
+
+- Ensures arguments are validated or sanitized before invocation.
+
+For an introduction to interprocess communication, see [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe/#119-interprocess-communication-101)  
+
+For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
+
+For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in ??????????? Where is it ?????????????
+
+-----------
+
 **Servant** An instance of your api server managed my mserve. When used by itself "servant" might refer to either
 a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
+
+-------
+NOTE: consider providing a rule of thumb or strict convention for disambiguating the two cases.
+
+------
 
 **Plugin** A program that provides some optional functionality to a "main" program without modifying the main program's source code.
 The "main" program may provide code to load the plugins, but which plugins get loaded is determined at launch time,
 in our case by an environment variable. The environment variable Q\_PLUGINS lists the plugins for the servant processes,
 while the variable MSERVE\_PLUGINS lists the plugins for mserve\_np.q itself.
+
+-------
+NOTE: I understand this is just a glossary of terms but it might be good to provide specific examples here of the kinds of plugins people might be adding. 
+
+REWRITE:  
+**Plugin**  
+A plugin is a program that provides optional functionality to a "main" program without modifying its source code.  
+The main program may include logic to load plugins, but which plugins get loaded is determined at launch time. In our case, this is determined through the use of environment variables:
+
+- `Q_PLUGINS` lists plugins for servant processes  
+- `MSERVE_PLUGINS` lists plugins for `mserve_np.q` itself  
+
+_Examples of plugins include:_  
+- list some examples
+- more example
+- another even
+
+
+-----
  
 **Dispatch Algorithm** A means of selecting a servant to run a particular query. In mserve\_np.q, a dispatch algorithm
 is selected by copying it to the global variable "check". Currently, there are 3 dispatch algorithms available:
+
+-----
+QUESTION: What is meant by a "is selected by copying it to a global variable "check.""?
+
+-----
 - **orig**: From the original. Always select the first not-busy server from the top of the list.
 - **even**: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch. 
 - **match**: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
+
+----
+REWRITE:
+
+- `orig`: From the original. Always select the first not-busy server from the top of the list.
+- `even`: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch. 
+- `match`: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
+
+-----
+QUESTION: What is meant by warm data really? What is good about this. Perhaps it is not obvious to everyone.
+
+NOTE: instead of not-busy, maybe say idle, available, or something else.
+
+-----
+
+----
 
 The "match" algorithm is the default.
 To use a different one, set the environment variable 'MSERVE\_ALGO' when launching mserve.
@@ -85,6 +153,12 @@ MSERVE_ALGO="even" q mserve-np.q 5 servant.q -p 5000
 ```
 
 New dispatch algorithms may be added as plugins, see "examples/04dispatch/04dispatch.md."
+
+----
+
+REWRITE:
+
+----
    
 **Routing String** A string (or symbol) derived from a query expression which is used to help select the best servant 
 on which to run that query. Only the "match" dispatch algorithm uses a routing string.
@@ -93,23 +167,60 @@ The default routing string is just the first argument to the command. That may b
 env variable to "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
 You can also override the "getRoutingSymbol" function from a plugin. 
 
-TODO: define host, server, servant,...
+
+----
+QUESTION: What does the routing string actually look like? An example and explanation of the mechanics might be useful.
+
+----
 
 ## When do use this Technology?
+
+-----
+REWRITE: 
+
+## When should you use this technology?
+
+## Recommended Use Cases
+
+## When is this Technology Recommended?
+
+-----
 
 ### Current Performance
 
 - **When you think you are in a situation where spikes of incoming requests cause frequent slowdowns**  
   *Consider option:* Distributing requests across multiple servers using a load balancer to mitigate CPU saturation on any single node.
 
+  ---
+  QUESTION: What is CPU saturation and what is a node?
+  I like how succinct these answers are but if you are aiming for total clarity to people not necessarily familiar with networking technologies, answering these could help.
+
+  ---
+
 - **When you think you are in a situation where memory usage on one server is causing bottlenecks**  
-  *Consider option:* Splitting data or queries among nodes so each node handles only a subset of the workload.
+  *Consider option:* Splitting data or queries among nodes so each node handles only a subset of the workload.\
+
+---
+Question: How could that arise? How would a bottleneck arise? Example?
+
+---
 
 - **When you think you are in a situation where a single machine can be upgraded but might still struggle under peak load**  
   *Consider option:* A lightweight enhancement like socket sharding on Linux to better utilize multiple CPU cores and reduce queue times.
 
+
+---
+Question: How could that arise? How would a bottleneck arise? Example? Repeated question but I think this would really make this suggested use case more compelling.
+
+---
+
 - **When you think you are in a situation where cache thrashing leads to poor query performance**  
   *Consider option:* Routing queries to servers holding relevant data in memory, improving local cache efficiency.
+
+---
+Question: What is cache thrashing? 
+
+---
 
 - **When you think you are in a situation where your team invests too much time tuning one massive server**  
   *Consider option:* Multiple smaller servers with a load balancer to simplify configuration and reduce single-server complexity.
