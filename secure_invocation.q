@@ -48,7 +48,7 @@ validateAndRunAsync:{[req]
   if[null fn; '"unknown command: ", .Q.s1 query 0] ;       /Accept only function names in .api namespace, AND allowed by role.
   arg: 1_ query ;                                          /Remaining query items are arguments.
   if[100<=any type each (raze/) arg; "nested evaluation"]; /Reject query with any function type anywhere in any argument
-  (fn; arg; query 0)                                       /return: function; arguments; function name
+  (fn; arg; string query 0)                                /return: function; arguments; function name
  };
 
 /This parses a query intended to be run without using "eval" - treating all symbols as literals.
