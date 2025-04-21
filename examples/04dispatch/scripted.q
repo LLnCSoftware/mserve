@@ -61,26 +61,68 @@ restrictFallback:{[bits]
 /Return bit vector corresponding to routingTable rows, where 1 means "not busy"
 notbusyBitVector:{ 0= count each h routingTable `h};
 
-/Canary
-cn_server_type:`; cn_old_version:0N; cn_new_version:0N; cn_start:0Np; 
-cn_increment:25 ; cn_interval:30000 ; /Default to switch 25% of querys per 30 seconds
-canaryFilter:{[tbl]
-  if[ any null (cn_server_type; cn_old_version; cn_new_version); :tbl] ;
+/**** Canary ******
+cn_server_type:`; cn_new_version:0N; cn_start:0Np; 
+cn_increment:25; cn_interval:30000; cn_backupRT:(::);
+canaryFilter:{[tbl] 
+  if[ any null (cn_server_type; cn_new_version); :tbl] ;
   if[ null cn_start; cn_start:: .z.P] ;
-  new_percentage: 100 & cn_increment* (`long$ .000001* .z.P-cn_start) div cn_interval ;
-  ignore_version: $[ (first 1?100)< new_percentage; cn_old_version; cn_new_version] ;
-  /0N!(`canary; cn_server_type; new_percentage; ignore_version) ;
-  update condition:enlist "0b" from tbl where stype=cn_server_type, sversion=ignore_version 
+  new_percentage: cn_increment* 1+ (`long$ .000001* .z.P-cn_start) div cn_interval ;
+  /instead of an interval at 0% provide 2 intervals at 100% for better error detection before end of phase in.
+  use_new: first 1?100 ; 
+  -1 "phase-in ", (string 100& new_percentage), "% use new when >", string use_new ;
+  out: $[ use_new < new_percentage; 
+    (update condition:(count i)# enlist "0b" from tbl where stype=cn_server_type, sversion<>cn_new_version); /ignore old = use new 
+    (update condition:(count i)# enlist "0b" from tbl where stype=cn_server_type, sversion=cn_new_version)   /ignore new = use old
+  ];
+  if[new_percentage>=100+cn_increment; routingTable::out; endPhaseIn[] ] ; 
+  out
  } ;
+
+endPhaseIn:{ cn_server_type::`; cn_new_version::0N; cn_start::0Np; cn_backupRT::(::); -1 "end phase-in"; } ;
+
+/**** Canary Failover ******
+cn_cnterr: 0 ;
+cn_maxerr: 3^ "J"$ getenv `CN_MAXERR ;
+filterResponse:{                       /x= (id; result; info)
+  if[null cn_server_type; :x] ;        /No canary - just return
+  if[10<>type x 1; :x]        ;        /Error is a string result strarting with ERROR
+  if[not "ERROR"~ upper 5# x 1; :x] ;  /No error - just return
+  t: exec first stype, first sversion from routingTable where address like 1_ string x[2] `qsvr ;  /get server type and version
+  if[(cn_server_type<>t `stype) or cn_new_version<>t `sversion; :x];   /not new server  - just return
+  cn_cnterr+:1; if[cn_cnterr<cn_maxerr; :x] ;                          /less than max errors - just return 
+  -1 "failover - cancel phase in" ;
+  cancelPhaseIn[] ;   /cancel phase in
+  x                   /return response
+ } ;
+
+cancelPhaseIn:{[] 
+   update route:` from `queries where location=`master ; fallbackPos::(::) ; 
+   if[not cn_backupRT~(::); routingTable::cn_backupRT; -1 "routing table restored";]; endPhaseIn[] ; 
+ };
+finishPhaseIn:{[] 
+  update condition:(count i)# enlist "0b" from `routingTable where stype=cn_server_type, sversion<>cn_new_version; 
+  endPhaseIn[] ;
+ };
 
 /****** Synchronous api to edit routing table ******
 
 invalid:"Routing commands must be lists of strings" ;
-.z.pg:{
+.z.pg:{o
   if[0<>type x; :invalid]; if[any 10<>type each x; :invalid] ;
   if[(x 0)~"getRule"; :getRule x 1] ;
   if[(x 0)~"setRule"; :setRule[x 1; x 2; x 3]] ;
+  if[(x 0)~"saveRoutingTable"; :saveRoutingTable[]] ;
+  if[(x 0)~"cancelPhaseIn"; :cancelPhaseIn[]] ;
+  if[(x 0)~"finishPhaseIn"; :finishPhaseIn[]] ;
   "Unexpected routing command: ", x 0 ;
+ } ;
+
+saveRoutingTable:{ 
+  if[not null cn_server_type; '"Phase-in in progress for server type '",(string cn_server_type)," v", (string cn_new_version),"'"]; 
+  delete from `routingTable where condition in ("0b"; "(0b)") ; /remove phased-out rules
+  (`$":",afile) 0: "," 0: delete h from routingTable ;          /update csv file 
+  `OK
  } ;
 
 getRule:{1_ "," 0: select from (delete h from routingTable) where address like str x } ;
@@ -88,29 +130,30 @@ setRule:{[pos;routing;canary]
   if[10=type pos; pos: "J"$ pos] ;
   if[0<count canary;
     canary: "," vs canary ;
-    if[3<>count canary; :"phase-in requires 3 settings: oldversion, percentage, per-interval (suffix: m=minutes, h=hours, d=days)"] ;
-    cn_old_version::"J"$ canary 0 ;
-    cn_increment::   "J"$ ssr[;"%";""] canary 1 ;
-    cn_interval::    interval canary 2 ;
-    if[any null (cn_old_version; cn_increment; cn_interval); :"Invalid phase-in specification."] ;
+    if[not null cn_server_type; '"Phase-in already in progress for '",(string cn_server_type)," v", (string cn_new_version),"'"]; 
+    if[2<>count canary; :"phase-in requires 2 settings: percentage, per-interval (suffix: m=minutes, h=hours, d=days)"] ;
+    cn_increment:: "J"$ ssr[;"%";""] canary 0 ;
+    cn_interval:: interval canary 1 ;
+    if[any null (cn_increment; cn_interval); :"Invalid phase-in specification."] ;
+    cn_backupRT:: routingTable ;
   ] ;
   /update routing table
   len:count routingTable;  pos:len^pos ;
   routing: (-1_ cols routingTable)! ("SSJ**"; ",") 0: routing ;   /same as a routing table csv row
   hit: (routingTable `address)? routing `address ;                /Is address already in table ?
+  if[(hit<len)& not (routing `qfile)~routingTable[hit;`qfile]; '"Cannot change 'qfile' in an existing rule"] ;
   if[hit<len; routing[`h]: routingTable[hit;`h]; routingTable[hit]:routing] ;  /yes: replace row, but keep same handle
-  if[hit=len; routing[`h]: connectServant routing; routingTable,:routing] ;    /no:  connect servant then add row w new handle
+  if[hit=len; routing[`h]: connectServant routing; routingTable,::routing] ;   /no:  connect servant then add row w new handle
   if[hit<>pos; routingTable::moveItemInList[routingTable;hit;pos]];  /if not in requested position, move.
-  /clear previous routing symbol in enqueued queries (recompute upon next "check[]")
-  update route:` from `queries where location=`master ; 
-  fallbackPos::(::) ;  
+  /clear previous routing symbol in enqueued queries, and fallback positions (recompute upon next "check[]")
+  update route:` from `queries where location=`master ; fallbackPos::(::) ;  
   /start canary (if any)
-  if[0<count canary; cn_server_type::routing `stype; cn_new_version::routing `sversion] ; 
+  if[0<count canary; cn_server_type::routing `stype; cn_new_version::routing `sversion;] ; 
  } ;
 
 interval:{u:last x; x: -1_ x; ("J"$x)* $[u="m"; 60000; u="h"; 60*60000; u="d"; 24*60*60000; 0N]}
 moveItemInList:{[data;fr;to] 
-  en:count data;
+  en:count data; fr&:en-1; to&:en-1; if[fr=to; :data];
   a:til fr&to; b:fr&to; d:fr|to; c:1+b+til d-b+1; e:1+d+til en-d+1;
   data raze 0N! $[fr<to; (a;c;d;b;e); (a;d;b;c;e)]
  }; 
@@ -130,6 +173,7 @@ connectServant:{[routing]
   h2idle[newh]: 0Np ;
   newh 
  };
+
 
 /***** Startup ******
 
