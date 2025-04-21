@@ -86,8 +86,8 @@ queries:([qid:`u#`int$()]
 
 /** Send Query to Servant **
 send_query:{[hdl; qid]
-  -1 ts[], "-> Forward Request: #", (str qid), " to handle ", (str hdl) ;
 	if[not null qid;
+    -1 ts[], "-> Forward Request: #", (str queries[qid;`client_qid]), " to ", {x[0],":",x[1], "  (", x[2], ")"} h2addr hdl ;
   	query:queries[qid;`query];
     options: queries[qid; `client_options];
   	h[hdl],:qid;
@@ -114,11 +114,12 @@ send_result:{[qid;result;info]
   route:queries[qid; `route] ;
   if[ 99<>type info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
   info,: `route`backlog`remaining!(route; backlog; remaining) ;
-  -1 ts[], "-> Return Response: #", (str client_queryid), "  ", describeResult[result;info] ;
-	client_handle (client_queryid; result; info);
+  response: filterResponse(client_queryid; result; info) ;
+  -1 ts[], "-> Return Response: #", (str response 0), "  ", describeResult[response 1; response 2] ;
+	client_handle response ;
   h2idle[ queries[qid; `slave_handle] ]: .z.P ;
  }; 
-
+filterResponse:{x} ;  /Stub to modify response in a plugin
 
 /** Built-in dispatch methods **
  
@@ -277,10 +278,12 @@ ts:{
  };
 
 /describe result
-describeResult:{[x;y] 
+describeResult:{[x;y]
+  info: "  server=", (1_ str y `qsvr), " route=", (str y `route), " elapsed= ", (str y `elapsed) ;
+  if[10=type x; if["ERROR"~upper 5# x; :($[40<count x; 40#x,".."; x],info)]]; 
+
   t:gettype x; if[t in ("null"; "empty"); :t];
-  $[(0>type x); ""; (string count x)," "], t, $[0>type x; " atom"; 0<type x; "s"; ""] 
-  , "  server=", (1_ str y `qsvr), " route=", (str y `route), " elapsed= ", (str y `elapsed)
+  $[(0>type x); ""; (string count x)," "], t, $[0>type x; " atom"; 0<type x; "s"; ""], info  
  } ; 
 
 gettype:{[x]
