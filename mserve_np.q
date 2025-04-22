@@ -79,13 +79,14 @@ queries:([qid:`u#`int$()]
   time_returned:`timestamp$();
   route: `symbol$() ;
   backlog: `int$() ;
-  slave_handle:`int$();
+  servant_address:`symbol$();
   location:`symbol$() 
  );
 /update `u#qid from `queries;	
 
 /** Send Query to Servant **
 send_query:{[hdl; qid]
+  if[0<hdl; -1 "****ERROR: positive handle ", (string hdl), " will try negation"; hdl:neg hdl] ;
 	if[not null qid;
     -1 ts[], "-> Forward Request: #", (str queries[qid;`client_qid]), " to ", {x[0],":",x[1], "  (", x[2], ")"} h2addr hdl ;
   	query:queries[qid;`query];
@@ -93,7 +94,7 @@ send_query:{[hdl; qid]
   	h[hdl],:qid;
     h2route[hdl]: enlist queries[qid; `route] ;
     h2idle[hdl]: 0Wp ;
-  	queries[qid;`slave_handle]:hdl;
+  	queries[qid;`servant_address]: `$ {x[0],":",x[1]} h2addr hdl;
     queries[qid;`time_sent]: .z.P ;
   	queries[qid;`location]:`servant;
     hdl (qid; query; options) ; 
@@ -106,7 +107,7 @@ send_result:{[qid;result;info]
 	queries[qid;`location`time_returned]:(`client;.z.P);
 	client_handle:queries[qid;`client_handle] ;
   client_queryid: queries[qid; `client_qid] ;
-  servant_address: {`$":",(x 0),":",(x 1)} h2addr queries[qid; `slave_handle] ;
+  servant_address: queries[qid; `servant_addresss] ;
   servant_elapsed: tms .z.P - queries[qid; `time_sent] ;
   total_elapsed: tms .z.P - queries[qid; `time_received] ;
   remaining: exec count i from queries where location in `master`servant ;
@@ -117,7 +118,7 @@ send_result:{[qid;result;info]
   response: filterResponse(client_queryid; result; info) ;
   -1 ts[], "-> Return Response: #", (str response 0), "  ", describeResult[response 1; response 2] ;
 	client_handle response ;
-  h2idle[ queries[qid; `slave_handle] ]: .z.P ;
+  h2idle[neg .z.w]: .z.P ;
  }; 
 filterResponse:{x} ;  /Stub to modify response in a plugin
 
@@ -210,7 +211,7 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
     role:getrole[];                                                           /overridden in authent.q plugin
     if[not null role; options[`user]:.z.u; options[`role]:role];
 
-    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; `; bklg; 0N; `master); 
+    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; `; bklg; `; `master); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
