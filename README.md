@@ -45,6 +45,38 @@ The diagram below shows the messages exchanged in the demo above
 
 ## MServe Glossary  
 
+**API Version:** An API specifies exactly what functions are documented to be supported 
+by a server, what arguments they take and what it means to run this function, including what
+it returns. A servant could be documented to support more than one API Version which it could support 
+by shunting the calls to different name spaces depending on what API version the client 
+request says it is expecting to support. 
+
+QUESTION: Is this precisely correct? This feels off from my understanding of what an API is. But API version is what is actually being defined
+so I guess... well I am still confused. The API version is the API version... wouldn't the API documentation be what specifies what functions 
+are documented to be supported?
+
+**Server Type Name:** Say I am at hedge fund named HF and we have some code we use to do RDB computations 
+and some to do HDB computations. Mserver could be configured with a plugin to know which queries should be
+sent to which servers because we realized that it is valuable to keep the data for the last 48 hours in RDB 
+and the older information in HDB. This could turn out to be a major performance enhancement. It is powerful to allow 
+mserve to rout the query to the right server without having to change the client, just based on
+things like start and end date of the query API call. A server type named HF_RDB and another HF_HDB, 
+a dispatch alog could know that we expanded what we expanded from 24 hours in the RDB to 48 in the RDB 
+at a certain point adn dispatch accordingly. 
+
+**Server Type Version:** We might want to gradually replace one server with another
+server because any of a number issues:
+
+* A code change that supports a new API, but still supports the old API. 
+* A code change that supports a new API, but does not supports the old API. 
+* A code change that improves efficiency or fix a bug and does not change any of the operation names, the arguments they take, what they do or what they return, so no need for any client to change and thus no need to have a new API ID.
+* A configuration change, such as moving from one EC2 instance type to another or changing an environment var 
+  that impacts how much memory the KTV instance is allowed to grow to use. 
+
+When a server administrator deploys a new servant, and wants to do it using canary capability, 
+mserver needs a way to know which servant is intended to replace what other servant. 
+
+
 **Secure Invocation:** The practice of executing q functions or operations in a controlled manner, 
 without evaluating arbitrary expressions. This mitigates security risks associated with executing 
 client-provided strings, which might contain malicous code. Instead, Secure Invocation only allows 
@@ -63,33 +95,12 @@ See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe
 Also for more details about **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
 
 -----------
-REWRITE:  
-#### Secure Invocation: 
-
-Secure Invocation:
-The practice of executing only a limited set of pre-defined q functions in a controlled manner, disallowing arbitrary string evaluation. This mitigates security risks such as code injection, which can arise from evaluating client-provided strings containing malicious code. Like conventional API calls, Secure Invocation ensures that only registered and explicitly permitted functions can be executed, and that their arguments are properly validated or sanitized. It also prevents the execution of arbitrary expressions passed as arguments.
-
-_Security Guarantees_ ??? (need to rethink this part maybe)
-
-- Prevents code injection by disallowing arbitrary q code evaluation.
-
-- Limits execution to a pre-defined, registered set of safe functions.
-
-- Ensures arguments are validated or sanitized before invocation.
-
-For an introduction to interprocess communication, see [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe/#119-interprocess-communication-101)  
-
-For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
-
-For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in ??????????? Where is it ?????????????
-
------------
 
 **Servant** An instance of your api server managed my mserve. When used by itself "servant" might refer to either
 a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
 
 -------
-NOTE: consider providing a rule of thumb or strict convention for disambiguating the two cases.
+QUESTION: How do you disambiguate usage of the term "servant"? Maybe provide a rule of thumb. I've seen this pattern in documentation and textbooks. In this context, we mean X. Otherwise, Y. 
 
 ------
 
@@ -99,50 +110,17 @@ in our case by an environment variable. The environment variable Q\_PLUGINS list
 while the variable MSERVE\_PLUGINS lists the plugins for mserve\_np.q itself.
 
 -------
-NOTE: I understand this is just a glossary of terms but it might be good to provide specific examples here of the kinds of plugins people might be adding. 
 
-REWRITE:  
-**Plugin**  
-A plugin is a program that provides optional functionality to a "main" program without modifying its source code.  
-The main program may include logic to load plugins, but which plugins get loaded is determined at launch time. In our case, this is determined through the use of environment variables:
-
-- `Q_PLUGINS` lists plugins for servant processes  
-- `MSERVE_PLUGINS` lists plugins for `mserve_np.q` itself  
-
-_Examples of plugins include:_  
-- list some examples
-- more example
-- another even
-
+QUESTION: What are some example of plugins?
 
 -----
  
 **Dispatch Algorithm** A means of selecting a servant to run a particular query. In mserve\_np.q, a dispatch algorithm
 is selected by copying it to the global variable "check". Currently, there are 3 dispatch algorithms available:
 
------
-QUESTION: What is meant by a "is selected by copying it to a global variable "check.""?
-
------
 - **orig**: From the original. Always select the first not-busy server from the top of the list.
 - **even**: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch. 
 - **match**: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
-
-----
-REWRITE:
-
-- `orig`: From the original. Always select the first not-busy server from the top of the list.
-- `even`: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch. 
-- `match`: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
-
------
-QUESTION: What is meant by warm data really? What is good about this. Perhaps it is not obvious to everyone.
-
-NOTE: instead of not-busy, maybe say idle, available, or something else.
-
------
-
-----
 
 The "match" algorithm is the default.
 To use a different one, set the environment variable 'MSERVE\_ALGO' when launching mserve.
@@ -154,11 +132,15 @@ MSERVE_ALGO="even" q mserve-np.q 5 servant.q -p 5000
 
 New dispatch algorithms may be added as plugins, see "examples/04dispatch/04dispatch.md."
 
-----
-
-REWRITE:
 
 ----
+
+QUESTION: What is meant by a "is selected by copying it to a global variable "check.""?
+
+Maybe better to be more specific... it's not merely a "means of selecting a servant", it is an algorithm that selects servants based on certain criteria. It is a mechanism that intelligently assigns queries in order to optimize performance. 
+
+QUESTION: What is meant by warm data really? What is good about this. Perhaps it is not obvious to everyone. The principle of locality?
+
    
 **Routing String** A string (or symbol) derived from a query expression which is used to help select the best servant 
 on which to run that query. Only the "match" dispatch algorithm uses a routing string.
@@ -167,63 +149,60 @@ The default routing string is just the first argument to the command. That may b
 env variable to "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
 You can also override the "getRoutingSymbol" function from a plugin. 
 
-
 ----
-QUESTION: What does the routing string actually look like? An example and explanation of the mechanics might be useful.
+QUESTION: What does the routing string actually look like? An example and explanation of the mechanics might be useful. This is broadly confusing to me. It is used to help select the best servant but apparently is only used in only ONE of the algorithms. Why? What is used in the other cases? 
 
 ----
 
 ## When do use this Technology?
 
------
-REWRITE: 
+QUESTION: Could it be better to title this section: 
 
-## When should you use this technology?
+When *should* you use this technology?
 
-## Recommended Use Cases
+Recommended Use Cases
 
-## When is this Technology Recommended?
+When is this Technology Recommended?
 
------
+?
 
 ### Current Performance
 
 - **When you think you are in a situation where spikes of incoming requests cause frequent slowdowns**  
   *Consider option:* Distributing requests across multiple servers using a load balancer to mitigate CPU saturation on any single node.
 
-  ---
+
   QUESTION: What is CPU saturation and what is a node?
   I like how succinct these answers are but if you are aiming for total clarity to people not necessarily familiar with networking technologies, answering these could help.
 
-  ---
+
 
 - **When you think you are in a situation where memory usage on one server is causing bottlenecks**  
-  *Consider option:* Splitting data or queries among nodes so each node handles only a subset of the workload.\
+  *Consider option:* Splitting data or queries among nodes so each node handles only a subset of the workload.
 
----
+
 Question: How could that arise? How would a bottleneck arise? Example?
 
----
 
 - **When you think you are in a situation where a single machine can be upgraded but might still struggle under peak load**  
   *Consider option:* A lightweight enhancement like socket sharding on Linux to better utilize multiple CPU cores and reduce queue times.
 
 
----
+
 Question: How could that arise? How would a bottleneck arise? Example? Repeated question but I think this would really make this suggested use case more compelling.
 
----
+
 
 - **When you think you are in a situation where cache thrashing leads to poor query performance**  
   *Consider option:* Routing queries to servers holding relevant data in memory, improving local cache efficiency.
 
----
-Question: What is cache thrashing? 
 
----
+Question: What is cache thrashing? 
 
 - **When you think you are in a situation where your team invests too much time tuning one massive server**  
   *Consider option:* Multiple smaller servers with a load balancer to simplify configuration and reduce single-server complexity.
+
+Question: I don't fully understand this use case. Why does multiple servers reduce complexity? Less people per server? What is tuning a server?
 
 ### Scalability and Future-Proofing
 
@@ -233,14 +212,22 @@ Question: What is cache thrashing?
 - **When you think you are in a situation where you want to avoid big “forklift” upgrades**  
   *Consider option:* Incrementally adding mid-range servers behind a load balancer, rather than purchasing a single high-end box.
 
+  Question: What is a "forklift" upgrade and why would adding mid-range servers "behind a load balancer" be better than a single high-end box?
+
 - **When you think you are in a situation where you anticipate new data distribution patterns (e.g., time-partitioned data)**  
   *Consider option:* Let the load balancer direct queries to nodes specialized in different time ranges or data types.
+
+  Question: "data distribution patterns" would be good, why? If this is a given then everything else is clear to me.
 
 - **When you think you are in a situation where you might add specialized infrastructure in the future**  
   *Consider option:* Designing a flexible load-balancing layer that can incorporate new hardware without major architectural changes.
 
+  Question: I don't really understand this. It feels very broad Is the idea that the load balancer could accommodate servers in a "hardware agnostic" way or... without... well... what kind of architectural changes would need to be made otherwise?
+
 - **When you think you are in a situation where you need to adapt quickly to changing traffic patterns**  
   *Consider option:* An auto-scaling approach with a load balancer that spins up or down additional servers based on real-time metrics.
+
+  Question: Why is this beneficial? If you have X servers, why not just keep X servers running all the time? Does "spinning them down" save compute or energy or something? Why wouldn't you just be capable of accommodating max capacity at all times?
 
 ### Improved Availability
 
