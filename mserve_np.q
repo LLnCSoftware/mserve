@@ -107,7 +107,7 @@ send_result:{[qid;result;info]
 	queries[qid;`location`time_returned]:(`client;.z.P);
 	client_handle:queries[qid;`client_handle] ;
   client_queryid: queries[qid; `client_qid] ;
-  servant_address: queries[qid; `servant_addresss] ;
+  servant_address: queries[qid; `servant_address] ;
   servant_elapsed: tms .z.P - queries[qid; `time_sent] ;
   total_elapsed: tms .z.P - queries[qid; `time_received] ;
   remaining: exec count i from queries where location in `master`servant ;
