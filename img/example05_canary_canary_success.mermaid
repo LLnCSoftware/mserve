@@ -1,0 +1,34 @@
+mermaid
+sequenceDiagram
+    participant A015 as 015 User
+    participant A025 as 025 Client
+    participant A035 as 035 Timer
+    participant A045 as 045 mserve
+    participant A055 as 055 CSV File
+    participant A065 as 065 Servant: Symbol Set 1 (Old)
+    participant A066 as 066 Servant: Symbol Set 1 (New)
+    participant A075 as 075 Servant: Symbol Set 2
+    participant A085 as 085 Servant: Symbol Set 3
+    participant A095 as 095 Servant: Other Symbols
+
+    A015 ->> A045: 020 🛠 setRule (initiate canary rollout)
+    A045 ->> A045: 030 🧠 Backup routing table
+    A045 ->> A045: 040 🧠 Set globals: server type, % increment, interval
+
+    A025 ->> A045: 050 📤 Send request
+    A045 ->> A045: 060 🧠 Apply canaryFilter (probabilistic routing)
+
+    alt 070 🧠 Routed to New Version
+        A045 ->> A066: 080 📤 Dispatch to new servant (canary)
+        A066 ->> A045: 090 📥 Return response
+    else 070 🧠 Routed to Old Version
+        A045 ->> A065: 080 📤 Dispatch to old servant
+        A065 ->> A045: 090 📥 Return response
+    end
+
+    A045 ->> A045: 100 🧠 Run filterResponse (canary active – no action taken)
+    A045 ->> A025: 110 📥 Return result to client
+
+    A045 ->> A045: 120 🧠 new_percentage increases per interval
+    A045 ->> A045: 130 🧠 When new_percentage = 100%, clear canary state
+ 

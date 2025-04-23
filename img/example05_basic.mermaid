@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant A015 as 015 User
+    participant A025 as 025 Client
+    participant A035 as 035 Timer
+    participant A045 as 045 mserve
+    participant A055 as 055 CSV File
+    participant A065 as 065 Servant: Symbol Set 1
+    participant A075 as 075 Servant: Symbol Set 2
+    participant A085 as 085 Servant: Symbol Set 3
+    participant A095 as 095 Servant: Other Symbols
+
+    A025 ->> A045: 020 📤 Send request
+    A045 ->> A045: 030 🧠 Check routing table for qualified servants
+    A045 ->> A045: 040 🧠 Check handle dictionary (h) for available servants
+    A045 ->> A045: 050 🧠 Pick first qualified + available servant
+
+    A045 ->> A065: 060 📤 Dispatch request
+    A065 ->> A045: 070 📥 Return response
+
+    A045 ->> A045: 080 🧠 Run filterResponse (noop – no canary)
+
+    A045 ->> A025: 090 📥 Return result to client
