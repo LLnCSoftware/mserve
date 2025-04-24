@@ -70,7 +70,7 @@ canaryFilter:{[tbl]
   new_percentage: cn_increment* 1+ (`long$ .000001* .z.P-cn_start) div cn_interval ;
   /instead of an interval at 0% provide 2 intervals at 100% for better error detection before end of phase in.
   use_new: first 1?100 ; 
-  -1 "phase-in ", (string use_new), " < ", (string 100& new_percentage), "%" ;
+  -1 "phase-in ", (string use_new), " < ", (string 100& new_percentage), "%  error ",(string cn_cnterr)," of ",(string cn_maxerr);
   out: $[ use_new < new_percentage; 
     (update condition:(count i)# enlist "0b" from tbl where stype=cn_server_type, sversion<>cn_new_version); /ignore old = use new 
     (update condition:(count i)# enlist "0b" from tbl where stype=cn_server_type, sversion=cn_new_version)   /ignore new = use old
@@ -88,9 +88,9 @@ filterResponse:{                       /x= (id; result; info)
   if[null cn_server_type; :x] ;        /No canary - just return
   if[10<>type x 1; :x]        ;        /Error is a string result strarting with ERROR
   if[not "ERROR"~ upper 5# x 1; :x] ;  /No error - just return
-  t: exec first stype, first sversion from routingTable where address like 1_ string x[2] `qsvr ;  /get server type and version
+  t: exec first stype, first sversion from routingTable where address like string x[2] `qsvr ;  /get server type and version
   if[(cn_server_type<>t `stype) or cn_new_version<>t `sversion; :x];   /not new server  - just return
-  cn_cnterr+:1; if[cn_cnterr<cn_maxerr; :x] ;                          /less than max errors - just return 
+  cn_cnterr+::1; 0N!(`cn_cnterr; cn_cnterr);  if[cn_cnterr<cn_maxerr; :x] ;                          /less than max errors - just return 
   -1 "failover - cancel phase in" ;
   cancelPhaseIn[] ;   /cancel phase in
   x                   /return response
