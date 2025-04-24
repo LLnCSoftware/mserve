@@ -1,5 +1,0 @@
-address,stype,sversion,condition,qfile
-localhost:5001,low,1,(symbol within `A`F),servant.q
-localhost:5002,mid,1,(symbol within `G`L),servant.q
-localhost:5003,high,1,(symbol within `M`T),servant.q
-localhost:5004,other,1,(1b),servant.q

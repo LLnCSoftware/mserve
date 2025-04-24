@@ -3,61 +3,110 @@
 ## About this Example
 
 We create a dispatch algorithm which explictly routes each request to a servant based on a configuration file.  
-This algorithm also provides the ability to phase-in a new servant
 
-
+This algorithm also provides the ablilty to modify the configuration without shutting down or suspending operations.
+That includes the ability to phase-in a new servant, so that the percentage of queries going to the 
+new servant increases over a time interval. If a configurable number of errors occur in the new servant
+while the phase in is in effect, the new servant is removed and the original configuration restored.
 
 ## New/Modified Files
 
-scripted.q - An mserve plugin implementing this dispatch algorithm.
-scripted.csv - The configuration file
+* scripted.q - An mserve plugin implementing this dispatch algorithm.
+* scripted.csv - The configuration file
+
+### Admin Scripts
+
+* getrule "like-pattern"
+    * Invokes the "getRule" method in scripted.q.
+    * Will return all rules from the current routing table which match the pattern, as csv-lines
+    * Takes 1 argument, a quoted string ($pattern).
+    * Gets the host and port for mserve\_np.q from an env variable MSERVE\_ADDR, defaulting to localhost:5000
+    * Pipes a line of code into a new q-session to send a 'getRule "$pattern"' command to mserve on the synchronous interface.
+
+* setrule position "csv-line" "phase-in spec"  
+    * Invokes the "setRule" method in scripted.q
+    * Will place the specified csv-line in the routing table at the specified (zero-based) position.
+    * When address in csv-line matches a rule already in the table, that rule will be replaced (and moved if necessary).
+    * When address in csv-line does not match, the rule will be added at the bottom of the table and then be moved if necessary.
+    * Takes 3 arguments, a numeric string ($pos) and two quoted strings ($rule and $phasein).
+    * Gets the host and port for mserve\_np.q from an enx variable MSERVE\_ADDR, defaulting to localhost:5000
+    * Pipes a line of code into a new q-session to send 'setRule[$pos; $rule; $phasein]' command to mserve on the sync interface.
+
+Note: When used without authentication (as it is here), this synchronous interface is highly insecure.
+To fix that you can add authentication, in particular for an "admin" role, that grants usage of the interface.
+Alternatively, you could remove the synchronous interface (.z.pg), and invoke these functions from the mserve q-console.
 
 ## How it Works
 
-To provide a dispatch plugin you would:
+Similar to the previous example 04dispatch, which implemented the "match" dispatch algorithm in a plug in,
+This plugin overrides the "check" function which performs dispatch in mserve\_np.q.
 
-- Write a new "q-file" (in our example "match.q") which defines two global variables
-  - check: function implementing your new dispatch algorithm
-  - algo:  provides a name for your algorithm which is displayed on the console at startup
+However, when this plugin is used, the command line to start mserve\_np.q will NOT contain arguments
+for the number of servants and a servant q-file to run in each of them.
 
-- Include your filename in the MSERVE\_PLUGINS environment variable when starting mserve\_np.q
-  - for example:  'MSERVE\_PLUGINS="match.q" q mserve\_np.q 2 servant.q'
+Instead it will have single argument which specifies a configuration csv file, which will explicity 
+list the host and port for each servant, and the q-file to run there. In particular, there can 
+be more than one distinct q-file in the configuration.
 
-### The "check" function
+For this example the command to launch mserve will look like:
 
-- The check function takes no arguments and returns no value. 
-- The check function examines the enqueued queries, and attempts to match some query with an available server.
-- If successful, it calls the "send\_query" function, providing the server handle and query id as arguments. 
+```
+MSERVE_PLUGINS='scripted.q' q mserve_np.q scripted.csv -p 5000
+```
 
-### Resources available in mserve\_np.q
+### The configuration file
 
-- **getArguments** - function which parses specified command, which must be the invocation of a user-defined function,
-   always interpreting symbols in arguments as literals, not variables; and rejecting function evaluation in the arguments.
-   (In match.q, used to obtain the routing string as the first argument to the command).
-- **h**            - dictionary which maps each servant handle to the list of queries pending on that handle.
-                     (In match.q, used to determin if a particular servant is busy.) 
-- **hroute**       - dictionary which maps each servant handle to its last routing symbol.
-                     (In match.q, used to determine which queries a particular servant may accept.)
-- **hidle**        - dictionary which maps each servant handle to its idle timestamp, i.e. when last query finished.
-                     (In match.q, used to reset the "hroute" value of a servant to "allow any query" after a period of inactivity.
-- **addMs**        - function which adds milliseconds to a timestamp.
-- **nextCheck**    - timestamp which schedules a call to "check" at the specified time (+infinity 0Wp to surpress)
-                     (In match.q, schedules a call on the timer when "check" fails to dispatch a request although
-                      the queue is not empty. Normally the check function is called when a new query or response 
-                      is received. However it may happen that none of the enqueued queries are eligable for any servant,
-                      and no servants are busy. In that case, without a call on the timer, the remaining queries could
-                      not run until a new query is received, which might not happen).
+A complete listing of scripted.csv is shown below:
 
-### Understanding the example "match.q"
+```
+address,stype,sversion,condition,qfile
+localhost:5001,low,1,(symbol within `A`F),servant.q
+localhost:5002,mid,1,(symbol within `G`L),servant.q
+localhost:5003,high,1,(symbol within `M`T),servant.q
+localhost:5004,other,1,(1b),servant.q
+```
 
-The algorithm may be briefly described as follows:
-1. Compute a routing symbol for any queries for which "route" is null in the queries table.  
-2. Find all queries whose routing symbol is also held by some not-busy servant handle
-3. If any found, dispatch the first such query to the first such handle, and return.
-4. Otherwise, find all queries whose routing symbol is NOT held by any servant (busy or not).
-5. Also, find all handles which are not busy and whose routing symbol is unset or expired
-6. If both found, dispatch the first such query to the first such handle, and return.
-7. Otherwise, If the queue is not empty, request a call on the timer.
+Here, "address" specifies the host and port for the servant process, and "q-file" the program to run there.
+
+The "stype" and "sversion" columns are only used to phase-in new servants.
+When a new servant is added while mserve is running you can specify a percentage and a time interval.
+Each interval the probablity that a qualifying query goes to the new server will increase by the specified
+percentage, until it has held at 100% for a full interval. 
+
+
+
+The "condition" is a "q" boolean expression which determines whether this servant is qualified for a particular query.
+The variables in the boolean expression are derived from the arguments to the query, and any "options" included with
+the request by the function "getRoutingCriteria" (similar to getRoutingString in the match algorithm).
+
+In general, a query will be sent to the first servant in the table for which the condition evaluates as true,
+and which is not currently busy. 
+
+
+In this case there is only one variable "symbol" which comes from the first (and only) argument to the query.
+To use this plugin in another context where other variables are required, you can write your own
+getRoutingCriteria function as a second plugin, which should follow scripted.q in the MSERVE\_PLUGINS setting.
+
+In the above you can see that the first 3 servants are designated for symbols within the alphabetic ranges,
+A-F, G-L, and M-T respectively. 
+
+While I could have used (symbol within `U`Z) for the last servant, I want to illustrate the use of (1b) as a 
+"fallback" or "catch all" for all queries for which none of the previous conditions evaluate as true.
+
+In general, a query will be sent to the FIRST servant in the table for which the condition evaluates as true.
+
+That allows a servant at the bottom of the file with condition (1b) to serve as a fallback.
+If a fallback is not provided, and none of the conditions evaluate as true, the query cannot be dispatched 
+and will return an "ERROR: No Qualified Server" message.
+
+Similarly, if the alphabetic ranges above were not disjoint, but had some overlap, a query whos symbol is in 
+the overlap would be qualified for more than one server. In that case it would be sent to the first qualifying 
+server WHICH IS NOT BUSY.
+
+However a query will not be sent to a fallback just because its qualifying servers are busy, only when there
+are no qualifying servers at all.
+
+ 
 
 
 ## How to test match.q: To Do and Observe

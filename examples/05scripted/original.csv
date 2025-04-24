@@ -1,0 +1,4 @@
+address,stype,sversion,condition,qfile
+localhost:5001,IBM,1,(symbol=`IBM),servant.q
+localhost:5002,AAPL,1,(symbol=`AAPL),servant.q
+localhost:5003,other,1,(1b),servant.q
