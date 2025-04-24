@@ -280,7 +280,7 @@ ts:{
 
 /describe result
 describeResult:{[x;y]
-  info: "  server=", (1_ str y `qsvr), " route=", (str y `route), " elapsed= ", (str y `elapsed) ;
+  info: "  server=", (str y `qsvr), " route=", (str y `route), " elapsed= ", (str y `elapsed) ;
   if[10=type x; if["ERROR"~upper 5# x; :($[40<count x; 40#x,".."; x],info)]]; 
 
   t:gettype x; if[t in ("null"; "empty"); :t];
