@@ -9,6 +9,89 @@ That includes the ability to phase-in a new servant, so that the percentage of q
 new servant increases over a time interval. If a configurable number of errors occur in the new servant
 while the phase in is in effect, the new servant is removed and the original configuration restored.
 
+## The servant type and version
+
+(Eric: this section here is to discuss how the stype and sversion columns in the csv file
+should actually be used to reconfigure multiple servers in one operation, which is as close
+as I come to understanding what you want them for. -- it is temporary.
+
+Where you can help is to go down to where you see: "But what will users want to accomplish ?"
+and maybe add some stuff.)
+
+### A problem with the current system
+
+The servant type (stype) and version (sversion) are tags applied to rows in the routing table.
+The type seems to represent the role of the server in the system in some general way that may include
+some mixture of the properties of the host, the q-program, and the rule itself. And the version attempts
+to represent the evolution of this role over time.
+
+The exact meaning of the servant type might be different from one installation to another, and even
+from one version to another.
+ 
+For example, in scripted.csv, the stype really represents the alphabetic range of symbols handled by 
+the servant process - it is sort of a proxy for the boolean condition, and all the rows have sversion=1.
+
+When we do our failover demo, we add a new row with the same stype and boolean condition, but with a 
+new servant address and q-program (which has a simulated bug), and sversion=2.
+
+Where as "other v1" identified the fallback in the original table, "other v2" identifies the fallback
+with the upgraded (bad) q-program in the new table. This is what I mean by the version representing
+the evolution of the role with time.
+
+In this case the phase-in and failover worked as intended because there was only one row in the table
+with stype=other. If there had been more than one, when a single new server was phased in, ALL of the
+original servers with stype=other would be phased out.
+
+It seems that a user doing this would expect to start a new server with the upgraded q-file for each of
+the servers with stype=other.
+
+It gets worse if the user makes a mistake and forgets to increment the version number for the new server.
+Then the system will think that it is version 1 that is being phased in. Which means that although a new
+sevant will be started, ALL the original servers will also be ignored for most of the queries in the
+early portion of the phase in... because they all have version 1.
+
+I am sure we can come up with more unfavorable things that can happen.
+
+### Should we bring back the "old version" spec for phase in ?
+
+Originally, I required the user to specify an "old version" to be phased out when requesting a "new version"
+to be phased-in. If the "old version" was omitted or not present in the table, nothing would be phased out.
+Maybe that was better approach.
+
+Otherwise, after a phase-in all rows with the given stype will have the same sversion.
+However the initial configuration, and updates to the table done without phase in could result in different
+rows having different versions; that would likely be intentional, but would be destroyed by a later phase in.
+Maybe we should require that all rows with the same stype have the same sversion.
+
+Maybe we should require that all rows with the same stype and version have same q-file and/or condition.
+
+### A set of routing commands
+
+Rather than editing table rows the user should be able to think in terms of what they want to accomplish
+in the system, and we should have a specific command to do that, with good error checking.
+ 
+But what will users want to accomplish ?
+
+1. Upgrade all servants with a given type to a new version of their q-file, retaining same boolean condition.
+2. Move all servants with a given type on a given host, to a new host with different capabilities or location.
+3. Add a copy of a given rule (same type, version, condition, q-file), started on a given host/port.
+4. Add a copy of a given rule with a new condition (same type, version, q-file) started on a given host/port
+5. Add a copy of a given rile with the same condition but a new q-file (require type-version change ?) on given host/port
+6. Add a brand new rule specifying everything. (should we require a new stype or sversion?)
+7. Remove a given rule, closing the servants handle to cause it to shut down (terminate on close). 
+8. Modify just the condition in a given rule.
+
+...
+
+### Managing q-file versions.
+
+At present the only way be can choose between two q-files is by a file system path.
+That means if we want to distinguish between two version of (for example) servant.q
+we need to give one a different name (e.g. servantbad.q) or put it in a different directory.
+Also there is no guarantee that q-files with the same path on different hosts will be identical.
+
+
+
 ## New/Modified Files
 
 * scripted.q - An mserve plugin implementing this dispatch algorithm.
