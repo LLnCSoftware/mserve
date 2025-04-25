@@ -1,6 +1,30 @@
 # mserve
 
+## TODO Guide
+
+### Documentation TODOs
+- [D1] [Version and compatibility requirements](#todo-d1)
+- [D2] [Practical examples for glossary terms](#todo-d2)
+- [D3] [Custom server type guidelines](#todo-d3)
+
+### Technical TODOs
+- [T1] [Error handling scenarios](#todo-t1)
+- [T2] [Security vulnerability examples](#todo-t2)
+- [T3] [Configuration templates](#todo-t3)
+
+### Performance TODOs
+- [P1] [Benchmarks and metrics](#todo-p1)
+- [P2] [Capacity planning guidelines](#todo-p2)
+- [P3] [Hardware configuration comparisons](#todo-p3)
+- [P4] [System specifications for benchmarking](#todo-p4)
+- [P5] [Statistical analysis of performance data](#todo-p5)
+- [P6] [Implementation comparison methodology](#todo-p6)
+
+---
+
 A high-performance load balancing solution for KDB+/q applications, based on [mserve\_np](https://github.com/nperrem/mserve) by Nathan Perrem (formerly of First Derivatives) and the original [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) cookbook.
+
+## todo-d1 [Add version information and compatibility requirements for each feature to help users understand system requirements.]
 
 ## Key Features
 
@@ -9,6 +33,8 @@ A high-performance load balancing solution for KDB+/q applications, based on [ms
 * Built-in benchmarking for performance tuning
 * Secure query execution
 * Flexible plugin architecture
+
+## todo-t1 [Add error handling scenarios and failure cases to the sequence diagram explanation.]
 
 ### Example Sequence Diagram.
 
@@ -43,6 +69,8 @@ The diagram below shows the messages exchanged in the demo above
       mserve_np would return that dictionary, with the routing string added to it.
     * The message ``(1234; <result table>; <info dictionary>)`` is sent back to the client
 
+## todo-d2 [Consider adding practical examples for each glossary term to make concepts more concrete.]
+
 ## MServe Glossary  
 
 **API Version:** A specific version of the service interface that defines:
@@ -51,6 +79,8 @@ The diagram below shows the messages exchanged in the demo above
 * Behavior guarantees
 
 Servants can support multiple API versions simultaneously by routing requests to different namespaces based on the client's requested version.
+
+## todo-d3 [Add guidelines for creating custom server types and best practices for naming conventions.]
 
 **Server Type Name:** An identifier that categorizes servers by their specialized function. For example:
 
@@ -72,6 +102,8 @@ This versioning enables gradual rollouts and canary deployments of server change
 When a server administrator deploys a new servant, and wants to do it using canary capability, 
 mserver needs a way to know which servant is intended to replace what other servant. 
 
+
+## todo-t2 [Add specific examples of security vulnerabilities that secure invocation prevents and how to test security configuration.]
 
 **Secure Invocation:** A security practice that restricts function execution to a pre-defined set of operations. It:
 
@@ -129,6 +161,8 @@ You can also override the "getRoutingSymbol" function from a plugin.
 
 
 
+## todo-p1 [Include specific performance benchmarks and metrics to help users make informed decisions.]
+
 ### Current Performance
 
 - **When request spikes cause frequent slowdowns**  
@@ -149,6 +183,8 @@ You can also override the "getRoutingSymbol" function from a plugin.
 - **When server tuning becomes overly complex**  
   *Consider option:* Deploy multiple smaller servers with standardized configurations behind a load balancer. This reduces the complexity of tuning individual servers and makes the system more maintainable.
 
+## todo-p2 [Add capacity planning guidelines and specific scaling thresholds based on real-world deployments.]
+
 ### Scalability and Future-Proofing
 
 - **When anticipating significant growth in traffic or data volume**  
@@ -166,6 +202,8 @@ You can also override the "getRoutingSymbol" function from a plugin.
 - **When traffic patterns are highly variable**  
   *Consider option:* Implement auto-scaling to dynamically adjust server capacity based on demand. This optimizes resource usage and costs by running fewer servers during low-traffic periods while maintaining the ability to scale up during peak loads.
 
+## todo-t3 [Include configuration templates for common high-availability setups and disaster recovery procedures.]
+
 ### Improved Availability
 
 - **When high availability is critical**  
@@ -182,6 +220,8 @@ You can also override the "getRoutingSymbol" function from a plugin.
 
 - **When dealing with intermittent server issues**  
   *Consider option:* Implement automatic health checks to detect and route traffic away from problematic servers, ensuring reliable service despite occasional server or network issues.
+
+## todo-p3 [Add performance comparison data between different hardware configurations and cost-benefit analysis.]
 
 ### Use of Special Hardware
 
@@ -219,12 +259,16 @@ The benchmarks below compare elapsed time overhead (in milliseconds) across diff
 | AW      | 0.696 | 0.870 | 0.940 | 50     | Original mserve implementation           |
 | SS      | 0.339 | 0.490 | 0.547 | 50     | Socket sharding (baseline)               |
 
+## todo-p4 [Add system specifications and hardware configurations used for benchmarking to ensure reproducibility.]
+
 ### Benchmark Methodology
 
 * Test scenario: Round-trip timing of an "echo" query (returns its single argument)
 * Environment: All tests use servant.q from examples with added echo function
 * Exception: NP version uses its own servant due to different function evaluation approach
 * Security note: NP's approach of sending functions for evaluation is not compatible with secure invocation
+
+## todo-p5 [Include statistical analysis of performance variations and explain any anomalies in the data.]
 
 ### Historical Performance Data
 
@@ -252,3 +296,32 @@ Additional implementations pending evaluation:
 **References:**
 * [Socket Sharding Documentation](https://code.kx.com/q/wp/socket-sharding/)
 * [Nginx Load Balancing Guide](https://iceburn.medium.com/nginx-tcp-load-balancing-6f9509b772f2)
+
+## todo-p6 [Add comparison methodology for evaluating new implementations against existing benchmarks.]
+
+---
+
+### Document Revision Summary
+This document has been enhanced with TODOs to guide future improvements in the following areas:
+
+1. Documentation Completeness
+   - Version information and compatibility requirements
+   - Practical examples for glossary terms
+   - Custom server type guidelines
+
+2. Technical Implementation
+   - Error handling scenarios
+   - Security vulnerability examples
+   - Configuration templates
+
+3. Performance Documentation
+   - Specific benchmarks and metrics
+   - Capacity planning guidelines
+   - Hardware configuration comparisons
+
+4. Benchmarking Methodology
+   - System specifications for reproducibility
+   - Statistical analysis of performance data
+   - Comparison methodology for new implementations
+
+Each TODO is specific and actionable, providing clear direction for future documentation improvements.
