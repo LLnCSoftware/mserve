@@ -18,6 +18,17 @@ as I come to understanding what you want them for. -- it is temporary.
 Where you can help is to go down to where you see: "But what will users want to accomplish ?"
 and maybe add some stuff.)
 
+The stype represents a description of a servant that is present in the routingTable in order to be 
+able to replace it with a new version, gradually with canary deployment, or 
+suddenly with conventional deployments, for example: 
+
+ * hdb-running-on-ec2-t2.small
+ * rdb-running-in-Singapore
+
+The sversion is used to indicate which rows are supposed to replace which other rows, either 
+via canary deployment or deletion and replacement, so that an admin can say 
+"I'm upgrading the software on the rdb-running-in-Singapore to the new commit" 
+
 ### A problem with the current system
 
 The servant type (stype) and version (sversion) are tags applied to rows in the routing table.
@@ -65,6 +76,12 @@ Maybe we should require that all rows with the same stype have the same sversion
 
 Maybe we should require that all rows with the same stype and version have same q-file and/or condition.
 
+What are the implications of saying: 
+
+* We have stype and sversion to support:
+    * Replacing an old servant with a new one (canary or suddenly)
+    * Decommissioning an old set of servants 
+
 ### A set of routing commands
 
 Rather than editing table rows the user should be able to think in terms of what they want to accomplish
@@ -72,14 +89,45 @@ in the system, and we should have a specific command to do that, with good error
  
 But what will users want to accomplish ?
 
+* Sudden deploy a new servant (or canary) to replace an old one 
+* Delete a servant (including after a canary)
+* Add a servant 
+
+**We should develop something that is easy to automate with a react UI eventually.**
+
+## Ways to avoid errors 
+
+* Confirmation string and (Y/N) confirm 
+
+
+* It is almost like the "stype" is a **"description"** field:
+    * hdb-running-on-ec2-t2.small or rdb-running-in-Singapore
+
+* I might want to canary in something that I want to use "gently" even though I'm not
+  retiring anything yet. (Accomplishable by having no other row with this 
+  stype, or nothing with this stype and any other version number.)
+
 1. Upgrade all servants with a given type to a new version of their q-file, retaining same boolean condition.
+    * or retain the same q-file but change some configuration things such as:
+        * Put it on a different host, perhaps one with more ram or something
 2. Move all servants with a given type on a given host, to a new host with different capabilities or location.
+    * yes, not in this demo but sure.
+        * I don't think we need to implement something with a where clause 
 3. Add a copy of a given rule (same type, version, condition, q-file), started on a given host/port.
-4. Add a copy of a given rule with a new condition (same type, version, q-file) started on a given host/port
-5. Add a copy of a given rile with the same condition but a new q-file (require type-version change ?) on given host/port
+    * replicating a capability by Horizontally Scaling 
+4. Add a copy of a given rule with a new condition (same type, version, q-file) started on a given specified host/port
+5. Add a copy of a given rule with the same condition but a new q-file (require type-version change ?) on given host/port (upgrade)
 6. Add a brand new rule specifying everything. (should we require a new stype or sversion?)
+    * When I am adding a new capability, say an RDB for the last 3 days.
+    * In this case, if I say "newCapablity" it should do nothing if the stype is not new, 
+      just return an error msg that the shell script can print out. "Retry with unique stype" 
 7. Remove a given rule, closing the servants handle to cause it to shut down (terminate on close). 
+    * Def want to be able to support but not essential for this demo. 
 8. Modify just the condition in a given rule.
+    * Changing what a specific servant is being used to do, like change the date range 
+      it serves, for example. 
+    * I might want to do this for all the servants with a specific stype 
+        * Would I ever want to have different booleans for the same stype? 
 
 ...
 
