@@ -51,10 +51,13 @@ it returns. A servant could be documented to support more than one API Version w
 by shunting the calls to different name spaces depending on what API version the client 
 request says it is expecting to support. 
 
+<<<<<<< HEAD
 QUESTION: Is this precisely correct? This feels off from my understanding of what an API is. But API version is what is actually being defined
 so I guess... well I am still confused. The API version is the API version... wouldn't the API documentation be what specifies what functions 
 are documented to be supported?
 
+=======
+>>>>>>> f9a49f6d917ecf8f1641ebecc6a967218483cb1d
 **Server Type Name:** Say I am at hedge fund named HF and we have some code we use to do RDB computations 
 and some to do HDB computations. Mserver could be configured with a plugin to know which queries should be
 sent to which servers because we realized that it is valuable to keep the data for the last 48 hours in RDB 
@@ -76,12 +79,15 @@ server because any of a number issues:
 When a server administrator deploys a new servant, and wants to do it using canary capability, 
 mserver needs a way to know which servant is intended to replace what other servant. 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> f9a49f6d917ecf8f1641ebecc6a967218483cb1d
 **Secure Invocation:** The practice of executing q functions or operations in a controlled manner, 
 without evaluating arbitrary expressions. This mitigates security risks associated with executing 
-client-provided strings, which might contain malicous code. Instead, Secure Invocation only allows 
+client-provided strings, which might contain malicious code. Instead, Secure Invocation only allows 
 execution of a limited number pre-defined functions, as in a conventional API call. In addition,
-Secure invocation must prevent execution of arbitary expressions which might appear in the
+Secure invocation must prevent execution of arbitrary expressions which might appear in the
 arguments to the functions.
 
 _key characteristics_
@@ -95,6 +101,30 @@ See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe
 Also for more details about **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
 
 -----------
+<<<<<<< HEAD
+=======
+REWRITE:  
+#### Secure Invocation: 
+
+Secure Invocation:
+The practice of executing only a limited set of pre-defined q functions in a ?? controlled manner, disallowing arbitrary string evaluation. This reduces security risks such as code injection, which can arise from evaluating client-provided strings containing potentially malicious code. Like conventional API calls, Secure Invocation ensures that only registered and explicitly permitted functions can be executed, and that their arguments are properly validated (and potentially sanitized.) It also prevents the execution of arbitrary expressions passed as arguments.
+
+_Security Guarantees_ ??? (need to rethink this part maybe)
+
+- Prevents code injection by disallowing arbitrary q code evaluation.
+
+- Limits execution to a pre-defined, registered set of safe functions.
+
+- Ensures arguments are validated or sanitized before invocation.
+
+For an introduction to interprocess communication, see [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe/#119-interprocess-communication-101)  
+
+For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
+
+For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in ??????????? Where is it ?????????????
+
+-----------
+>>>>>>> f9a49f6d917ecf8f1641ebecc6a967218483cb1d
 
 **Servant** An instance of your api server managed my mserve. When used by itself "servant" might refer to either
 a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
