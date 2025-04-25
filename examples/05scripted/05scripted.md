@@ -80,7 +80,7 @@ What are the implications of saying:
 
 * We have stype and sversion to support:
     * Replacing collection of old servants (having specified stype or stype and version) with new ones (one-for-one).
-    * Adding a copy of each of a collection of old servants (having specified stype or stype and sversion) 
+    * Adding a copy of each of a collection of existing servants (having specified stype or stype and sversion) (hscaling or vscaling)
     * Decommisioning an old set of servants (having specified stype or stype and version).    
     * Reducing the number of servants (having speciied stype or stype and version) to a specified maximum.
 
