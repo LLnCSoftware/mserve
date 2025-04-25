@@ -1,8 +1,45 @@
 # mserve
+
+## Document Revision Notes
+This document has been enhanced with TODOs to highlight areas needing clarification or improvement:
+
+1. Terminology
+   - API vs API Version distinction ([→ todo-t1](#todo-t1))
+   - Cache thrashing explanation ([→ todo-t3](#todo-t3))
+   - Infrastructure terms ([→ todo-t4](#todo-t4))
+   - Servant terminology ([→ todo-t5](#todo-t5))
+
+2. Technical Details
+   - Dispatch algorithm implementation ([→ todo-t2](#todo-t2))
+   - Routing string mechanics ([→ todo-e1](#todo-e1))
+   - Plugin examples ([→ todo-t6](#todo-t6))
+   - Global variable usage ([→ todo-t7](#todo-t7))
+   - Data locality concepts ([→ todo-t8](#todo-t8))
+   - Error handling strategy ([→ todo-t9](#todo-t9))
+   - Message protocol details ([→ todo-t10](#todo-t10))
+
+3. Performance
+   - Benchmark methodology ([→ todo-p1](#todo-p1))
+   - Test comparisons ([→ todo-p2](#todo-p2))
+   - System terminology ([→ todo-p3](#todo-p3))
+   - Scaling limits ([→ todo-p4](#todo-p4))
+   - Network overhead ([→ todo-p5](#todo-p5))
+
+4. Examples
+   - Memory bottlenecks ([→ todo-e2](#todo-e2))
+   - Routing patterns ([→ todo-e1](#todo-e1))
+   - Migration guide ([→ todo-e3](#todo-e3))
+   - Configuration patterns ([→ todo-e4](#todo-e4))
+
+Each TODO is linked to its location in the document and includes specific action items for improvement.
+
+---
+
+# mserve
 Enhanced mserve load balanced solution
 
 Enhanced mserve load balanced solution based on [mserve\_np](https://github.com/nperrem/mserve) 
-by Nathan Perrem, formerly of First Derivatives, in tern was based on [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) 
+by Nathan Perrem, formerly of First Derivatives, in turn was based on [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) 
 
 Here we are adding:
 
@@ -29,6 +66,14 @@ The diagram below shows the messages exchanged in the demo above
     * If preferred servant is not available choose any free (i.e., not busy) servant.
     * The message ``(1234; "proc1 `IBM)`` is forwarded to the selected servant unchanged.
 
+## todo-t9
+[Define error handling strategy]
+QUESTION: We need to clarify our error handling approach:
+1. What happens if all servants are busy?
+2. How do we handle servant failures?
+3. Is there retry logic?
+This impacts system reliability and debugging.
+
 3. When the servant responds with a result table
     * The message ``(1234; <result table>)`` is sent from the servant to mserve\_np.
 
@@ -43,6 +88,14 @@ The diagram below shows the messages exchanged in the demo above
       mserve_np would return that dictionary, with the routing string added to it.
     * The message ``(1234; <result table>; <info dictionary>)`` is sent back to the client
 
+## todo-t10
+[Document message protocol]
+QUESTION: We should document our message protocol more thoroughly:
+1. What are all possible message formats?
+2. How do we handle malformed messages?
+3. Is there a size limit on messages?
+This would help teams implement reliable client integrations.
+
 ## MServe Glossary  
 
 **API Version:** An API specifies exactly what functions are documented to be supported 
@@ -51,9 +104,13 @@ it returns. A servant could be documented to support more than one API Version w
 by shunting the calls to different name spaces depending on what API version the client 
 request says it is expecting to support. 
 
-QUESTION: Is this precisely correct? This feels off from my understanding of what an API is. But API version is what is actually being defined
-so I guess... well I am still confused. The API version is the API version... wouldn't the API documentation be what specifies what functions 
-are documented to be supported?
+## todo-t1
+[Review and clarify API versioning model]
+QUESTION: We should clarify the relationship between API documentation and version support. Currently, the text discusses API versions but doesn't fully explain:
+1. What constitutes our API (the interface itself)
+2. How version changes are determined
+3. How API documentation relates to version support
+This distinction is important for maintainers and users of the system.
 
 **Server Type Name:** Say I am at hedge fund named HF and we have some code we use to do RDB computations 
 and some to do HDB computations. Mserver could be configured with a plugin to know which queries should be
@@ -70,6 +127,14 @@ server because any of a number issues:
 * A code change that supports a new API, but still supports the old API. 
 * A code change that supports a new API, but does not supports the old API. 
 * A code change that improves efficiency or fix a bug and does not change any of the operation names, the arguments they take, what they do or what they return, so no need for any client to change and thus no need to have a new API ID.
+
+## todo-p4
+[Document scaling characteristics]
+QUESTION: We should specify our scaling boundaries:
+1. What's the max number of servants we've tested?
+2. Are there message size limits?
+3. What resource constraints should teams plan for?
+This helps teams plan capacity effectively.
 * A configuration change, such as moving from one EC2 instance type to another or changing an environment var 
   that impacts how much memory the KTV instance is allowed to grow to use. 
 
@@ -121,7 +186,13 @@ For implementation details on **Secure Invocation** see: "Understanding secure\_
 a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
 
 -------
-QUESTION: How do you disambiguate usage of the term "servant"? Maybe provide a rule of thumb. I've seen this pattern in documentation and textbooks. In this context, we mean X. Otherwise, Y. 
+## todo-t5
+[Clarify servant terminology]
+QUESTION: We need to establish clear terminology guidelines:
+1. What exactly is a "servant" in our system?
+2. How does our usage differ from other contexts?
+3. What are the key responsibilities of a servant?
+This will help prevent confusion in technical discussions.
 
 ------
 
@@ -132,7 +203,13 @@ while the variable MSERVE\_PLUGINS lists the plugins for mserve\_np.q itself.
 
 -------
 
-QUESTION: What are some example of plugins?
+## todo-t6
+[Document plugin system]
+QUESTION: We need to document the plugin architecture:
+1. What types of plugins are supported?
+2. What are common use cases for plugins?
+3. How can teams develop custom plugins?
+This will help teams extend the system effectively.
 
 -----
  
@@ -153,14 +230,44 @@ MSERVE_ALGO="even" q mserve-np.q 5 servant.q -p 5000
 
 New dispatch algorithms may be added as plugins, see "examples/04dispatch/04dispatch.md."
 
+## todo-e3
+[Create migration guide]
+QUESTION: We need a practical migration guide:
+1. How do teams transition from monolithic to distributed?
+2. What are common migration pitfalls?
+3. Can we provide a phased approach?
+This would help teams adopt the technology safely.
+
+## todo-e4
+[Document configuration patterns]
+QUESTION: We should document real-world configurations:
+1. What are typical production setups?
+2. How do different team sizes affect configuration?
+3. What environment variables matter most?
+This helps teams choose appropriate configurations.
+
 
 ----
 
-QUESTION: What is meant by a "is selected by copying it to a global variable "check.""?
+## todo-t2
+[Document dispatch algorithm implementation details]
+## todo-t7
+[Explain global state management]
+QUESTION: We need to clarify our state management:
+1. How is the global 'check' variable used?
+2. What are the implications of this design?
+3. Are there thread-safety considerations?
+This will help developers understand our state management approach.
 
 Maybe better to be more specific... it's not merely a "means of selecting a servant", it is an algorithm that selects servants based on certain criteria. It is a mechanism that intelligently assigns queries in order to optimize performance. 
 
-QUESTION: What is meant by warm data really? What is good about this. Perhaps it is not obvious to everyone. The principle of locality?
+## todo-t8
+[Explain data locality principles]
+QUESTION: We need to explain our data locality strategy:
+1. What do we mean by "warm" data?
+2. How does data locality affect performance?
+3. What are the benefits of our approach?
+This will help teams optimize their data access patterns.
 
    
 **Routing String** A string (or symbol) derived from a query expression which is used to help select the best servant 
@@ -171,21 +278,15 @@ env variable to "q" function definition which accepts the parsed expression and 
 You can also override the "getRoutingSymbol" function from a plugin. 
 
 ----
+## todo-e1
+[Add examples of routing string patterns and usage]
 QUESTION: What does the routing string actually look like? An example and explanation of the mechanics might be useful. This is broadly confusing to me. It is used to help select the best servant but apparently is only used in only ONE of the algorithms. Why? What is used in the other cases? 
 
 ----
 
 ## When do use this Technology?
 
-QUESTION: Could it be better to title this section: 
 
-When *should* you use this technology?
-
-Recommended Use Cases
-
-When is this Technology Recommended?
-
-?
 
 ### Current Performance
 
@@ -193,8 +294,13 @@ When is this Technology Recommended?
   *Consider option:* Distributing requests across multiple servers using a load balancer to mitigate CPU saturation on any single node.
 
 
-  QUESTION: What is CPU saturation and what is a node?
-  I like how succinct these answers are but if you are aiming for total clarity to people not necessarily familiar with networking technologies, answering these could help.
+## todo-p3
+[Define system terminology]
+QUESTION: We need to define key system concepts:
+1. What constitutes CPU saturation?
+2. What defines a node in our architecture?
+3. How do these concepts affect scaling decisions?
+This will help teams understand system behavior and limitations.
 
 
 
@@ -202,7 +308,13 @@ When is this Technology Recommended?
   *Consider option:* Splitting data or queries among nodes so each node handles only a subset of the workload.
 
 
-Question: How could that arise? How would a bottleneck arise? Example?
+## todo-e2
+[Document memory bottleneck scenarios]
+QUESTION: We need concrete examples of memory bottlenecks:
+1. What are typical scenarios that create memory pressure?
+2. How do these manifest in production?
+3. What resolution strategies have worked?
+Real-world examples would help teams identify and address similar issues.
 
 
 - **When you think you are in a situation where a single machine can be upgraded but might still struggle under peak load**  
@@ -217,11 +329,24 @@ Question: How could that arise? How would a bottleneck arise? Example? Repeated 
 - **When you think you are in a situation where cache thrashing leads to poor query performance**  
   *Consider option:* Routing queries to servers holding relevant data in memory, improving local cache efficiency.
 
-
-Question: What is cache thrashing? 
+## todo-t3
+[Document cache behavior and optimization]
+QUESTION: We need to explain cache thrashing in our context:
+1. What specific conditions trigger cache thrashing in our system?
+2. How does it impact query performance?
+3. What are our recommended mitigation strategies?
+This will help teams diagnose and prevent performance issues. 
 
 - **When you think you are in a situation where your team invests too much time tuning one massive server**  
   *Consider option:* Multiple smaller servers with a load balancer to simplify configuration and reduce single-server complexity.
+
+## todo-p5
+[Analyze network overhead]
+QUESTION: We should quantify our network impact:
+1. What's the message overhead per request?
+2. How does network latency affect performance?
+3. Are there bandwidth considerations?
+This helps teams optimize their network architecture.
 
 Question: I don't fully understand this use case. Why does multiple servers reduce complexity? Less people per server? What is tuning a server?
 
@@ -233,7 +358,13 @@ Question: I don't fully understand this use case. Why does multiple servers redu
 - **When you think you are in a situation where you want to avoid big “forklift” upgrades**  
   *Consider option:* Incrementally adding mid-range servers behind a load balancer, rather than purchasing a single high-end box.
 
-  Question: What is a "forklift" upgrade and why would adding mid-range servers "behind a load balancer" be better than a single high-end box?
+## todo-t4
+[Document infrastructure evolution strategies]
+QUESTION: We should clarify our infrastructure terminology, specifically:
+1. What exactly constitutes a "forklift" upgrade in our context?
+2. Why is our incremental approach with load balancing preferable?
+3. What are the cost/benefit tradeoffs?
+This will help teams make informed infrastructure decisions.
 
 - **When you think you are in a situation where you anticipate new data distribution patterns (e.g., time-partitioned data)**  
   *Consider option:* Let the load balancer direct queries to nodes specialized in different time ranges or data types.
@@ -301,6 +432,9 @@ to that of invocation via socket sharding (direct invocation with reuse port).
 | AW      | 0.696 | 0.870 | 0.940 | 50     |                                          |
 | SS      | 0.339 | 0.490 | 0.547 | 50     |                                          |
 
+## todo-p1
+[Document complete benchmark methodology and environment]
+
 These numbers were obtained by timing a round trip to the servant for an "echo" query
 (which just returns its single argument).
 
@@ -308,6 +442,9 @@ The servant is the servant.q used in the examples (to which the "echo" function 
 except in the case of "NP" (the original mserve\_np.q by Nathan Perrem). That version needed
 to use it own servant because it sends a function to be evaluated which is not allowed by
 secure invocation.
+
+## todo-p2
+[Add comparative analysis between test iterations]
 
 ## Previous Tests
 
