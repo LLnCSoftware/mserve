@@ -38,9 +38,18 @@ This document uses the following symbols to highlight areas needing attention:
 
 | Symbol | Meaning | How to Search |
 |--------|----------|---------------|
-| ⚠️ | Indicates spelling, grammar, or consistency issues | Search for `⚠️` |
+| ⚠️ | Spelling, grammar, or consistency issues | Search for `⚠️` |
+| 🔗 | Missing or broken references | Search for `🔗` |
+| 📝 | Formatting inconsistencies | Search for `📝` |
+| ❓ | Undefined or ambiguous terms | Search for `❓` |
+| 🔍 | Missing examples or illustrations | Search for `🔍` |
+| ⚙️ | Undefined configuration details | Search for `⚙️` |
+| 🏗️ | Structural improvements needed | Search for `🏗️` |
 
-Example: `word ⚠️[correction]` indicates that 'word' should be 'correction'
+Examples:
+- `word ⚠️[correction]` - Spelling/grammar correction
+- `term ❓[definition needed]` - Term needs definition
+- `section 🏗️[merge with X]` - Structural suggestion
 
 ---
 
@@ -52,9 +61,9 @@ by Nathan Perrem, formerly of First Derivatives, in turn was based on [LoadBalan
 
 Here we are adding:
 
-* "servants" on multiple remote hosts
-* providing for programmable dispatch to allow for such things as improved data locality, and 
-* providing benchmarking information for easier tuning. 
+* "servants" ❓[define servant concept] on multiple remote hosts
+* providing for programmable dispatch to allow for such things as improved data locality 📝[inconsistent list punctuation], and 
+* providing benchmarking information for easier tuning 🔍[add tuning examples]. 
 
 ### Example Sequence Diagram.
 
@@ -122,9 +131,9 @@ QUESTION: We should clarify the relationship between API documentation and versi
 This distinction is important for maintainers and users of the system.
 
 **Server Type Name:** Say I am at hedge fund named HF and we have some code we use to do RDB computations 
-and some to do HDB computations. Mserver could be configured with a plugin to know which queries should be
-sent to which servers because we realized that it is valuable to keep the data for the last 48 hours in RDB 
-and the older information in HDB. This could turn out to be a major performance enhancement. It is powerful to allow 
+and some to do ❓[HDB (Historical Database)] computations. Mserver could be configured with a plugin to know which queries should be
+sent to which servers because we realized that it is valuable to keep the data for the last 48 hours in ❓[RDB (Real-time Database)] 
+and the older information in HDB 🔍[add architecture diagram]. This could turn out to be a major performance enhancement. It is powerful to allow 
 mserve to ⚠️[route] the query to the right server without having to change the client, just based on
 things like start and end date of the query API call. A server type named HF_RDB and another HF_HDB, 
 a dispatch ⚠️[algo] could know that we expanded what we expanded from 24 hours in the RDB to 48 in the RDB 
@@ -187,7 +196,7 @@ For an introduction to interprocess communication, see [Interprocess Communicati
 
 For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
 
-⚠️[MISSING REFERENCE] For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q"
+🏗️[duplicate section] 🔗[fix reference] For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q"
 
 -----------
 
@@ -234,7 +243,7 @@ To use a different one, set the environment variable 'MSERVE\_ALGO' when launchi
 For example, to run with 5 instances of "servant.q" using the 'even' algorithm you could type:
 
 ```
-MSERVE_ALGO="even" q mserve-np.q 5 servant.q -p 5000
+MSERVE_ALGO="even" q mserve-np.q 5 servant.q -p 5000 ⚙️[document all env vars and defaults]
 ```
 
 New dispatch algorithms may be added as plugins, see "examples/04dispatch/04dispatch.md."
@@ -283,8 +292,8 @@ This will help teams optimize their data access patterns.
 on which to run that query. Only the "match" dispatch algorithm uses a routing string.
 
 The default routing string is just the first argument to the command. That may be changed by setting the MSERVE_ROUTING 
-env variable to a "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
-You can also override the "getRoutingSymbol" function from a plugin. 
+env variable ⚙️[add default value] to a "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
+You can also override the "getRoutingSymbol" function from a plugin 🔍[add example plugin]. 
 
 ----
 ## todo-e1
@@ -464,9 +473,9 @@ We are calling this version LBT for Load Balancing Technology
 | LBT     | .411 | .515 | NA  | 30 queries and 28 took less than .5 ms |
 | NP      | .367 | 1    | NA  | 19 of 30 had zero at ms precision      |
 | AW      | .696 | .921 | NA  | All 30 exceeded .5 ms                  |
-| SS      |      |      |     |                                        |
-| Direct  |      |      |     |                                        |
-| Nginx   |      |      |     |                                        |
+| SS      |      |      |     | 🔍[add missing data]                    |
+| Direct  |      |      |     | 🔍[add missing data]                    |
+| Nginx   |      |      |     | 🔍[add missing data]                    |
 
 In the above we attempt to compare the overhead associated with several different load balancing techniques. We estimate the overhead as the round trip elapsed time of an "echo" command that just returns its argument. For each technique we obtain the average and maximum elapsed time, and fraction of the requests taking less than .5 ms.
 
