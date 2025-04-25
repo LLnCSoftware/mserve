@@ -79,8 +79,13 @@ Maybe we should require that all rows with the same stype and version have same 
 What are the implications of saying: 
 
 * We have stype and sversion to support:
-    * Replacing an old servant with a new one (canary or suddenly)
-    * Decommissioning an old set of servants 
+    * Replacing collection of old servants (having specified stype or stype and version) with new ones (one-for-one).
+    * Adding a copy of each of a collection of old servants (having specified stype or stype and sversion) 
+    * Decommisioning an old set of servants (having specified stype or stype and version).    
+    * Reducing the number of servants (having speciied stype or stype and version) to a specified maximum.
+
+    * Replacing an old servant with a new one (canary or suddenly)  (singular: no need for stype)
+    * Decommissioning a single servant                              (singular: no need for stype)
 
 ### A set of routing commands
 
