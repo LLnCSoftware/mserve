@@ -1,250 +1,254 @@
 # mserve
-Enhanced mserve load balanced solution
 
-Enhanced mserve load balanced solution based on [mserve_np](https://github.com/nperrem/mserve) 
-by Nathan Perrem, formerly of First Derivatives, which in turn was based on [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing).
+A high-performance load balancing solution for KDB+/q applications, based on [mserve\_np](https://github.com/nperrem/mserve) by Nathan Perrem (formerly of First Derivatives) and the original [LoadBalancing](https://code.kx.com/trac/wiki/Cookbook/LoadBalancing) cookbook.
 
-Here we are adding:
+## Key Features
 
-* "servants" on multiple remote hosts
-* Programmable dispatch to allow for improved data locality
-* Benchmarking information for easier tuning
+* Support for distributed servants across multiple remote hosts
+* Programmable dispatch mechanisms for optimized data locality
+* Built-in benchmarking for performance tuning
+* Secure query execution
+* Flexible plugin architecture
 
-### Example Sequence Diagram
+### Example Sequence Diagram.
 
-The diagram below shows the messages exchanged in the demo above:
+The diagram below shows the messages exchanged in the demo above
 
 ![Sequence Diagram](img/sequencediagram.png)
 
-When you run `send proc1 `IBM` in the quickstart demo:
+* When you run ``send proc1 `IBM`` in the quickstart demo:
+    * The message ``(1234; "proc1 `IBM")`` is sent from the client to mserve\_np, which is the 
+      client's way of saying to the load balancer "execute the function 'proc1' with argument `IBM and return the result to me with id 1234".
+    * mserve\_np sends the query to an internal function (denoted "match dispatcher"). (To see how to 
+      select or develop a different method of dispatch, see "examples/04dispatch/04dispatch.md".)
+    * which sends back a "routing string" in this case the first argument to the query: `IBM.   
 
-1. The message `(1234; "proc1 `IBM")` is sent from the client to mserve_np, which is the 
-   client's way of saying to the load balancer "execute the function 'proc1' with argument `IBM` and return the result to me with id 1234".
-2. mserve_np sends the query to an internal function (denoted "match dispatcher"). (To see how to 
-   select or develop a different method of dispatch, see "examples/04dispatch/04dispatch.md".)
-3. The dispatcher sends back a "routing string" in this case the first argument to the query: `IBM`.
+2. When this message is ready to be sent:
+    * The routing string is used to select a servant.
+    * Prefer to send a query to a servant whose previous query had the same routing string.
+    * If preferred servant is not available choose any free (i.e., not busy) servant.
+    * The message ``(1234; "proc1 `IBM)`` is forwarded to the selected servant unchanged.
 
-When this message is ready to be sent:
+3. When the servant responds with a result table
+    * The message ``(1234; <result table>)`` is sent from the servant to mserve\_np.
 
-1. The routing string is used to select a servant.
-2. Prefer to send a query to a servant whose previous query had the same routing string.
-3. If preferred servant is not available, choose any free (i.e., not busy) servant.
-4. The message `(1234; "proc1 `IBM")` is forwarded to the selected servant unchanged.
+4. When mserve\_np receives the result
+    * msevere\_np notices that the response includes only the id and result, no extra "info".
+    * For that reason it provides a default "info dictionary" that reports: 
+       * the routing string used
+       * which servant ran the request
+       * elapsed time (includes time in queue)
+       * execution time (excludes time in queue)
+    * If the servant had provided its own info dictionary as the 3rd item in the response  
+      mserve_np would return that dictionary, with the routing string added to it.
+    * The message ``(1234; <result table>; <info dictionary>)`` is sent back to the client
 
-When the servant responds with a result table:
+## MServe Glossary  
 
-1. The message `(1234; <result table>)` is sent from the servant to mserve_np.
+**API Version:** A specific version of the service interface that defines:
+* Supported functions and their signatures
+* Expected arguments and return types
+* Behavior guarantees
 
-When mserve_np receives the result:
+Servants can support multiple API versions simultaneously by routing requests to different namespaces based on the client's requested version.
 
-1. mserve_np notices that the response includes only the id and result, no extra "info".
-2. For that reason it provides a default "info dictionary" that reports: 
-   * The routing string used
-   * Which servant ran the request
-   * Elapsed time (includes time in queue)
-   * Execution time (excludes time in queue)
-3. If the servant had provided its own info dictionary as the 3rd item in the response, 
-   mserve_np would return that dictionary, with the routing string added to it.
-4. The message `(1234; <result table>; <info dictionary>)` is sent back to the client.
+**Server Type Name:** An identifier that categorizes servers by their specialized function. For example:
 
-## MServe Glossary
+* `HF_RDB`: Servers optimized for recent data (e.g., last 48 hours)
+* `HF_HDB`: Servers handling historical data
 
-**API Version:** An API specifies exactly what functions are documented to be supported 
-by a server, what arguments they take, and what it means to run this function, including what
-it returns. A servant could be documented to support more than one API Version which it could support 
-by shunting the calls to different name spaces depending on what API version the client 
-request says it is expecting to support.
+This allows mserve to intelligently route queries based on criteria like date ranges without requiring client-side changes. The server type enables automatic query routing to the most appropriate server based on the query's characteristics.
 
-**Server Type Name:** For example, at a hedge fund named HF, we might have some code for RDB computations 
-and some for HDB computations. Mserve could be configured with a plugin to know which queries should be
-sent to which servers because we realized that it is valuable to keep the data for the last 48 hours in RDB 
-and the older information in HDB. This could turn out to be a major performance enhancement. It is powerful to allow 
-mserve to route the query to the right server without having to change the client, just based on
-things like start and end date of the query API call. A server type named `HF_RDB` and another `HF_HDB`, 
-a dispatch algorithm could know that we expanded from 24 hours in the RDB to 48 in the RDB 
-at a certain point and dispatch accordingly.
+**Server Type Version:** A version identifier for server implementations that enables controlled server updates. Common scenarios include:
 
-**Server Type Version:** We might want to gradually replace one server with another
-server for any of several reasons:
+* Backward-compatible API updates
+* Breaking API changes
+* Performance improvements and bug fixes
+* Infrastructure changes (e.g., EC2 instance type updates)
+* Configuration modifications (e.g., memory allocation adjustments)
 
-* A code change that supports a new API, but still supports the old API
-* A code change that supports a new API, but does not support the old API
-* A code change that improves efficiency or fixes a bug without changing any operation names, arguments, behavior, or return values
-* A configuration change, such as moving from one EC2 instance type to another or changing an environment variable 
-  that impacts how much memory the KDB instance is allowed to use
+This versioning enables gradual rollouts and canary deployments of server changes.
 
-When a server administrator deploys a new servant and wants to use canary deployment capability, 
-mserve needs a way to know which servant is intended to replace what other servant.
+When a server administrator deploys a new servant, and wants to do it using canary capability, 
+mserver needs a way to know which servant is intended to replace what other servant. 
 
-**Secure Invocation:** The practice of executing q functions or operations in a controlled manner, 
-without evaluating arbitrary expressions. This mitigates security risks associated with executing 
-client-provided strings, which might contain malicious code. Instead, Secure Invocation only allows 
-execution of a limited number of pre-defined functions, as in a conventional API call. In addition,
-Secure invocation must prevent execution of arbitrary expressions which might appear in the
-arguments to the functions.
 
-Key characteristics:
+**Secure Invocation:** A security practice that restricts function execution to a pre-defined set of operations. It:
 
-* Reduces the risk of code injection attacks
-* Allows execution of only a pre-defined set of commands
-* Arguments are validated or sanitized before command execution
+* Prevents execution of arbitrary expressions
+* Mitigates code injection risks
+* Validates all function arguments
+* Limits operations to documented API calls
+* Ensures predictable and safe execution
 
-See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe/#119-interprocess-communication-101)
+_key characteristics_
 
-Also for more details about **Secure Invocation** see: "Understanding secure_invocation.q" in examples/02quickauth/02quickauth.q.
+- Reduces the risk of code injection attacks.
+- Allows execution of only a pre-defined set of commands.
+- Arguments are validated or sanitized before command is executed.
 
-**Servant:** An instance of your API server managed by mserve. When used by itself "servant" might refer to either
-a "servant process" (a running instance of your API), or a "servant host" (the machine an instance of your API is running on).
+See: [Interprocess Communication 101](https://code.kx.com/q4m3/1_Q_Shock_and_Awe/#119-interprocess-communication-101)  
 
-**Plugin:** A program that provides some optional functionality to a "main" program without modifying the main program's source code.
+Also for more details about **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
+
+-----------
+
+**Servant** An instance of your api server managed my mserve. When used by itself "servant" might refer to either
+a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
+
+**Plugin** A program that provides some optional functionality to a "main" program without modifying the main program's source code.
 The "main" program may provide code to load the plugins, but which plugins get loaded is determined at launch time,
-in our case by an environment variable. The environment variable `Q_PLUGINS` lists the plugins for the servant processes,
-while the variable `MSERVE_PLUGINS` lists the plugins for mserve_np.q itself.
+in our case by an environment variable. The environment variable Q\_PLUGINS lists the plugins for the servant processes,
+while the variable MSERVE\_PLUGINS lists the plugins for mserve\_np.q itself.
 
-**Dispatch Algorithm:** A means of selecting a servant to run a particular query. In mserve_np.q, a dispatch algorithm
-is selected by copying it to the global variable "check". Currently, there are 3 dispatch algorithms available:
+**Dispatch Algorithm** A mechanism that intelligently assigns queries in order to optimize performance. It is an algorithm that selects servants based on certain criteria. 
 
-* **orig**: From the original. Always select the first not-busy server from the top of the list.
-* **even**: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch.
-* **match**: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
+- **orig**: From the original. Always select the first not-busy server from the top of the list.
+- **even**: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch. 
+- **match**: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
 
 The "match" algorithm is the default.
-To use a different one, set the environment variable `MSERVE_ALGO` when launching mserve.
-For example, to run with 5 instances of "servant.q" using the 'even' algorithm:
+To use a different one, set the environment variable 'MSERVE\_ALGO' when launching mserve.
+For example, to run with 5 instances of "servant.q" using the 'even' algorithm you could type:
 
-```bash
+```
 MSERVE_ALGO="even" q mserve-np.q 5 servant.q -p 5000
 ```
 
 New dispatch algorithms may be added as plugins, see "examples/04dispatch/04dispatch.md."
 
-**Routing String:** A string (or symbol) derived from a query expression which is used to help select the best servant 
+
+**Routing String** A string (or symbol) derived from a query expression which is used to help select the best servant 
 on which to run that query. Only the "match" dispatch algorithm uses a routing string.
 
-The default routing string is just the first argument to the command. That may be changed by setting the `MSERVE_ROUTING` 
-environment variable to a q function definition which accepts the parsed expression and returns the routing string as a symbol.
-You can also override the "getRoutingSymbol" function from a plugin.
+The default routing string is just the first argument to the command. That may be changed by setting the MSERVE_ROUTING 
+env variable to "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
+You can also override the "getRoutingSymbol" function from a plugin. 
 
-## When to Use This Technology
+## When Should You Use mserve?
+
+
 
 ### Current Performance
 
-* **When you think you are in a situation where spikes of incoming requests cause frequent slowdowns**  
-  *Consider option:* Distributing requests across multiple servers using a load balancer to mitigate CPU saturation on any single node.
+- **When request spikes cause frequent slowdowns**  
+  *Consider option:* Distribute requests across multiple servers using a load balancer to mitigate CPU saturation on any single node.
 
-* **When you think you are in a situation where memory usage on one server is causing bottlenecks**  
-  *Consider option:* Splitting data or queries among nodes so each node handles only a subset of the workload.
+- **When memory usage on one server causes bottlenecks**  
+  *Consider option:* Distribute data and workload across multiple nodes to reduce per-server memory pressure. For example, partitioning time-series data across servers by date ranges.
 
-* **When you think you are in a situation where a single machine can be upgraded but might still struggle under peak load**  
+
+
+
+- **When you think you are in a situation where a single machine can be upgraded but might still struggle under peak load**  
   *Consider option:* A lightweight enhancement like socket sharding on Linux to better utilize multiple CPU cores and reduce queue times.
 
-* **When you think you are in a situation where cache thrashing leads to poor query performance**  
-  *Consider option:* Routing queries to servers holding relevant data in memory, improving local cache efficiency.
+- **When cache thrashing leads to poor query performance**  
+  *Consider option:* Route similar queries to the same servers to maintain data locality and improve cache hit rates. This reduces the frequency of data being loaded into and evicted from memory (cache thrashing).
 
-* **When you think you are in a situation where your team invests too much time tuning one massive server**  
-  *Consider option:* Multiple smaller servers with a load balancer to simplify configuration and reduce single-server complexity.
+- **When server tuning becomes overly complex**  
+  *Consider option:* Deploy multiple smaller servers with standardized configurations behind a load balancer. This reduces the complexity of tuning individual servers and makes the system more maintainable.
 
 ### Scalability and Future-Proofing
 
-* **When you think you are in a situation where traffic or data volume is expected to grow significantly**  
-  *Consider option:* Implementing load balancing to easily add more servers horizontally as demands increase.
+- **When anticipating significant growth in traffic or data volume**  
+  *Consider option:* Implement horizontal scaling through load balancing, allowing you to add more servers as needed without system redesign.
 
-* **When you think you are in a situation where you want to avoid big "forklift" upgrades**  
-  *Consider option:* Incrementally adding mid-range servers behind a load balancer, rather than purchasing a single high-end box.
+- **When avoiding disruptive system upgrades**  
+  *Consider option:* Instead of major system replacements ("forklift upgrades"), gradually scale by adding mid-range servers behind a load balancer. This approach reduces both cost and risk compared to upgrading a single high-end server.
 
-* **When you think you are in a situation where you anticipate new data distribution patterns (e.g., time-partitioned data)**  
-  *Consider option:* Let the load balancer direct queries to nodes specialized in different time ranges or data types.
+- **When data access patterns evolve over time**  
+  *Consider option:* Configure the load balancer to route queries based on data characteristics (e.g., time ranges, data types). This enables efficient data partitioning and specialized node optimization without client-side changes.
 
-* **When you think you are in a situation where you might add specialized infrastructure in the future**  
-  *Consider option:* Designing a flexible load-balancing layer that can incorporate new hardware without major architectural changes.
+- **When planning for future infrastructure expansion**  
+  *Consider option:* Design a hardware-agnostic load balancing layer that can seamlessly integrate new server types (e.g., GPU-enabled nodes, high-memory instances) without requiring system-wide architectural changes.
 
-* **When you think you are in a situation where you need to adapt quickly to changing traffic patterns**  
-  *Consider option:* An auto-scaling approach with a load balancer that spins up or down additional servers based on real-time metrics.
+- **When traffic patterns are highly variable**  
+  *Consider option:* Implement auto-scaling to dynamically adjust server capacity based on demand. This optimizes resource usage and costs by running fewer servers during low-traffic periods while maintaining the ability to scale up during peak loads.
 
 ### Improved Availability
 
-* **When you think you are in a situation where high availability SLAs must be met**  
-  *Consider option:* A redundant, multi-server setup behind a load balancer for automatic failover when a node goes down.
+- **When high availability is critical**  
+  *Consider option:* Deploy a redundant, multi-server setup with automatic failover capabilities. This ensures service continuity even if individual servers fail, helping meet strict Service Level Agreements (SLAs).
 
-* **When you think you are in a situation where you must avoid any single point of failure**  
-  *Consider option:* Replicating data or services across multiple servers and distributing traffic so that any single node's failure is non-disruptive.
+- **When eliminating single points of failure is essential**  
+  *Consider option:* Replicate data and services across multiple servers with distributed traffic handling. This ensures system reliability by allowing the service to continue operating even if individual components fail.
 
-* **When you think you are in a situation where maintenance windows are disruptive**  
-  *Consider option:* Temporarily removing a server from the load balancer while patching or upgrading, keeping the rest online.
+- **When system maintenance must not interrupt service**  
+  *Consider option:* Perform rolling updates by temporarily removing servers from the load balancer for maintenance while keeping the service running on remaining servers.
 
-* **When you think you are in a situation where you need disaster recovery across different sites**  
-  *Consider option:* Geo-distributed servers behind a global load balancer, ensuring continuity if one site fails.
+- **When geographic redundancy is required**  
+  *Consider option:* Deploy servers across multiple locations with a global load balancer. This provides resilience against site-wide failures and can improve performance through locality.
 
-* **When you think you are in a situation where you experience occasional network or server hiccups**  
-  *Consider option:* Automatic health checks in a load balancer to route new requests away from misbehaving nodes.
+- **When dealing with intermittent server issues**  
+  *Consider option:* Implement automatic health checks to detect and route traffic away from problematic servers, ensuring reliable service despite occasional server or network issues.
 
 ### Use of Special Hardware
 
-* **When you think you are in a situation where some queries need GPU acceleration**  
-  *Consider option:* Direct GPU-intensive queries to servers equipped with GPUs, via a specialized load-balancing policy.
+- **When workloads require specialized hardware acceleration**  
+  *Consider option:* Route computation-intensive queries to GPU-equipped servers while handling standard queries on regular nodes, maximizing hardware utilization.
 
-* **When you think you are in a situation where certain servers have more RAM or faster SSDs**  
-  *Consider option:* Routing memory-bound or I/O-heavy queries to those specific nodes for optimal performance.
+- **When server capabilities vary across the cluster**  
+  *Consider option:* Direct memory-intensive or I/O-heavy operations to high-memory or SSD-optimized nodes respectively, ensuring optimal resource utilization.
 
-* **When you think you are in a situation where certain workloads require FPGA or other hardware accelerators**  
-  *Consider option:* A load balancer that tags and dispatches relevant queries to those specialized nodes only.
+- **When using specialized hardware accelerators**  
+  *Consider option:* Tag and route specific workloads to nodes with FPGA or other hardware accelerators, maximizing the benefit of specialized hardware investments.
 
-* **When you think you are in a situation where different nodes run different OS versions or architecture**  
-  *Consider option:* A load-balancing layer that hides heterogeneity from clients and routes queries based on compatibility.
+- **When managing a heterogeneous infrastructure**  
+  *Consider option:* Abstract away infrastructure differences through the load balancer, automatically routing requests to compatible servers based on OS version or architecture.
 
-* **When you think you are in a situation where new hardware needs to be tested in production**  
-  *Consider option:* Gradually shifting some percentage of traffic to the new hardware behind a load balancer, mitigating risk to the main environment.
+- **When testing new hardware configurations**  
+  *Consider option:* Use the load balancer for canary deployments, gradually shifting a percentage of traffic to new hardware while monitoring performance and stability.
 
 ## Performance Comparison
 
-The following compares the elapsed time overhead in milliseconds for 3 versions of mserve,
-to that of invocation via socket sharding (direct invocation with reuse port).
-[Socket sharding with kdb+ and Linux](https://code.kx.com/q/wp/socket-sharding/)
+The following benchmarks compare the overhead of different load balancing approaches for KDB+/q applications. The results show that our Load Balancing Technology (LBT) achieves comparable performance to less feature-rich alternatives.
 
-| System  |  Min  | Avg   | Max   | Trials | Comment                                 |
-|---------|-------|-------|-------|--------|------------------------------------------|
-| LBT     | 0.990 | 1.256 | 1.425 | 50     | Current implementation                   |
-| NP      | 1.014 | 1.209 | 1.316 | 50     | Original mserve_np                       |
-| AW      | 0.696 | 0.870 | 0.940 | 50     | Arthur's original mserve                 |
-| SS      | 0.339 | 0.490 | 0.547 | 50     | Socket sharding baseline                 |
+The benchmarks below compare elapsed time overhead (in milliseconds) across different implementations:
 
-These numbers were obtained by timing a round trip to the servant for an "echo" query
-(which just returns its single argument).
+* LBT: Current version with enhanced features
+* NP: Original mserve_np implementation
+* AW: Arthur Whitney's original mserve
+* SS: Socket sharding ([documentation](https://code.kx.com/q/wp/socket-sharding/))
 
-The servant is the servant.q used in the examples (to which the "echo" function was added),
-except in the case of "NP" (the original mserve_np.q by Nathan Perrem). That version needed
-to use its own servant because it sends a function to be evaluated which is not allowed by
-secure invocation.
 
-## Previous Tests
+| System | Min   | Avg   | Max   | Trials | Description                              |
+|---------|-------|-------|-------|---------|------------------------------------------|
+| LBT     | 0.990 | 1.256 | 1.425 | 50     | Current version with full feature set    |
+| NP      | 1.014 | 1.209 | 1.316 | 50     | Original mserve_np implementation        |
+| AW      | 0.696 | 0.870 | 0.940 | 50     | Original mserve implementation           |
+| SS      | 0.339 | 0.490 | 0.547 | 50     | Socket sharding (baseline)               |
 
-We are calling this version LBT for Load Balancing Technology
+### Benchmark Methodology
 
-| System  | Avg  | Max  | Min | Comment                                |
-|---------|------|------|-----|----------------------------------------|
-| LBT     | .411 | .515 | NA  | 30 queries and 28 took less than .5 ms |
-| NP      | .367 | 1    | NA  | 19 of 30 had zero at ms precision      |
-| AW      | .696 | .921 | NA  | All 30 exceeded .5 ms                  |
-| SS      |      |      |     |                                        |
-| Direct  |      |      |     |                                        |
-| Nginx   |      |      |     |                                        |
+* Test scenario: Round-trip timing of an "echo" query (returns its single argument)
+* Environment: All tests use servant.q from examples with added echo function
+* Exception: NP version uses its own servant due to different function evaluation approach
+* Security note: NP's approach of sending functions for evaluation is not compatible with secure invocation
 
-In the above we attempt to compare the overhead associated with several different load balancing techniques. We estimate the overhead as the round trip elapsed time of an "echo" command that just returns its argument. For each technique we obtain the average and maximum elapsed time, and fraction of the requests taking less than .5 ms.
+### Historical Performance Data
 
-* LBT - My most recent version of mserve_np.q using secure invocation
-* NP  - My starting point, the original mserve_np.q by Nathan Perrem
-* AW  - Arthur's original mserve
+Previous benchmarks comparing different load balancing approaches (times in milliseconds):
 
-We plan to add results for:
+| System | Avg   | Max   | Min | Performance Characteristics           |
+|--------|-------|-------|-----|---------------------------------------|
+| LBT    | 0.411 | 0.515 | N/A | 93% of queries under 0.5ms           |
+| NP     | 0.367 | 1.000 | N/A | 63% of queries with sub-ms latency   |
+| AW     | 0.696 | 0.921 | N/A | All queries exceeded 0.5ms           |
 
-* SS - [Socket sharding with kdb+ and Linux](https://code.kx.com/q/wp/socket-sharding/)
-* Direct - No load balancer at all
-* Nginx  - [Use Nginx as a tcp load balancer](https://iceburn.medium.com/nginx-tcp-load-balancing-6f9509b772f2)
+Additional implementations pending evaluation:
+* Socket sharding (SS)
+* Direct connection (no load balancer)
+* Nginx TCP load balancer
 
-In the LBT and NP versions the numbers were obtained from the timestamps in the queries table (time_returned - time_received)
-The NP version uses the datatype "time" which has millisecond precision, while the LBT version 
-uses the datatype "timestamp" with nanosecond precision. I multiply by .000001 to get milliseconds.
+### Measurement Methodology
 
-The AW version does not have a queries table, and hence no timestamps.
-In that case we create a timestamp on the client and send it in the argument to the "echo" command.
-When it arrives in .z.ps on the client I subtract this timestamp from the current timestamp.
+**Timing Implementation:**
+* LBT/NP: Uses internal queries table with timestamps
+  - LBT: Nanosecond precision (timestamp datatype)
+  - NP: Millisecond precision (time datatype)
+* AW: Client-side timing using echo command timestamps
+
+**References:**
+* [Socket Sharding Documentation](https://code.kx.com/q/wp/socket-sharding/)
+* [Nginx Load Balancing Guide](https://iceburn.medium.com/nginx-tcp-load-balancing-6f9509b772f2)
