@@ -33,6 +33,15 @@ This document has been enhanced with TODOs to highlight areas needing clarificat
 
 Each TODO is linked to its location in the document and includes specific action items for improvement.
 
+## Document Symbols Guide
+This document uses the following symbols to highlight areas needing attention:
+
+| Symbol | Meaning | How to Search |
+|--------|----------|---------------|
+| ⚠️ | Indicates spelling, grammar, or consistency issues | Search for `⚠️` |
+
+Example: `word ⚠️[correction]` indicates that 'word' should be 'correction'
+
 ---
 
 # mserve
@@ -78,14 +87,14 @@ This impacts system reliability and debugging.
     * The message ``(1234; <result table>)`` is sent from the servant to mserve\_np.
 
 4. When mserve\_np receives the result
-    * msevere\_np notices that the response includes only the id and result, no extra "info".
+    * msevere\_np ⚠️[mserve\_np] notices that the response includes only the id and result, no extra "info".
     * For that reason it provides a default "info dictionary" that reports: 
        * the routing string used
        * which servant ran the request
        * elapsed time (includes time in queue)
        * execution time (excludes time in queue)
     * If the servant had provided its own info dictionary as the 3rd item in the response  
-      mserve_np would return that dictionary, with the routing string added to it.
+      mserve\_np would return that dictionary, with the routing string added to it.
     * The message ``(1234; <result table>; <info dictionary>)`` is sent back to the client
 
 ## todo-t10
@@ -116,17 +125,17 @@ This distinction is important for maintainers and users of the system.
 and some to do HDB computations. Mserver could be configured with a plugin to know which queries should be
 sent to which servers because we realized that it is valuable to keep the data for the last 48 hours in RDB 
 and the older information in HDB. This could turn out to be a major performance enhancement. It is powerful to allow 
-mserve to rout the query to the right server without having to change the client, just based on
+mserve to ⚠️[route] the query to the right server without having to change the client, just based on
 things like start and end date of the query API call. A server type named HF_RDB and another HF_HDB, 
-a dispatch alog could know that we expanded what we expanded from 24 hours in the RDB to 48 in the RDB 
-at a certain point adn dispatch accordingly. 
+a dispatch ⚠️[algo] could know that we expanded what we expanded from 24 hours in the RDB to 48 in the RDB 
+at a certain point ⚠️[and] dispatch accordingly. 
 
 **Server Type Version:** We might want to gradually replace one server with another
 server because any of a number issues:
 
 * A code change that supports a new API, but still supports the old API. 
-* A code change that supports a new API, but does not supports the old API. 
-* A code change that improves efficiency or fix a bug and does not change any of the operation names, the arguments they take, what they do or what they return, so no need for any client to change and thus no need to have a new API ID.
+* A code change that supports a new API, but does not ⚠️[support] the old API. 
+* A code change that improves efficiency or ⚠️[fixes] a bug and does not change any of the operation names, the arguments they take, what they do or what they return, so no need for any client to change and thus no need to have a new API ID.
 
 ## todo-p4
 [Document scaling characteristics]
@@ -145,7 +154,7 @@ mserver needs a way to know which servant is intended to replace what other serv
 **Secure Invocation:** The practice of executing q functions or operations in a controlled manner, 
 without evaluating arbitrary expressions. This mitigates security risks associated with executing 
 client-provided strings, which might contain malicious code. Instead, Secure Invocation only allows 
-execution of a limited number pre-defined functions, as in a conventional API call. In addition,
+execution of a limited number ⚠️[of] pre-defined functions, as in a conventional API call. In addition,
 Secure invocation must prevent execution of arbitrary expressions which might appear in the
 arguments to the functions.
 
@@ -178,12 +187,12 @@ For an introduction to interprocess communication, see [Interprocess Communicati
 
 For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in examples/02quickauth/02quickauth.q.
 
-For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q" in ??????????? Where is it ?????????????
+⚠️[MISSING REFERENCE] For implementation details on **Secure Invocation** see: "Understanding secure\_invocation.q"
 
 -----------
 
-**Servant** An instance of your api server managed my mserve. When used by itself "servant" might refer to either
-a "servant process" (an running instance of your api), or a "servant host" (the machine an instance of your api is running on).
+**Servant** An instance of your api server managed ⚠️[by] mserve. When used by itself "servant" might refer to either
+a "servant process" (⚠️[a] running instance of your api), or a "servant host" (the machine an instance of your api is running on).
 
 -------
 ## todo-t5
@@ -217,7 +226,7 @@ This will help teams extend the system effectively.
 is selected by copying it to the global variable "check". Currently, there are 3 dispatch algorithms available:
 
 - **orig**: From the original. Always select the first not-busy server from the top of the list.
-- **even**: Avoids unused or under-utilized servants. Always select the next not-busy server further down the list from last dispatch. 
+- **even**: Avoids unused or under-utilized servants. Always select the next not-busy server ⚠️[farther] down the list from last dispatch. 
 - **match**: Attempts to improve performance by keeping similar queries on the same servant so that data will be "warm".
 
 The "match" algorithm is the default.
@@ -259,7 +268,7 @@ QUESTION: We need to clarify our state management:
 3. Are there thread-safety considerations?
 This will help developers understand our state management approach.
 
-Maybe better to be more specific... it's not merely a "means of selecting a servant", it is an algorithm that selects servants based on certain criteria. It is a mechanism that intelligently assigns queries in order to optimize performance. 
+
 
 ## todo-t8
 [Explain data locality principles]
@@ -274,7 +283,7 @@ This will help teams optimize their data access patterns.
 on which to run that query. Only the "match" dispatch algorithm uses a routing string.
 
 The default routing string is just the first argument to the command. That may be changed by setting the MSERVE_ROUTING 
-env variable to "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
+env variable to a "q" function definition which accepts the parsed expression and returns the routing string as a symbol.
 You can also override the "getRoutingSymbol" function from a plugin. 
 
 ----
@@ -284,7 +293,7 @@ QUESTION: What does the routing string actually look like? An example and explan
 
 ----
 
-## When do use this Technology?
+## When do ⚠️[should you] use this Technology?
 
 
 
@@ -322,7 +331,7 @@ Real-world examples would help teams identify and address similar issues.
 
 
 
-Question: How could that arise? How would a bottleneck arise? Example? Repeated question but I think this would really make this suggested use case more compelling.
+
 
 
 
@@ -348,7 +357,7 @@ QUESTION: We should quantify our network impact:
 3. Are there bandwidth considerations?
 This helps teams optimize their network architecture.
 
-Question: I don't fully understand this use case. Why does multiple servers reduce complexity? Less people per server? What is tuning a server?
+
 
 ### Scalability and Future-Proofing
 
@@ -369,17 +378,17 @@ This will help teams make informed infrastructure decisions.
 - **When you think you are in a situation where you anticipate new data distribution patterns (e.g., time-partitioned data)**  
   *Consider option:* Let the load balancer direct queries to nodes specialized in different time ranges or data types.
 
-  Question: "data distribution patterns" would be good, why? If this is a given then everything else is clear to me.
+
 
 - **When you think you are in a situation where you might add specialized infrastructure in the future**  
   *Consider option:* Designing a flexible load-balancing layer that can incorporate new hardware without major architectural changes.
 
-  Question: I don't really understand this. It feels very broad Is the idea that the load balancer could accommodate servers in a "hardware agnostic" way or... without... well... what kind of architectural changes would need to be made otherwise?
+
 
 - **When you think you are in a situation where you need to adapt quickly to changing traffic patterns**  
   *Consider option:* An auto-scaling approach with a load balancer that spins up or down additional servers based on real-time metrics.
 
-  Question: Why is this beneficial? If you have X servers, why not just keep X servers running all the time? Does "spinning them down" save compute or energy or something? Why wouldn't you just be capable of accommodating max capacity at all times?
+
 
 ### Improved Availability
 
