@@ -134,9 +134,121 @@ But what will users want to accomplish ?
     * I might want to do this for all the servants with a specific stype 
         * Would I ever want to have different booleans for the same stype? 
 
-...
+### commands for above use-cases
+
+Canary: To phase out everything except new-verion - use null (0N) as old version.
+        To phase out nothing - use zero (or any version not in table)  as old version.
+
+We need to require sversion to change whenever we might want a canary.
+That means whenever starting a new servant on a new host, with a new q-file, or with a new condition.
+But then the same thing running on each distinct host might would end up with a different sversion
+
+Also we need a new stype  whenever starting a new servant on a new host with different characteristics,
+which we really can't tell (as we only have a name or ip address) and has to be tracked manually.
+
+The way we want sversion to work with conditions is more subtle.
+In the initial configuration from the csv file all rows for a given stype should have the same sversion (likely 1).
+Maybe when any condition is changed, all of them should go to the next sversion, because the routing scheme has changed.
+Maybe we should just allow changing the condition without changing the sversion, but then we could not do a canary.
+
+
+1. Upgrade all servants with a given type to a new version of their q-file, retaining same boolean condition.
+  upgradeByType stype [sversion] new-q-file new-sversion
+  1. Find all routing table rows with stype (and sversion when specified)
+  1.1 Veriy that at least one row is selected.
+  1.2 Veriy that none of the selected rows has sversion=new-sversion.  !??
+  (would like to leave rows already at new-sversion alone, but canary will treat them as being phased in.)
+  2. For each selected row
+  2.1. Find an available port on the same host
+  2.2. Copy the selected row to a position immediately above itself
+  2.3. Replace the port, sversion, and q-file with the new values
+  2.4. Launch the new-q-file at the new host:port.
+  3. If canary requested, set:
+  3.1. cn\_increment, cn\_interval as requested;
+  3.2. cn\_server\_type= stype; cn\_old\_version=sversion; cn\_new\_version=new-sversion
+  4. If no canary requested
+  4.1. update condition in the originally selected rows to (0b) to take them out out of service 
+     Affected servers are not disconnected until saveRoutingTable is called - and they are not busy.
+
+2. Move all servants with a given type on a given host, to a new host with different capabilities or location.
+  relocateByType host stype sversion new-host new-stype new-sversion
+  1. Find all routing table rows with host, sversion, stype(when specified)
+  1.1. Verify that at least one row is selected
+  1.2. Verify that none of the selected rows has sversion= new version !?? (see above)
+  1.3. Verify that none of the selected rows has host= new host
+  (stype may have to change to reflect the capablites and location of the new host.
+   will need to rewrite canary to allow changing the stype...) 
+  2. For each selected row
+  2.1. Select a new host (round robbin: host1 host2...) 
+  2.2. Find an available port on this host.
+  2.3. Copy the selected row to a position immediately above itself.
+  2.4. Replace the host, port, stype and sversion, but keep the condition and q-file 
+  2.5. Launch the same q-file on the new host:port.
+  3. If canary requested, set:
+  3.1.  cn\_increment, cn\_interval as requested
+  3.2.  cn\_server\_type=stype, cn\_old\_version=sversion, cn\_new\_stype=new-stype, cn\_new\_version=new-sversion
+  4. If no canary requested
+  4.1 update condition in the originally selected rows to (0b) to take them out of service.
+
+3. Add a copy of a given rule (same type, version, condition, q-file), started on a given host/port.
+4. Add a copy of a given rule with a new condition (same type, version, q-file) started on a given host/port
+  newCopyByAddress from-address to-address [new-condition]  (when new-condition omitted will be unchanged)  
+   1. find row with from-address
+   1.1. Verify that row exists.
+   2. Copy selected row to a position immediately above itsel
+   2.1. Replace address with to-address and condition with new-condition (if specified)
+   2.2. Launch the same q-file at the new address
+   3. If canary specified set
+   3.1 increment and interval as requested
+   3.2 cnServerType=current stype cnOldVersion=0 (no phase out) cnNewVersion=(increment until value unique for this stype)
+   (canary not possible unless sversion is set to something unique for this svalue.)
+   4. If no canary - nothing to do (not replacing)
+
+5. Add a copy of a given rule with the same condition but a new q-file on given host/port 
+  newUpgradeByAddress from-address to-address q-file new-sversion 
+  1. Find routing table rows with from-address 
+  1.1 Veriy that the row exists
+  1.2 Veriy that no row with this stype has new-sversion.
+  (would like to leave rows already at new-sversion alone, but canary will treat them as being phased in.)
+  2. For selected row
+  2.1. Find an available port on the same host
+  2.2. Copy the selected row to a position immediately above itself
+  2.3. Replace the port, sversion, and q-file with the new values
+  2.4. Launch the new-q-file at the new host:port.
+  3. If canary requested, set:
+  3.1. cn-increment, cn-interval as requested;
+  3.2. cn-server-type= stype; cn-old-version=0 (no phase out); cn-new-version=new-sversion
+  4. If no canary requested - nothing to do (not replacing)
+
+6. Add a brand new rule specifying everything for new servant. (admin must pick stype and sversion wrt what is already defined)
+  addServer position address stype sversion condition q-file
+  1. Verify that address is not in routing table
+  2. Verify that all settings are provided.
+  3. Add row with all settings at specified position
+  4. Launch q-file at specified address
+  5. If canary requested, set:
+  5.1. cn-increment, cn-interval as requested;
+  5.2. cn-server-type= stype; cn-old-version=0 (no phase out); cn-new-version=sversion
+  6. If no canary requested - nothing to do (not replacing)
+
+7. Modify just the condition in a given rule.
+  updateCondition address condition  (no canary allowed)
+  1. Verify that address is in the table
+  2. Find row for that address
+  3. update condition in that row.
+
+
+8. Remove all rules with given stype and sversion, closing the servants handle to cause it to shut down (terminate on close). 
+  removeByType stype sversion
+  1. Find all rows corresponding to "stype" and optional "sversion"
+  1.1. Verify that at least on row is selected.
+  2. If canary specified, set:
+  2.1. cn-increment, cn-interval as requested
+  2.2. cn-server-type=stype, cn-old-version=sversion, cn-new-version=0 (no phase in)
+  3. If no canary specified, update condition to (0b) in each selected row.
 
 ### Managing q-file versions.
+
 
 At present the only way be can choose between two q-files is by a file system path.
 That means if we want to distinguish between two version of (for example) servant.q
