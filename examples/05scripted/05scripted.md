@@ -9,7 +9,99 @@ That includes the ability to phase-in a new servant, so that the percentage of q
 new servant increases over a time interval. If a configurable number of errors occur in the new servant
 while the phase in is in effect, the new servant is removed and the original configuration restored.
 
-## The servant type and version
+
+## Changes to Canary Filter
+
+We need to ensure that only newly started servers are "phased in",
+and no server is "phased out" unless that is explictly requested.
+
+To make that happen, instead of canaryFilter operating on a servant type, new-version
+and optional old-version, it will have a list of servants to phase-in and a list of
+servants to phase-out. These lists will be populated by the routing commands, which
+might select servants individually (by address), or by type and version.
+
+## Routing Command Interface
+
+We need to allow the user to enter several routing commands before applying them
+by updating the routing table. We also need to allow the user to preview the
+changes before applying them.
+
+This means we will need 5 new functions:
+
+- editChanges      - Creates a copy of the routing table in which to make changes.
+- previewChanges   - Displays a "diff" of the edited copy to the live routing table.
+- applyChanges     - Updates the routing table from the copy, and optionally starts a canary.
+- cancelChanges    - Discards the copy of the routing table and any associated data structures.
+- saveConfiguation - Writes the live routing table out to csv.
+
+A canary may be requested in "applyChanges" via arguments for the percent increment and per-interval.
+
+## Routing Command Set
+
+### editServer address, position, stype, sversion, condition
+
+1. Find the row with "address" in the edit buffer
+2. Update the specified fields, fields left blank will be unchanged.
+3. Move the row to the requested position.
+Note: you cannot change the q-file as this would require launching a new server.
+Note: servers can be removed from service by setting their "condition" to (0b).
+ but they cannot be removed from the table until they are no longer busy,
+ and are disconnected. That might be done in saveConfiguration. 
+
+### addServer address, position, stype, sversion, condition, q-file 
+
+1. Verify that "address" is not already in the buffer.
+2. Verify that none of the specified fields are blank.
+3. Add a row with the specified fields at the bottom of the buffer.
+4. Move the row to the specified position.
+5. Add the "address" to the phase-in list.
+
+### copyServer address, position, stype, sversion, condition, q-file
+
+1. Verify that "address" is not already in the buffer
+2. Add a copy of the row at "position" at the bottom of the buffer.
+3. Update the specified fields in the copy, fields left blank will be unchanged.
+4. Move the copy immediately above the original "position".
+5. Add the "address" to the phase-in list.
+
+### replaceServer address, postion, stype, sversion, condition, q-file
+
+Same as copyServer but add:
+6. Add the "address" from the original "position" to the phase-out list.
+
+### upgradeServers stype, sversion, host, qfile, new-qfile, new-sversion
+
+1. Find position of all rows in the buffer having the specified stype, sversion, host, and qfile
+   Ignoring any of the above which were entered as blank.
+2. For each row found above, find an unused port on the same host
+3. Combine into a list of tuples: (address=host:unused-port; position; new-qfile; new-sversion).
+4. Perform replaceServer on each tuple, updating only qfile and sversion for each address and position.
+   Leave sversion unchanged when new-sversion is blank.
+
+### migrateServers stype, sversion, host, new-host, new-stype, new-sversion
+
+1. Find position of all rows in the buffer having specified stype, sversion, and host,
+   Ignoring any  of the above which were entered as blank.
+2. For each row found above, find an unused port on new-host.
+3. Combine into a list of tuples: (address=new-host:unused-port; position, new-stype, new-sversion)
+4. Because the stype may carry information about the q-file and/or condition as well as the host,
+   we probably want "new-stype" to be an edit pattern which is applied to the old stype,
+   so we can change only the part referring to the host.
+5. For example "t2small-taiwan:myserver:A-M", "d4xlarge-singapore:=", "d4xlarge-singapore:myserver:A-M" 
+6. Perform replaceServer on each tuple, updating only stype and sversion, 
+   but only when new settings are not blank.
+
+### Apply Changes
+
+
+
+
+
+
+
+
+
+## **OLD** The servant type and version
 
 (Eric: this section here is to discuss how the stype and sversion columns in the csv file
 should actually be used to reconfigure multiple servers in one operation, which is as close
