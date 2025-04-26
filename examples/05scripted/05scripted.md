@@ -228,7 +228,7 @@ But what will users want to accomplish ?
 
 ### commands for above use-cases
 
-Canary: To phase out everything except new-verion - use null (0N) as old version.
+Canary: To phase out everything except new-version - use null (0N) as old version.
         To phase out nothing - use zero (or any version not in table)  as old version.
 
 We need to require sversion to change whenever we might want a canary.
@@ -247,8 +247,8 @@ Maybe we should just allow changing the condition without changing the sversion,
 1. Upgrade all servants with a given type to a new version of their q-file, retaining same boolean condition.
   upgradeByType stype [sversion] new-q-file new-sversion
   1. Find all routing table rows with stype (and sversion when specified)
-  1.1 Veriy that at least one row is selected.
-  1.2 Veriy that none of the selected rows has sversion=new-sversion.  !??
+  1.1 Verify that at least one row is selected.
+  1.2 Verify that none of the selected rows has sversion=new-sversion.  !??
   (would like to leave rows already at new-sversion alone, but canary will treat them as being phased in.)
   2. For each selected row
   2.1. Find an available port on the same host
@@ -268,7 +268,7 @@ Maybe we should just allow changing the condition without changing the sversion,
   1.1. Verify that at least one row is selected
   1.2. Verify that none of the selected rows has sversion= new version !?? (see above)
   1.3. Verify that none of the selected rows has host= new host
-  (stype may have to change to reflect the capablites and location of the new host.
+  (stype may have to change to reflect the capabilities and location of the new host.
    will need to rewrite canary to allow changing the stype...) 
   2. For each selected row
   2.1. Select a new host (round robbin: host1 host2...) 
@@ -287,7 +287,7 @@ Maybe we should just allow changing the condition without changing the sversion,
   newCopyByAddress from-address to-address [new-condition]  (when new-condition omitted will be unchanged)  
    1. find row with from-address
    1.1. Verify that row exists.
-   2. Copy selected row to a position immediately above itsel
+   2. Copy selected row to a position immediately above itself
    2.1. Replace address with to-address and condition with new-condition (if specified)
    2.2. Launch the same q-file at the new address
    3. If canary specified set
@@ -299,8 +299,8 @@ Maybe we should just allow changing the condition without changing the sversion,
 5. Add a copy of a given rule with the same condition but a new q-file on given host/port 
   newUpgradeByAddress from-address to-address q-file new-sversion 
   1. Find routing table rows with from-address 
-  1.1 Veriy that the row exists
-  1.2 Veriy that no row with this stype has new-sversion.
+  1.1 Verify that the row exists
+  1.2 Verify that no row with this stype has new-sversion.
   (would like to leave rows already at new-sversion alone, but canary will treat them as being phased in.)
   2. For selected row
   2.1. Find an available port on the same host
