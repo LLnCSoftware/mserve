@@ -38,17 +38,18 @@ A canary may be requested in "applyChanges" via arguments for the percent increm
 
 ## Routing Command Set
 
-### editServer address, position, stype, sversion, condition
+### editServer function (with args:) address, position, stype, sversion, condition
 
-1. Find the row with "address" in the edit buffer
-2. Update the specified fields, fields left blank will be unchanged.
+1. Find the row with "address" (host and port) in the edit buffer
+2. Update the specified fields, fields specified as blank will be unchanged.
 3. Move the row to the requested position.
-Note: you cannot change the q-file as this would require launching a new server.
-Note: servers can be removed from service by setting their "condition" to (0b).
- but they cannot be removed from the table until they are no longer busy,
- and are disconnected. That might be done in saveConfiguration. 
 
-### addServer address, position, stype, sversion, condition, q-file 
+* Note: you cannot change the q-file as this would require launching a new server.
+* Note: servers can be removed from service by setting their "condition" to (0b).
+  but they cannot be removed from the table until they are no longer busy,
+  and are disconnected. That might be done in saveConfiguration. 
+
+### addServer function (with args:) address, position, stype, sversion, condition, q-file 
 
 1. Verify that "address" is not already in the buffer.
 2. Verify that none of the specified fields are blank.
@@ -56,7 +57,9 @@ Note: servers can be removed from service by setting their "condition" to (0b).
 4. Move the row to the specified position.
 5. Add the "address" to the phase-in list.
 
-### copyServer address, position, stype, sversion, condition, q-file
+The new server will be launched in applyChanges. 
+
+### copyServer function (with args:) address, position, stype, sversion, condition, q-file
 
 1. Verify that "address" is not already in the buffer
 2. Add a copy of the row at "position" at the bottom of the buffer.
@@ -64,21 +67,28 @@ Note: servers can be removed from service by setting their "condition" to (0b).
 4. Move the copy immediately above the original "position".
 5. Add the "address" to the phase-in list.
 
-### replaceServer address, postion, stype, sversion, condition, q-file
+### replaceServer function (with args:) address, position, stype, sversion, condition, q-file
 
 Same as copyServer but add:
 6. Add the "address" from the original "position" to the phase-out list.
 
-### upgradeServers stype, sversion, host, qfile, new-qfile, new-sversion
+### upgradeServers function (with args:) stype, sversion, host, qfile, new-qfile, new-sversion
+
+Upgrade a collection of servers to a new qfile, matching those old servers by the 
+"and" of supplied stype, sversion, host, qfile. 
 
 1. Find position of all rows in the buffer having the specified stype, sversion, host, and qfile
    Ignoring any of the above which were entered as blank.
 2. For each row found above, find an unused port on the same host
 3. Combine into a list of tuples: (address=host:unused-port; position; new-qfile; new-sversion).
-4. Perform replaceServer on each tuple, updating only qfile and sversion for each address and position.
+4. Perform replaceServer on each tuple, updating only qfile and sversion for 
+   each address and position.
    Leave sversion unchanged when new-sversion is blank.
 
-### migrateServers stype, sversion, host, new-host, new-stype, new-sversion
+### migrateServers function (with args:) stype, sversion, host, new-host, new-stype, new-sversion
+
+Replacing any number of servers with the same number of servers on a 
+different host by matching stype, sversion, host 
 
 1. Find position of all rows in the buffer having specified stype, sversion, and host,
    Ignoring any  of the above which were entered as blank.
@@ -93,7 +103,15 @@ Same as copyServer but add:
 
 ### Apply Changes
 
+Hard part is: 
 
+Possible meanings: 
+
+* provide a guid, then apply the guid at the end so that 
+  two people can use this at the same time and they are not 
+  going to bump into one another. The guid becomes the name of 
+  the temp table or something like that. 
+* 
 
 
 
