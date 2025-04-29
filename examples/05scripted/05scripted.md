@@ -78,6 +78,11 @@ Same as copyServer but add:
 4. Perform replaceServer on each tuple, updating only qfile and sversion for each address and position.
    Leave sversion unchanged when new-sversion is blank.
 
+### duplicateServers stype sversion, host, qfile, new-qfile, new-sversion
+
+Same as upgradeServers, but don't phase out the old servers.
+Use "copyServer" in 4. above instead of "replaceServer".
+
 ### migrateServers stype, sversion, host, new-host, new-stype, new-sversion
 
 1. Find position of all rows in the buffer having specified stype, sversion, and host,
@@ -91,11 +96,28 @@ Same as copyServer but add:
 6. Perform replaceServer on each tuple, updating only stype and sversion, 
    but only when new settings are not blank.
 
-### Apply Changes
+### Find an unused port on given host
 
+1. The default port range is 5000-5999 but we should make this configurable.
+2. The lowest port in the range is for mserve, the highest for the launcher
+ , and second highest for "announcement" callbacks (currently to batchmark).
+3. The remainder (5001-5997 by default) is the "available port range".
+4. Extract the port number from all addresses in the table on the given host.
+5. Choose the lowest number from the available port range, which is NOT in this list.
 
+### applyChanges percent-increment per-interval
 
+Note: a canary will be started when percent-increment is an integer between 1 and 99,
+and per-interval is an integer suffixed by one of 'm', 'h', or 'd' (for minutes, hours, days).
+Otherwize no canary; which would be equivilant to specifying 100 for percent-increment with any interval.
 
+1. The phase-in and phase-out lists were already populated by the commands above.
+2. Launch and connect to each of the servers on the phase-in list.
+3. When no canary, discard the phase-in and phase-out lists.
+4. When canary, set percent-increment, per-interval, and start-time for canaryFilter. 
+5. Replace the live routingTable with the contents of the edit buffer (and discard the buffer).
+
+### previewChanges
 
 
 
