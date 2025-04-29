@@ -116,9 +116,12 @@ Replacing any number of servers with the same number of servers on a different h
 
 ### applyChanges percent-increment per-interval
 
-Note: a canary will be started when percent-increment is an integer between 1 and 99,
+Note: a canary will be started when percent-increment is an integer between 1 and 100,
 and per-interval is an integer suffixed by one of 'm', 'h', or 'd' (for minutes, hours, days).
-Otherwize no canary; which would be equivilant to specifying 100 for percent-increment with any interval.
+There is no interval where 0% goes to the new server, it starts at the percent-increment,
+and continues though 100%. Specifying 100% sends everything to the new server all at once,
+but allows for rollback durring the specified interval.
+Otherwize no canary, which means no phase in and no roll back.
 
 1. The phase-in and phase-out lists were already populated by the commands above.
 2. Launch and connect to each of the servers on the phase-in list.
