@@ -62,39 +62,39 @@ restrictFallback:{[bits]
 notbusyBitVector:{ 0= count each h routingTable `h};
 
 /**** Canary ******
-cn_server_type:`; cn_new_version:0N; cn_start:0Np; 
-cn_increment:25; cn_interval:30000; cn_backupRT:(::);
+cn_increment:0N; cn_interval:0N; cn_start:0Np; 
+cn_phasein:`$(); cn_phaseout:`$();
+cn_editbufRT:(::); cn_backupRT:(::);
 canaryFilter:{[tbl] 
-  if[ any null (cn_server_type; cn_new_version); :tbl] ;
+  if[ any null (cn_increment; cn_interval); :tbl] ;
   if[ null cn_start; cn_start:: .z.P] ;
   new_percentage: cn_increment* 1+ (`long$ .000001* .z.P-cn_start) div cn_interval ;
   /instead of an interval at 0% provide 2 intervals at 100% for better error detection before end of phase in.
   use_new: first 1?100 ; 
   -1 "phase-in ", (string use_new), " < ", (string 100& new_percentage), "%  error ",(string cn_cnterr)," of ",(string cn_maxerr);
   out: $[ use_new < new_percentage; 
-    (update condition:(count i)# enlist "0b" from tbl where stype=cn_server_type, sversion<>cn_new_version); /ignore old = use new 
-    (update condition:(count i)# enlist "0b" from tbl where stype=cn_server_type, sversion=cn_new_version)   /ignore new = use old
+    (update condition:(count i)# enlist "0b" from tbl where address in cn_phaseout); /ignore old = use new 
+    (update condition:(count i)# enlist "0b" from tbl where address in cn_phasein);   /ignore new = use old
   ];
   if[new_percentage>=100+cn_increment; routingTable::out; endPhaseIn[] ] ; 
   out
  } ;
 
-endPhaseIn:{ cn_server_type::`; cn_new_version::0N; cn_start::0Np; cn_backupRT::(::); -1 "end phase-in"; } ;
-
-/**** Canary Failover ******
+**** Canary Fallback ******
 cn_cnterr: 0 ;
 cn_maxerr: 3^ "J"$ getenv `CN_MAXERR ;
-filterResponse:{                       /x= (id; result; info)
-  if[null cn_server_type; :x] ;        /No canary - just return
-  if[10<>type x 1; :x]        ;        /Error is a string result strarting with ERROR
-  if[not "ERROR"~ upper 5# x 1; :x] ;  /No error - just return
-  t: exec first stype, first sversion from routingTable where address like string x[2] `qsvr ;  /get server type and version
-  if[(cn_server_type<>t `stype) or cn_new_version<>t `sversion; :x];   /not new server  - just return
-  cn_cnterr+::1; 0N!(`cn_cnterr; cn_cnterr);  if[cn_cnterr<cn_maxerr; :x] ;                          /less than max errors - just return 
+filterResponse:{                                          /x= (id; result; info)
+  if[and null (cn_increment; cn_interval) :x] ;           /No canary -- just return
+  if[10<>type x 1; :x; not "ERROR"~ upper 5# x 1; :x];    /Error is a string result strarting with ERROR; no error -- just return
+  address:x[2] `qsvr; if[ not address in cn_phasein; :x]; /If servant address not in "cn_phasein" -- just return 
+  cn_cnterr+::1; if[cn_cnterr<cn_maxerr; :x] ;            /less than max errors -- just return 
   -1 "failover - cancel phase in" ;
   cancelPhaseIn[] ;   /cancel phase in
   x                   /return response
  } ;
+
+endPhaseIn:{ cn_phasein::`$(); cn_phaseout::`$(); cn_backupRT::(:;) ; 
+ cn_increment::0N; cn_interval::0N; cn_start::0Np; -1 "end phase-in"; } ;
 
 cancelPhaseIn:{[]
    update route:` from `queries where location=`master ; fallbackPos::(::) ; 
@@ -104,7 +104,7 @@ cancelPhaseIn:{[]
 drophandles:{ h::h _/ x; h2addr::h2addr _/ x; h2route::h2route _/ x; h2idle::h2idle _/ x; x} ;
 
 finishPhaseIn:{[] 
-  update condition:(count i)# enlist "0b" from `routingTable where stype=cn_server_type, sversion<>cn_new_version; 
+  update condition:(count i)# enlist "0b" from `routingTable where address in cn_phaseout ; 
   endPhaseIn[] ;
  };
 
@@ -115,13 +115,13 @@ invalid:"Routing commands must be lists of strings" ;
   if[0<>type x; :invalid]; if[any 10<>abs type each x; :invalid] ;
   if[(x 0)~"getRule"; :getRule x 1] ;
   if[(x 0)~"setRule"; :setRule[x 1; x 2; x 3]] ;
-  if[(x 0)~"saveRoutingTable"; :saveRoutingTable[]] ;
+  if[(x 0)~"saveRoutingTable"; :saveConfiguration[]] ;
   if[(x 0)~"cancelPhaseIn"; :cancelPhaseIn[]] ;
   if[(x 0)~"finishPhaseIn"; :finishPhaseIn[]] ;
   0N!"Unexpected routing command: ", x 0 ;
  } ;
 
-saveRoutingTable:{ 
+saveConfiguration:{ 
   if[not null cn_server_type; '"Phase-in in progress for server type '",(string cn_server_type)," v", (string cn_new_version),"'"]; 
   delete from `routingTable where condition in ("0b"; "(0b)") ; /remove phased-out rules from routing table.
   hclose each abs drophandles (key h) except routingTable `h ;  /remove and close handles no longer present in routing table
@@ -129,6 +129,8 @@ saveRoutingTable:{
   "OK"
  } ;
 
+
+/*** crude editor (to be removed) ***
 getRule:{ 1_ "," 0: select from (delete h from routingTable) where address like str x } ;
 setRule:{[pos;routing;canary] 
   if[10=abs type pos; pos: "J"$ pos] ;
@@ -156,6 +158,24 @@ setRule:{[pos;routing;canary]
   "OK"
  } ;
 
+/**** fancy editior ****
+
+ed_phasein:`$(); ed_phaseout:`$(); ed_bufferRT:(::) ;
+cancelChanges:{ ed_phasein::`$(); ed_phaseout::`$(); ed_bufferRT::(::) };
+
+preview:{
+  if[(::)~ed_bufferRT; ed_bufferRT::routingTable]; len:count ed_bufferRT;
+  fr:x 0;to:x 1;sz:x 2; if[null sz; sz:$[null to; 10; to];  to:0N];      /get args w defaults.
+  if[11=type fr; fr:ed_bufferRT?fr]; if[11=type to; to:ed_bufferRT?to];  /symbol to position
+  if[(fr>=len) or (to>=len); :"address not found"] ;
+  if[sz>
+
+
+ };
+
+
+
+/----
 interval:{u:last x; x: -1_ x; ("J"$x)* $[u="m"; 60000; u="h"; 60*60000; u="d"; 24*60*60000; 0N]}
 moveItemInList:{[data;fr;to] 
   en:count data; fr&:en-1; to&:en-1; if[fr=to; :data];
