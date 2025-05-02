@@ -61,30 +61,32 @@ restrictFallback:{[bits]
 /Return bit vector corresponding to routingTable rows, where 1 means "not busy"
 notbusyBitVector:{ 0= count each h routingTable `h};
 
-/**** Canary ******
+/**** Canary Filter ******
 cn_increment:0N; cn_interval:0N; cn_start:0Np; 
-cn_phasein:`$(); cn_phaseout:`$();
-cn_editbufRT:(::); cn_backupRT:(::);
+cn_phasein:`$(); cn_phaseout:`$(); cn_backupRT:(::);
+cn_percentage:{0^ cn_increment* 1+ (`long$ .000001* .z.P-cn_start) div cn_interval} ;
 canaryFilter:{[tbl] 
-  if[ any null (cn_increment; cn_interval); :tbl] ;
-  if[ null cn_start; cn_start:: .z.P] ;
-  new_percentage: cn_increment* 1+ (`long$ .000001* .z.P-cn_start) div cn_interval ;
+  if[ any null (cn_increment; cn_interval); :tbl] ;         /no canary
+  if[ all 0= count each (cn_phasein; cn_phaseout); :tbl] ;  /nothing to phase in or out
+  if[ (0<cn_increment) and null cn_start; cn_start::.z.P];  /hold at 0% until cn_increment>0 
+  new_percentage: cn_percentage[] ;                         /then start phase in/out upon first request.
   /instead of an interval at 0% provide 2 intervals at 100% for better error detection before end of phase in.
   use_new: first 1?100 ; 
   -1 "phase-in ", (string use_new), " < ", (string 100& new_percentage), "%  error ",(string cn_cnterr)," of ",(string cn_maxerr);
   out: $[ use_new < new_percentage; 
     (update condition:(count i)# enlist "0b" from tbl where address in cn_phaseout); /ignore old = use new 
-    (update condition:(count i)# enlist "0b" from tbl where address in cn_phasein);   /ignore new = use old
+    (update condition:(count i)# enlist "0b" from tbl where address in cn_phasein)   /ignore new = use old
   ];
   if[new_percentage>=100+cn_increment; routingTable::out; endPhaseIn[] ] ; 
   out
  } ;
 
-**** Canary Fallback ******
+/**** Canary Failover ******
+/ When canary in effect, screen responses for errors. Revert to original config when error count exceeds maximum. 
 cn_cnterr: 0 ;
 cn_maxerr: 3^ "J"$ getenv `CN_MAXERR ;
 filterResponse:{                                          /x= (id; result; info)
-  if[and null (cn_increment; cn_interval) :x] ;           /No canary -- just return
+  if[(0>=cn_increment) or 0=count cn_phasein; :x] ;       /No canary, 0%, or nothing to phase in -- just return
   if[10<>type x 1; :x; not "ERROR"~ upper 5# x 1; :x];    /Error is a string result strarting with ERROR; no error -- just return
   address:x[2] `qsvr; if[ not address in cn_phasein; :x]; /If servant address not in "cn_phasein" -- just return 
   cn_cnterr+::1; if[cn_cnterr<cn_maxerr; :x] ;            /less than max errors -- just return 
@@ -93,7 +95,7 @@ filterResponse:{                                          /x= (id; result; info)
   x                   /return response
  } ;
 
-endPhaseIn:{ cn_phasein::`$(); cn_phaseout::`$(); cn_backupRT::(:;) ; 
+endPhaseIn:{ cn_phasein::`$(); cn_phaseout::`$(); cn_backupRT::(::) ; 
  cn_increment::0N; cn_interval::0N; cn_start::0Np; -1 "end phase-in"; } ;
 
 cancelPhaseIn:{[]
@@ -122,61 +124,64 @@ invalid:"Routing commands must be lists of strings" ;
  } ;
 
 saveConfiguration:{ 
-  if[not null cn_server_type; '"Phase-in in progress for server type '",(string cn_server_type)," v", (string cn_new_version),"'"]; 
+  if[not null cn_server_type; '"Phase-in in progress "+(string cn_percentage)+"%"]; 
   delete from `routingTable where condition in ("0b"; "(0b)") ; /remove phased-out rules from routing table.
   hclose each abs drophandles (key h) except routingTable `h ;  /remove and close handles no longer present in routing table
-  (`$":",afile) 0: "," 0: delete h from routingTable ;          /update csv file 
+  (`$":",afile,"1") 0: "," 0: delete h from routingTable ;      /write csv file, appending "1" to original file name 
   "OK"
  } ;
 
+/*** crude editor ***
+getRules:{  
+  csvf: 1_ "," 0: delete h from routingTable ;
+  pos: {x,": "} each string til count csvf ;
+  match: where csvf like str x ;
+  info: $[null cn_increment; enlist "no canary";
+   ((string cn_percentage[]), "% increment ",(string cn_increment), "% per ", asInter cn_interval;
+    "phase in:  ", ", " sv string cn_phasein;
+    "phase out: ", ", " sv string cn_phaseout
+   )] ;
+  ((pos match) ,' (csvf match)), info  
+  /1_ "," 0: select from (delete h from routingTable) where address like x[0], stype like x[1] 
+ } ;
 
-/*** crude editor (to be removed) ***
-getRule:{ 1_ "," 0: select from (delete h from routingTable) where address like str x } ;
 setRule:{[pos;routing;canary] 
   if[10=abs type pos; pos: "J"$ pos] ;
   if[0<count canary;
     canary: "," vs canary ;
-    if[not null cn_server_type; :"Phase-in already in progress for '",(string cn_server_type)," v", (string cn_new_version),"'"]; 
     if[2<>count canary; :"phase-in requires 2 settings: percentage, per-interval (suffix: m=minutes, h=hours, d=days)"] ;
-    cn_increment:: "J"$ ssr[;"%";""] canary 0 ;
+    cn_increment:: "J"$ ssr[;"%";""] canary 0 ;  /specify cn_increment zero to delay phase in until all rules entered.
     cn_interval:: interval canary 1 ;
     if[any null (cn_increment; cn_interval); :"Invalid phase-in specification."] ;
-    cn_backupRT:: routingTable ;
+    if[(::)~cn_backupRT; cn_backupRT:: routingTable; -1 "routing table backed up"] ;
   ] ;
   /update routing table
   len:count routingTable;  pos:len^pos ;
   routing: (-1_ cols routingTable)! ("SSJ**"; ",") 0: routing ;   /same as a routing table csv row
   hit: (routingTable `address)? routing `address ;                /Is address already in table ?
-  if[(hit<len)& not (routing `qfile)~routingTable[hit;`qfile]; :"Cannot change 'qfile' in an existing rule"] ;
-  if[hit<len; routing[`h]: routingTable[hit;`h]; routingTable[hit]:routing] ;  /yes: replace row, but keep same handle
-  if[hit=len; routing[`h]: connectServant routing; routingTable,::routing] ;   /no:  connect servant then add row w new handle
+  if[hit<len;                                                     /Yes, in table:
+    if[not (routing `qfile)~routingTable[hit;`qfile]; :"Cannot change 'qfile' in an existing rule"] ;
+    if[(not null cn_increment) and routing[`condition] in ("0b";"(0b)"); /when canary and condition is "false" 
+      routing[`condition]: routingTable[hit;`condition];                 / preserve existing condition during phase-out
+      cn_phaseout,: routing[`address]                                    / add to phase-out list
+    ];
+    routing[`h]: routingTable[hit;`h]; routingTable[hit]:routing ; /replace row, but keep same handle.
+  ];
+  if[hit=len;                                                     /No, not in table
+    if[(not null cn_increment) and not routing[`condition] in ("0b";"(0b)"); /when canary and condtion is not "false" 
+      cn_phasein,: routing[`address];                                        / add to phase-in list
+    ];
+    routing[`h]: connectServant routing; routingTable,::routing ;  /connect servant then add row w new handle
+  ];
   if[hit<>pos; routingTable::moveItemInList[routingTable;hit;pos]];  /if not in requested position, move.
   /clear previous routing symbol in enqueued queries, and fallback positions (recompute upon next "check[]")
   update route:` from `queries where location=`master ; fallbackPos::(::) ;  
-  /start canary (if any)
-  if[0<count canary; cn_server_type::routing `stype; cn_new_version::routing `sversion;] ; 
   "OK"
  } ;
 
-/**** fancy editior ****
+interval:{u:last x; x: -1_ x; ("J"$x)* $[u="m"; 60000; u="h"; 60*60000; u="d"; 24*60*60000; 0N]} ;
+asInter:{{t:last where x>0; (string x t),t} "mhd"!(x div 60000; x div 60*60000; x div 24*60*60000)} ;
 
-ed_phasein:`$(); ed_phaseout:`$(); ed_bufferRT:(::) ;
-cancelChanges:{ ed_phasein::`$(); ed_phaseout::`$(); ed_bufferRT::(::) };
-
-preview:{
-  if[(::)~ed_bufferRT; ed_bufferRT::routingTable]; len:count ed_bufferRT;
-  fr:x 0;to:x 1;sz:x 2; if[null sz; sz:$[null to; 10; to];  to:0N];      /get args w defaults.
-  if[11=type fr; fr:ed_bufferRT?fr]; if[11=type to; to:ed_bufferRT?to];  /symbol to position
-  if[(fr>=len) or (to>=len); :"address not found"] ;
-  if[sz>
-
-
- };
-
-
-
-/----
-interval:{u:last x; x: -1_ x; ("J"$x)* $[u="m"; 60000; u="h"; 60*60000; u="d"; 24*60*60000; 0N]}
 moveItemInList:{[data;fr;to] 
   en:count data; fr&:en-1; to&:en-1; if[fr=to; :data];
   a:til fr&to; b:fr&to; d:fr|to; c:1+b+til d-b+1; e:1+d+til en-d+1;
