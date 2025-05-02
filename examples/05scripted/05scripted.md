@@ -116,9 +116,12 @@ Replacing any number of servers with the same number of servers on a different h
 
 ### applyChanges percent-increment per-interval
 
-Note: a canary will be started when percent-increment is an integer between 1 and 100,
+Note: a canary will be started when percent-increment is an integer between 0 and 100,
 and per-interval is an integer suffixed by one of 'm', 'h', or 'd' (for minutes, hours, days).
-There is no interval where 0% goes to the new server, it starts at the percent-increment,
+Specifying the increment as 0% will set everything up to start phasing in the new configuration
+but hold the percentage of requests going to new servers at 0, until the increment is changed
+by another call to applyChanges.
+Otherwise, there is no interval where 0% goes to the new server, it starts at the percent-increment,
 and continues though 100%. Specifying 100% sends everything to the new server all at once,
 but allows for rollback durring the specified interval.
 Otherwize no canary, which means no phase in and no roll back.

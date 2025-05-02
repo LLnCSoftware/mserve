@@ -1,4 +1,11 @@
-buffer:([] address:`$ "localhost:",/: string  5000+ 1+til 20;  qfile: 20? (`servant_v1.q; `servant_v2.q); h:neg 5+til 20)
+buffer:([] address:`$ "localhost:",/: string  5000+ 1+til 20;
+  stype: 20# `local:servA ;
+  sversion: 20?(1 1 2 1) ;
+  condition:  "boolean expression ",/: string 1+til 20;
+  qfile: 20# `servant.q; 
+  h:neg 5+til 20
+ );
+update qfile:`servantbad.q from `buffer where sversion=2 ; 
 
 pos:{([] pos:1+til count x),'delete h from x} ;
 
