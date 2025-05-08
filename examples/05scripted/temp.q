@@ -88,7 +88,7 @@ browse:{
 /************ Editing commands ***********
 
 /Find row containing "address", apply "settings" and move to postion "pos".
-/Setting condition to "0b" would take the server out out service; put on phase-out list to allow canary.
+/Setting condition to "0b" would take the server out out service; instead, put on phase-out list to allow canary.
 editServer:{[address; pos; settings]
   if[-11=type pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: address not found"]] ;
   target: 1+ (ed_buffer `address) ? address ; if[target>count ed_buffer; :"ERROR: address not found"] ;
@@ -103,15 +103,15 @@ editServer:{[address; pos; settings]
 /Append a new row to the buffer, specifiying all fields in "settings"; then move to specified position.
 /Launch a new server on the host/port given by the "address", running the "qfile" specified in the new row.
 addServer:{[address; pos; settings]
-  if[-11=type pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: address not found"]] ;
-  if[address in ed_buffer `address; :"ERROR: new address alrealy in table"];
-  settings[`address]: address; 
+  if[-11=type pos; t:pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: pos address not found, ", str t]] ;
+  if[address in ed_buffer `address; :"ERROR: new address alrealy in table, ", str address];
+  settings:([address:address]), settings ; 
   if[not `ok~ t:allow[settings] fields;   :t] ;  
   if[not `ok~ t:require[settings] fields; :t] ;
   end: 1+ count ed_buffer ;
   if[null pos; pos:end] ;
   ed_buffer,:: ed_buffer[end] ;
-  updaterow[end; settings] ;
+  updaterow[end; settings]; ed_buffer[end-1;`h]:0Ni ;
   ed_buffer::moveItemInList[ed_buffer;end;pos] ;
   ed_phasein,::address ;
   `ok
@@ -121,14 +121,15 @@ addServer:{[address; pos; settings]
 /Launch a new server on the host/port given by the "address", running the "qfile" specified in the new row.
 copyServer:{[address; pos; settings; rep]
   if[-1<>type rep; :"ERROR: 'replace' flag must be a boolean (1b 0b)"];
-  if[-11=type pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: address not found"]];
-  if[address in ed_buffer `address; :"ERROR: new address alrealy in table"];
-  settings[`address]: address; oldaddress:ed_buffer[pos;`address] ;
-  if[not `ok~ t:allow[settings] fields; :t] ;  
+  if[-11=type pos; t:pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: old address not found, ", str t]];
+  if[address in ed_buffer `address; :"ERROR: new address alrealy in table, ", str address];
   end: 1+ count ed_buffer ;
   if[not pos within (1; end); :"ERROR: row to copy '",(string pos), "' not in range 1-", string end] ;
-  ed_buffer,:: ed_buffer[pos] ;
-  updaterow[end; settings] ;
+  settings:([address:address]), settings ; 
+  oldaddress:ed_buffer[pos-1;`address] ;
+  if[not `ok~ t:allow[settings] fields; :t] ;  
+  ed_buffer,:: ed_buffer[pos-1];
+  updaterow[end; settings]; ed_buffer[end-1;`h]:0Ni;
   ed_buffer::moveItemInList[ed_buffer;end;pos] ;
   if[rep; ed_phaseout,::oldaddress] ;
   ed_phasein,::address ;
@@ -141,38 +142,30 @@ copyServer:{[address; pos; settings; rep]
 /Although the name is "upgrade" the operation could be a "downgrade", "restart", or "reassignment" depending on the new qfile.
 /The sversion should change or not change accordingly, but this is not enforced.
 upgradeServers:{[stype; criteria; settings; rep]
-  criteria[`stype]:stype ;
+  criteria: ([stype:stype]), criteria ;
   if[not `ok~ t:allow[criteria] `stype`sversion`host`qfile; :t] ;
   if[not `ok~ t:require[criteria] `stype; :t] ;  
   if[not `ok~ t:allow[settings] `qfile`sversion; :t] ;
   oldservers: addressByCriteria criteria ;
-  newservers: unusedPort each oldservers ;  
-  if[ any null newservers; :"ERROR: no available port"] ;
-  copyServer[;;settings;rep] ./: flip (oldservers;newservers)
+  {newx:unusedPort x; t:copyServer[newx; x; y; z]; (t;newx)} [;settings;rep] each oldservers 
  };
 
 
-/Migrate selected servers to a new host.
-/Select all rows from the buffer satisfying the "criteria" (not necessarily all of same stype). Invoke "replaceServer"
-/on each of them, updating "address" to an unused port on the specified host, retaining the same qfile and condition.
+/Migrate (all or some) servers of a given "stype" to a new host.
+/Select all rows from the buffer with a given stype and perhapse other "criteria". Invoke "replaceServer" on each
+/of them, updating "address" to an unused port on the specified host, retaining the same qfile and condition.
 /The stype and sversion may be updated to reflect the properties of the new host.
 /In general the stype may depend on some combination of the host, qfile, and condition.
-/However, only the host dependent part of the stype should be changed (Note: all new servers will be on SAME host!).
-/To allow the non-host-dependent part of the stype to remain unchanged, we allow a "*" wildcard in the "stype" setting.
-/To take advantage of this the stypes should include a delimiter separating the host dependent part.
-/For example "t3xlarge-taiwan;servant;A-M" (host;qfile;condition).
-/Could be changed to reflect a move to singapore using the pattern: "t3xlarge-singapore;*"
+/Any new stype must be chosen to reflect only the change of host (which is why we only allow one stype per call)
 migrateServers:{[stype; criteria; settings; rep]
-  criteria[`stype]:stype ;
-  if[not `ok~ t:allow[criteria] `stype`version`host`qfile; :t] ;
+  criteria: ([stype:stype]), criteria ;
+  if[not `ok~ t:allow[criteria] `stype`sversion`host`qfile; :t] ;
   if[not `ok~ t:require[criteria] `stype; :t] ;  
   if[not `ok~ t:allow[settings] `stype`sversion`host; :t] ;
   if[not `ok~ t:require[settings] `host; :t] ;
   oldservers: addressByCriteria criteria ;
-  newservers: (str settings[`host]), ":", sting hiport ;
-  newservers: unusedPort each newservers ;
-  if[ any null newservers; :"ERROR: no available port"] ;
-  copyServer[;;settings;rep] ./: flip (oldservers;newservers)
+  {newx: unusedPort (str y `host), ":", str hiport; y:`host _ y; 
+   t:copyServer[newx; x; y; z]; (t;newx)} [;settings;rep] each oldservers 
  };
 
 /******* edit state controls *******
@@ -258,14 +251,15 @@ addressByCriteria:{[d]
     ()
   }[d] each key d ;
   if[ any 0=count w; :"ERROR: Unexpected data type"] ;
-  ?[pos ed_buffer; w; 0b; ([address:`address])]
+  ?[pos ed_buffer; w; 0b; ([address:`address])] `address
  } ;
 
 unusedPort:{[addr]
   host: first ":" vs str addr ;
-  used; "J"$ (ssr[; host,":"; ""] each) string exec address from ed_buffer where address like (host, ":*") ;
+  used: asc "J"$ (ssr[; host,":"; ""] each) string exec address from ed_buffer where address like (host, ":*") ;
   gaps: where 1< used-prev used ;
-  port: $[0=count gaps; 1+max used; last gaps] ;
-  $[port>hiport; `; `$ host,":", string port] ;  
+  port: $[0=count gaps; 1+loport|max used; last gaps] ;
+  if[port>hiport; '"no available port on ", host] ;
+  `$ host,":", string port  
  };
 
