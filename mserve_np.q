@@ -59,6 +59,10 @@ servant: port+ {1+ x-first x} each (count hosts; 0N)# til acount ;
 servant: raze {(enlist first x),/: enlist each string 1_ x} each (enlist each hosts) ,' servant ;
 servant: {x, enlist afile} each servant ;
 
+/port range for servants (loport+1 - hiport)
+loport:port ;
+hiport:{(1000* x div 1000)+997} loport ;
+
 / utilities
 str: {$[10=type x; x; string x]} ;         /convert non-string to string
 tms: { `long$ .000001 * x } ;              /convert timestamp difference to ms
@@ -201,7 +205,7 @@ if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTIN
 /if .z.w does not exist in h => message is a new request from a client
 
 getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users table 
-.z.ps:{[x]
+.z.ps:{[x] 
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; query; options)	
     -1 ts[], "-> Receive Request: #", (" " sv str each x) ; 
@@ -210,7 +214,6 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
     bklg: exec count i from queries where location in `master`servant ;       /queries in queue ahead of this one
     role:getrole[];                                                           /overridden in authent.q plugin
     if[not null role; options[`user]:.z.u; options[`role]:role];
-
     `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; `; bklg; `; `master); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
@@ -281,7 +284,8 @@ ts:{
 /describe result
 describeResult:{[x;y]
   info: "  server=", (str y `qsvr), " route=", (str y `route), " elapsed= ", (str y `elapsed) ;
-  if[10=type x; if["ERROR"~upper 5# x; :($[40<count x; 40#x,".."; x],info)]]; 
+  if[10=type x; :($[60<count x; (58#x),".."; x], info) ]; 
+  /if[10=type x; if["ERROR"~upper 5# x; :($[40<count x; 40#x,".."; x],info)]]; 
 
   t:gettype x; if[t in ("null"; "empty"); :t];
   $[(0>type x); ""; (string count x)," "], t, $[0>type x; " atom"; 0<type x; "s"; ""], info  
