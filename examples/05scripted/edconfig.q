@@ -69,6 +69,7 @@ browse:{
   if[0>type x; x:(x; 10)] ;
   if[-11=type x 0; x[0]: 1+(ed_buffer `address)? x 0; if[len<x 0; :"ERROR: address not found"]] ;
   if[-11=type x 1; x[1]: 1+(ed_buffer `address)? x 1; if[len<x 1; :"ERROR: address not found"]] ;
+  if[any not (type x) in\: (-5 -6 -7h); :"ERROR: arguments should be symbol or integer"] ;
   
   if[3=count x; a:x 0; b:x 1; sz:x 2];
   if[2=count x; a:x 0; b:x 0; sz:x 1];
@@ -251,7 +252,6 @@ addressByCriteria:{[d]
     if[(type v) within (-7;-5); :(=; k; v)];
     ()
   }[d] each key d ;
-  if[ any 0=count w; :"ERROR: Unexpected data type"] ;
   ?[pos ed_buffer; w; 0b; ([address:`address])] `address
  } ;
 
@@ -263,5 +263,13 @@ unusedPort:{[addr]
   if[port>hiport; '"no available port on ", host] ;
   `$ host,":", string port  
  };
+
+saveConfiguration:{ 
+  if[not null cn_server_type; '"Phase-in in progress "+(string cn_percentage)+"%"]; 
+  delete from `routingTable where condition in ("0b"; "(0b)") ; /remove phased-out rules from routing table.
+  hclose each abs drophandles (key h) except routingTable `h ;  /remove and close handles no longer present in routing table
+  (`$":",afile,"1") 0: "," 0: delete h from routingTable ;      /write csv file, appending "1" to original file name 
+  "OK"
+ } ; 
 
 -1 "edconfig.q loaded" ;
