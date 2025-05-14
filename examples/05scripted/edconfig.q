@@ -69,7 +69,7 @@ browse:{
   if[0>type x; x:(x; 10)] ;
   if[-11=type x 0; x[0]: 1+(ed_buffer `address)? x 0; if[len<x 0; :"ERROR: address not found"]] ;
   if[-11=type x 1; x[1]: 1+(ed_buffer `address)? x 1; if[len<x 1; :"ERROR: address not found"]] ;
-  if[any not (type x) in\: (-5 -6 -7h); :"ERROR: arguments should be symbol or integer"] ;
+  if[any not (type each x) in\: (-5 -6 -7h); :"ERROR: arguments should be symbol or integer"] ;
   
   if[3=count x; a:x 0; b:x 1; sz:x 2];
   if[2=count x; a:x 0; b:x 0; sz:x 1];
