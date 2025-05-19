@@ -124,9 +124,9 @@ connectServant:{[route]
 /***** Startup ******
 
 /Load Routing Table (afile= file name from command line) 
-routingTable:("SSJ**"; enlist ",") 0: `$":",afile ;    /routing table (host:port|stype|sversion|condition|qfile)
+routingTable:("SSJ*S"; enlist ",") 0: `$":",afile ;    /routing table (host:port|stype|sversion|condition|qfile)
 servant: (":" vs/: string routingTable `address);      /servants to be launched by the mserve startup
-servant: servant ,' enlist each routingTable `qfile ;  /append q-file to load.
+servant: servant ,' enlist each string routingTable `qfile ;  /append q-file to load.
 
 /Mserve callback provides handles to routing table
 readyCallback:{[x] routingTable:: routingTable,'([] h:x); system "l edconfig.q"} ;

@@ -74,18 +74,19 @@ browse:{
   if[3=count x; a:x 0; b:x 1; sz:x 2];
   if[2=count x; a:x 0; b:x 0; sz:x 1];
   if[1=count x; a:x 0; b:x 0; sz: 10];
+  if[a<0; a:len]; if[b<0; b:len];
   $[a<=b;[fr:a;to:b];[fr:b;to:a]] ;
   if[sz>=len;  :pos ed_buffer] ;
 
   n:1+to-fr ; half:sz div 2; 
   if[sz<n; :(browse (fr; half)), (pos ed_buffer)[len], browse (to; sz-half)] ;  
 
-  fr-:1; to-:1; if[fr<0; :"ERROR: position is one based"] ; 
+  fr-:1; to-:1; if[fr<0; :"ERROR: position is one based, got 0"] ; 
   half:(sz-n) div 2; beg:0|fr-half ;
   if[len<beg+sz; beg:len-sz];
   select[(beg;sz)] from pos ed_buffer
  }; 
-
+;
 /************ Editing commands ***********
 
 /Find row containing "address", apply "settings" and move to postion "pos".
@@ -94,8 +95,9 @@ editServer:{[address; pos; settings]
   if[-11=type pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: address not found"]] ;
   target: 1+ (ed_buffer `address) ? address ; if[target>count ed_buffer; :"ERROR: address not found"] ;
   if[not `ok~ t:allow[settings] fields except `address`qfile; :t] ;
-  if[(settings `condition) in ("0b"; "(0b)"); settings _: `condition; ed_phaseout,::address];  
+  if[0<count settings `condition; if[(settings `condition) in ("0b"; "(0b)"); settings _: `condition; ed_phaseout,::address]];  
   if[null pos; pos:target] ;
+  if[pos<0; pos:1+count ed_buffer] 
   updaterow[target; settings] ;
   ed_buffer::moveItemInList[ed_buffer; target; pos] ;
   `ok
@@ -110,7 +112,7 @@ addServer:{[address; pos; settings]
   if[not `ok~ t:allow[settings] fields;   :t] ;  
   if[not `ok~ t:require[settings] fields; :t] ;
   end: 1+ count ed_buffer ;
-  if[null pos; pos:end] ;
+  if[pos<0; pos:end] ;
   ed_buffer,:: ed_buffer[end] ;
   updaterow[end; settings]; ed_buffer[end-1;`h]:0Ni ;
   ed_buffer::moveItemInList[ed_buffer;end;pos] ;
@@ -243,14 +245,14 @@ updaterow:{[r;d] updatefield[r] .' {(y;x[y])}[d] each key d ;};
 updatefield:{[r;c;v] ed_buffer[r-1;c]:v ;} ;
 
 addressByCriteria:{[d]
-  if[99<>type criteria :"ERROR: dictionary expected"] ;
+  if[99<>type d; :"ERROR: dictionary expected"] ;
   w:{[d;k] 
     v: d k;
     if[k=`host; :(like; `address; $[10=type v; v; string v],":*")];
     if[10=type v; :(like; k; v)];
     if[-11=type v;  :(=; k; enlist v)];
     if[(type v) within (-7;-5); :(=; k; v)];
-    ()
+    :"ERROR: unexpected criterion, value type=", string type v, " pair ", .Q.s1 (k;v) ;
   }[d] each key d ;
   ?[pos ed_buffer; w; 0b; ([address:`address])] `address
  } ;
