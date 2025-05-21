@@ -14,6 +14,10 @@ if[ not `routingTable in key `.;
     h:neg 5+til 20
    );
   update qfile:`servantbad.q from `routingTable where sversion=2 ; 
+  
+  routingDescriptor:(::) ;
+  getContextSource:{[x;y] x} ;
+  contextSource: getContextSource[routingTable `condition; routingDescriptor] ;
 
   / Launch new servers
   launch:{-1 "simulate Launch ", (x 2), " on `:", (x 0), ":", (x 1); 0N} ;
@@ -33,11 +37,12 @@ if[ not `routingTable in key `.;
    };
 
   /canary control globals
+  cn_backupCS:(::) ;
   cn_backupRT:(::) ;
   cn_increment: 0N ;
   cn_interval: 0N ;
-  cn_phasein: `$() ;
-  cn_phaseout: `$() ;
+  cn_phasein: (count routingTable)#0b ;
+  cn_phaseout: (count routingTable)#0b ;
  ];
 
 /**** search or browse the editBuffer ****
@@ -108,7 +113,7 @@ editServer:{[address; pos; settings]
 addServer:{[address; pos; settings]
   if[-11=type pos; t:pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: pos address not found, ", str t]] ;
   if[address in ed_buffer `address; :"ERROR: new address alrealy in table, ", str address];
-  settings:([address:address]), settings ; 
+  settings:([address:address]), settings ;
   if[not `ok~ t:allow[settings] fields;   :t] ;  
   if[not `ok~ t:require[settings] fields; :t] ;
   end: 1+ count ed_buffer ;
@@ -128,7 +133,7 @@ copyServer:{[address; pos; settings; rep]
   if[address in ed_buffer `address; :"ERROR: new address alrealy in table, ", str address];
   end: 1+ count ed_buffer ;
   if[not pos within (1; end); :"ERROR: row to copy '",(string pos), "' not in range 1-", string end] ;
-  settings:([address:address]), settings ; 
+  settings:([address:address]), settings ;
   oldaddress:ed_buffer[pos-1;`address] ;
   if[not `ok~ t:allow[settings] fields; :t] ;  
   ed_buffer,:: ed_buffer[pos-1];
@@ -188,14 +193,19 @@ applyChanges:{[pct_increment; per_interval]
   canary: all not null (pct_increment; per_interval) ;
   if[canary; 
     cn_increment::pct_increment; cn_interval::per_interval; 
-    cn_phasein::ed_phasein; cn_phaseout::ed_phaseout; cn_backupRT::routingTable ;
+    cn_phasein:: (ed_buffer `address) in\: ed_phasein ; 
+    cn_phaseout:: (ed_buffer `address) in\: ed_phaseout ; 
+    cn_backupRT::routingTable; cn_backupCS::contextSource
   ] ;
   if[not canary;
-    cn_increment::0N; cn_interval::0N; cn_phasein::`$(); cn_phaseout::`$(); cn_backupRT::(::);
+    cn_increment::0N; cn_interval::0N; 
+    cn_phasein:: cn_phaseout:: (count ed_buffer)# 0b ; 
+    cn_backupRT::(::); cn_bacupCS::(::);
     update condition:(count i)# enlist "0b" from `ed_buffer where address in ed_phaseout
   ] ;
   /update routing table
   routingTable::ed_buffer; 
+  contextSource::getContextSource[routingTable `condition; routingDescriptor] ;
   clearChanges[] ;
  };
 
@@ -207,7 +217,7 @@ launchAll:{[routing]
  };
 
 /******** Utilities **********
-fields: -1_ cols routingTable;
+fields: (cols routingTable) except `h ;
 allow:{[s;f] 
   na:(key s) except f ;
   if[0<count na; :"ERROR: Not Allowed: ", " " sv string na] ;
