@@ -191,21 +191,13 @@ applyChanges:{[pct_increment; per_interval]
 
   /set canary parameters
   canary: all not null (pct_increment; per_interval) ;
-  if[canary; 
-    cn_increment::pct_increment; cn_interval::per_interval; 
-    cn_phasein:: (ed_buffer `address) in\: ed_phasein ; 
-    cn_phaseout:: (ed_buffer `address) in\: ed_phaseout ; 
-    cn_backupRT::routingTable; cn_backupCS::contextSource
-  ] ;
-  if[not canary;
-    cn_increment::0N; cn_interval::0N; 
-    cn_phasein:: cn_phaseout:: (count ed_buffer)# 0b ; 
-    cn_backupRT::(::); cn_bacupCS::(::);
-    update condition:(count i)# enlist "0b" from `ed_buffer where address in ed_phaseout
-  ] ;
-  /update routing table
-  routingTable::ed_buffer; 
-  contextSource::getContextSource[routingTable `condition; routingDescriptor] ;
+  canary: $[any null (pct_increment; per_interval); (::);
+     ([increment:pct_increment; interval:per_interval; 
+      phasein:(ed_buffer `address) in\: ed_phasein ; 
+      phaseout:(ed_buffer `address) in\: ed_phaseout])
+   ];
+  if[canary~(::); delete from `edbuffer where address in ed_phaseout] ;
+  alterRoutingReq[canary; ed_buffer] ; 
   clearChanges[] ;
  };
 
@@ -215,6 +207,11 @@ launchAll:{[routing]
   system "sleep 5" ;
   {if[not null x; hclose x]} each lh ;  /close handles to launcher on remote hosts.
  };
+
+
+
+
+
 
 /******** Utilities **********
 fields: (cols routingTable) except `h ;
@@ -277,9 +274,7 @@ unusedPort:{[addr]
  };
 
 saveConfiguration:{ 
-  if[not null cn_server_type; '"Phase-in in progress "+(string cn_percentage)+"%"]; 
-  delete from `routingTable where condition in ("0b"; "(0b)") ; /remove phased-out rules from routing table.
-  hclose each abs drophandles (key h) except routingTable `h ;  /remove and close handles no longer present in routing table
+  if[not null cn_increment; '"Cannot save; Phase-in in progress "+(string cn_percentage)+"%. Use finishPhaseIn or cancelPhaseIn first."]; 
   (`$":",afile,"1") 0: "," 0: delete h from routingTable ;      /write csv file, appending "1" to original file name 
   "OK"
  } ; 
