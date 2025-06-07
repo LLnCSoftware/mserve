@@ -16,8 +16,14 @@ if[ not `routingTable in key `.;
   update qfile:`servantbad.q from `routingTable where sversion=2 ; 
   
   routingDescriptor:(::) ;
-  getContextSource:{[x;y] x} ;
-  contextSource: getContextSource[routingTable `condition; routingDescriptor] ;
+  contextSource: routingTable `condition ;
+  alterRoutingReq:{[cn; newRT]
+    routingTable::newRT; contextSource::newRT `condition ;
+    if[ cn~(::); cn:([increment:0N;interval:0N]) ];
+    cn_increment:: cn `increment; cn_interval:: cn `interval ;
+    cn_phasein::$[`phasein in key cn; cn `phasein; (count newRT)#0b] ;
+    cn_phaseout::$[`phaseout in key cn; cn `phaseout; (count newRT)#0b] ;
+  };
 
   / Launch new servers
   launch:{-1 "simulate Launch ", (x 2), " on `:", (x 0), ":", (x 1); 0N} ;
@@ -183,6 +189,9 @@ applyChanges:{[pct_increment; per_interval]
   pct_increment: "J"$ ssr[;"%";""] pct_increment ;  /percentage eg. "25%" to integer
   per_interval: interval per_interval ;             /time interval eg "3h" to milliseconds
 
+  if[(ed_buffer~routingTable) and all 0=count each (ed_phasein; ed_phaseout); :"no changes to apply"] ;
+  if[(not null pct_increment) and all 0=count each (ed_phasein; ed_phaseout); :"nothing to phase in or out"];
+
   /launch and connect "phasein" servers; capture handles
   routing:  select from ed_buffer where address in ed_phasein ;
   launchAll routing ;
@@ -190,15 +199,17 @@ applyChanges:{[pct_increment; per_interval]
   update h:hdl from `ed_buffer where address in routing `address ;
 
   /set canary parameters
-  canary: all not null (pct_increment; per_interval) ;
-  canary: $[any null (pct_increment; per_interval); (::);
+  no_canary: any null (pct_increment; per_interval) ;
+  if[no_canary; delete from `ed_buffer where address in ed_phaseout] ;
+
+  canary: $[no_canary;  (::);
      ([increment:pct_increment; interval:per_interval; 
       phasein:(ed_buffer `address) in\: ed_phasein ; 
       phaseout:(ed_buffer `address) in\: ed_phaseout])
    ];
-  if[canary~(::); delete from `edbuffer where address in ed_phaseout] ;
   alterRoutingReq[canary; ed_buffer] ; 
   clearChanges[] ;
+  `ok
  };
 
 launchAll:{[routing]

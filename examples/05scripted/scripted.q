@@ -90,7 +90,7 @@ canaryFilter:{[bitvector]
   -1 "phase-in ",(string random)," < ",(string 100& new_percentage), "%  error ",(string cn_cnterr)," of ",(string cn_maxerr) ;
   bitvector and not $[use_new; cn_phaseout; cn_phasein]  
  };
-endPhaseIn:{ cn_increment::-1; cn_start::0Np; -1 "End Phase-in: Hold at 100%"; } ;
+endPhaseIn:{ cn_increment::-1; cn_start::0Np; -1 "\n*****\n end phase-in - hold at 100%\n*****\n"; } ;
 
 /**** Canary Failover ******
 / This overrides "filterResponse" in mserve_np.q
@@ -103,7 +103,7 @@ filterResponse:{                                          /x= (id; result; info)
   phasein: (routingTable `address) where cn_phasein ;     /Get phase in addresses from routing table
   address:x[2] `qsvr; if[not address in phasein; :x];     /If servant address not included -- just return 
   cn_cnterr+::1; if[cn_cnterr<cn_maxerr; :x] ;            /less than max errors -- just return 
-  -1 "failover - hold at 0%" ;
+  -1 "\n*****\n failover - hold at 0%\n*****\n" ;
   cn_increment::0; cn_start::0Np; 
   x                   /return response
  } ;
@@ -111,15 +111,15 @@ filterResponse:{                                          /x= (id; result; info)
 /**** Installation/Phase-In controls for new routing table - typically invoked manually via editor *****
 
 cancelPhaseIn:{[] 
-  if[null cn_interval; :"No phase in to cancel" ];
-  if[cn_interval<>0; :"Cancel only when holding at 0% - use alterPhaseIn[0;0N]"];
+  if[null cn_increment; :"No phase in to cancel" ];
+  if[cn_increment<>0; :"Cancel only when holding at 0% - use alterPhaseIn[0;0N]"];
   if[(cn_backupRT~(::)) or cn_backupCS~(::); :"No backup to restore";]; 
   alterRouting[(::); cn_backupRT; cn_backupCS]
  } ; 
 
 finishPhaseIn:{[]
-  if[null cn_interval; :"No phase in to finish" ];
-  if[cn_interval<>100; :"Finish only when holding at 100% - use alterPhaseIn[-1; 0N]" ];
+  if[null cn_increment; :"No phase in to finish" ];
+  if[cn_increment<>-1; :"Finish only when holding at 100% - use alterPhaseIn[-1; 0N]" ];
   if[all cn_phaseout=0b; 
    cn_increment::0N; cn_interval::0N; cn_start::0Np; 
    cn_backupRT::(::); cn_backupCS::(::); cn_phasein::cn_phaseout; 
@@ -141,8 +141,8 @@ alterPhaseIn:{[increment; interval]
 / After validating the "canary" parameters, receiveContextSource is replaced by an appropriate 
 / projection of "alterRouting" below, before calling requestContextSource.
 alterRoutingReq:{[canary; newRT]
+  if[cn_increment>=0; -1 "Phase in already in progress"; :(::)];
   if[not canary~(::); 
-    if[not null cn_increment; -1 "Phase in already in progress"; :(::)];
     if[(canary[`increment]<-1) or canary[`interval]<=0; -1 "increment or interval missing"; :(::)];
     if[`phasein  in key canary; t:canary `phasein;  if[(1h<>type t) or (count t)<>count newRT; -1 "invalid phasein bit vector";  :(::)]];
     if[`phaseout in key canary; t:canary `phaseout; if[(1h<>type t) or (count t)<>count newRT; -1 "invalid phaseout bit vector"; :(::)]];
@@ -169,6 +169,7 @@ alterRouting:{[canary; newRT; newCS]
   cn_increment:: canary `increment; cn_interval:: canary `interval; cn_start::0Np;
   cn_phasein:: $[`phasein in key canary; canary `phasein; (count routingTable)#0b ];
   cn_phaseout:: $[`phaseout in key canary; canary `phaseout; (count routingTable)#0b ] ;
+  ed_buffer::routingTable ;
   `ok
  };
 drophandles:{ h::h _/ x; h2addr::h2addr _/ x; h2route::h2route _/ x; h2idle::h2idle _/ x; x} ;
