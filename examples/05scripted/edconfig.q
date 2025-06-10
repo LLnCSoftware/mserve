@@ -61,7 +61,11 @@ ed_phaseout: `$() ;
 
 / start with copy of routing table.
 / add 1-based position column, remove handle column.
-pos:{([] pos:1+til count x),'delete h from x} ;
+pos:{([] pos:1+til count x; stat:stat each x `address) ,' delete h from x} ;
+stat:{[address]  
+  ph:$[cn_increment=0N; ""; cn_increment<0; "100%"; cn_increment=0; "0%"; (string cn_percentage[]),"%" ];
+  $[address in ed_phasein; "phase in ",ph; address in ed_phaseout; "phase out ",ph; ""]
+ };  
 
 / Allow user to search the buffer by specifying "where clauses" for a functional select
 / Example: search ("address like \"localhost:*\"; "sversion=2") 
@@ -103,6 +107,7 @@ browse:{
 /Find row containing "address", apply "settings" and move to postion "pos".
 /Setting condition to "0b" would take the server out out service; instead, put on phase-out list to allow canary.
 editServer:{[address; pos; settings]
+  if[not null cn_increment; :"Phase-in in progress - cannot edit"] ;
   if[-11=type pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: address not found"]] ;
   target: 1+ (ed_buffer `address) ? address ; if[target>count ed_buffer; :"ERROR: address not found"] ;
   if[not `ok~ t:allow[settings] fields except `address`qfile; :t] ;
@@ -117,6 +122,7 @@ editServer:{[address; pos; settings]
 /Append a new row to the buffer, specifiying all fields in "settings"; then move to specified position.
 /Launch a new server on the host/port given by the "address", running the "qfile" specified in the new row.
 addServer:{[address; pos; settings]
+  if[not null cn_increment; :"Phase-in in progress - cannot edit"] ;
   if[-11=type pos; t:pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: pos address not found, ", str t]] ;
   if[address in ed_buffer `address; :"ERROR: new address alrealy in table, ", str address];
   settings:([address:address]), settings ;
@@ -134,6 +140,7 @@ addServer:{[address; pos; settings]
 /Copy row from specified "pos" to end of the buffer; update all fields in "settings"; then move above original copied row.
 /Launch a new server on the host/port given by the "address", running the "qfile" specified in the new row.
 copyServer:{[address; pos; settings; rep]
+  if[not null cn_increment; :"Phase-in in progress - cannot edit"] ;
   if[-1<>type rep; :"ERROR: 'replace' flag must be a boolean (1b 0b)"];
   if[-11=type pos; t:pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: old address not found, ", str t]];
   if[address in ed_buffer `address; :"ERROR: new address alrealy in table, ", str address];
@@ -156,6 +163,7 @@ copyServer:{[address; pos; settings; rep]
 /Although the name is "upgrade" the operation could be a "downgrade", "restart", or "reassignment" depending on the new qfile.
 /The sversion should change or not change accordingly, but this is not enforced.
 upgradeServers:{[stype; criteria; settings; rep]
+  if[not null cn_increment; :"Phase-in in progress - cannot edit"] ;
   criteria: ([stype:stype]), criteria ;
   if[not `ok~ t:allow[criteria] `stype`sversion`host`qfile; :t] ;
   if[not `ok~ t:require[criteria] `stype; :t] ;  
@@ -172,6 +180,7 @@ upgradeServers:{[stype; criteria; settings; rep]
 /In general the stype may depend on some combination of the host, qfile, and condition.
 /Any new stype must be chosen to reflect only the change of host (which is why we only allow one stype per call)
 migrateServers:{[stype; criteria; settings; rep]
+  if[not null cn_increment; :"Phase-in in progress - cannot edit"] ;
   criteria: ([stype:stype]), criteria ;
   if[not `ok~ t:allow[criteria] `stype`sversion`host`qfile; :t] ;
   if[not `ok~ t:require[criteria] `stype; :t] ;  
@@ -183,7 +192,12 @@ migrateServers:{[stype; criteria; settings; rep]
  };
 
 /******* edit state controls *******
-clearChanges:{ed_buffer::routingTable; ed_phasein::`$(); ed_phaseout::`$()} ;
+clearChanges:{
+  ed_phasein::  (routingTable `address) where cn_phasein ;
+  ed_phaseout:: (routingTable `address) where cn_phaseout ;
+  ed_buffer::routingTable ;
+ };
+
 applyChanges:{[pct_increment; per_interval]
   /Convert canary paramters from string.
   pct_increment: "J"$ ssr[;"%";""] pct_increment ;  /percentage eg. "25%" to integer
@@ -219,9 +233,73 @@ launchAll:{[routing]
   {if[not null x; hclose x]} each lh ;  /close handles to launcher on remote hosts.
  };
 
+/**** Installation/Phase-In controls for new routing table - typically invoked manually via editor *****
+
+cancelPhaseIn:{[]
+  if[null cn_increment; :"No phase in to cancel" ];
+  if[cn_increment<>0; :"Cancel only when holding at 0% - use alterPhaseIn[0;0N]"];
+  if[(cn_backupRT~(::)) or cn_backupCS~(::); :"No backup to restore";];
+  alterRouting[(::); cn_backupRT; cn_backupCS]
+ } ;
+
+finishPhaseIn:{[]
+  if[null cn_increment; :"No phase in to finish" ];
+  if[cn_increment<>-1; :"Finish only when holding at 100% - use alterPhaseIn[-1; 0N]" ];
+  if[all cn_phaseout=0b;
+   cn_increment::0N; cn_interval::0N; cn_start::0Np; cn_cnterr::0 ;
+   cn_backupRT::(::); cn_backupCS::(::); cn_phasein::cn_phaseout;
+   :"done - nothing to phase out"
+  ];
+  alterRoutingReq[(::); delete from routingTable where cn_phaseout]
+ } ;
 
 
+/ Allows changeing increment and/or interval for a canary in progress 
+/ Specify 0N to leave increment or interval unchanged.
+/ Specify increment as 0 or -1 to hold at 0% or 100% respectively.
+alterPhaseIn:{[increment; interval]
+  if[null cn_increment; ":No active phase-in to modify"];
+  if[not null increment; cn_increment::increment; cn_start::0Np; cn_cnterr::0] ;
+  if[not null interval: cn_interval::interval; cn_start::0Np; cn_cnterr::0] ;
+ } ;
 
+/ Applies change to routing table after obtaining a new context source.
+/ After validating the "canary" parameters, receiveContextSource is replaced by an appropriate 
+/ projection of "alterRouting" below, before calling requestContextSource.
+alterRoutingReq:{[canary; newRT]
+  if[cn_increment>=0; :"Phase in already in progress"];
+  if[not canary~(::);
+    if[(not canary[`increment]>=0) or not canary[`interval]>0; :"increment or interval missing"];
+    if[`phasein  in key canary; t:canary `phasein;  if[(1h<>type t) or (count t)<>count newRT; :"invalid phasein bit vector"]];
+    if[`phaseout in key canary; t:canary `phaseout; if[(1h<>type t) or (count t)<>count newRT; :"invalid phaseout bit vector"]];
+  ];
+  -1 "awaiting contextSource" ;
+  receiveContextSource::alterRouting[canary; newRT;] ;
+  requestContextSource[newRT `condition; routingDescriptor] ;
+ };
+
+/ Alter Routing: This should be invoked as a callback after obtaining the new context source (newCS),
+/ which could take some time to build. When canary is omitted (::), the operation is one of:
+/ applying an abrut change (no phase in), or of finishing or canceling a previous canary.
+/ In this case, the canary settings and backups will be cleared. Otherwize a new canary is being
+/ started, and this can only happen when no previous canary is in effect.
+alterRouting:{[canary; newRT; newCS]
+  -1 "received context source" ;
+  $[canary~(::); [cn_backupRT::(::); cn_backupCS::(::)]; [cn_backupRT::routingTable; cn_backupCS::contextSource]];
+
+  update route:` from `queries where location=`master ; fallbackPos::(::) ; /invalidate previous routing symbols
+  routingTable::newRT; contextSource::newCS;                                /install new routing table and context source
+  hclose each abs drophandles (key h) except routingTable `h ;              /disconnect servants not present in new routing table
+
+  if[canary~(::); canary:([increment:0N;interval:0N]) ];
+  cn_start::0Np; cn_cnterr::0;
+  cn_increment:: canary `increment; cn_interval:: canary `interval; 
+  cn_phasein:: $[`phasein in key canary; canary `phasein; (count routingTable)#0b ];
+  cn_phaseout:: $[`phaseout in key canary; canary `phaseout; (count routingTable)#0b ] ; 
+  clearChanges[] ;
+  `ok 
+ };
+drophandles:{ h::h _/ x; h2addr::h2addr _/ x; h2route::h2route _/ x; h2idle::h2idle _/ x; x} ;
 
 
 /******** Utilities **********
