@@ -1,0 +1,117 @@
+### 1. Test canary failover without precomp.
+
+1.1 start mserve: MSERVE_PLUGINS='scripted.q' q mserve_np.q scripted.csv -p 5000 
+    observe: 4 servant processes should start up on ports 5001-5004. 
+1.2 Type "routingTable" 
+    Should print content of the scripted.csv file with a "h" column of handles added.
+1.3 Type "contextSource"
+    Should print content of the "condition" column from the scripted.csv file.
+1.4 Upgrade the servant with stype=`other to use the "bad" servant (replacing previous servant)
+    upgradeServers[`other; ([]); ([qfile:`servantbad.q; sversion:2]); 1b]
+    observe: should print "ok localhost:5005"
+1.5 Start canary: applyChanges["25%"; "1m"]  (phase in new server 25% per minute.
+    observe: should launch new server running servantbad on port 5005.
+    should print: awaiting contextSource \n received context source \n `ok
+1.6 Start the client and the timer.
+    q qs.q localhost 5000 \n \t 2000
+    observe: startup messages after launch, then tests begin running on timer.
+1.7 Watch the log for failover
+    The new server will fail when it receives a request for symbol `VOD.
+    After 3 such failures, the phase-in should be aborted, entering the "hold at 0%" state.
+    Before the abort you should see status messages like: "phase-in 95 < 50%  error 1 of 3"
+    When the apport happens: "*****\n failover - hold at 0% \n*****:
+    After the abort: "phase-in holding at 0%"
+1.8. After this happens there should be no more errors, 
+     and symbol `VOD should go to servant.q on port 5004 not servantbad.q on port 5005
+     let it run until you can confirm this:  
+      "Receive Request: #101 proc1 `VOD"
+      "Forward Request: #101 to localhost:5004  (servant.q)"
+     The test has failed if `VOD still goes to localhost:5005 (servantbad.q).
+1.9.  Stop the timer and review the log messages so far to make sure everything worked as intended.
+      Then restart the timer.
+1.10. Use "cancelPhaseIn" to restore the routing table to what it was before the edit.
+      Type: "cancelPhaseIn[]"
+      Should print: "received context source \n `ok"
+      After this there should be no more status "phase-in" status messages.
+1.11. Kill the client.
+      All console activity should (eventually) cease.
+1.12. Check that the routingTable and contextSource are the same as they were at the beginning.
+      DONE !     
+
+### 2. Test successfull canary without precomp.
+
+2.1-2.4: Repeat 1.1 - 1.4 above
+2.5-2.6: applyChanges["100%";"1m"]  
+2.7      Watch the log for "end of phase in"
+         This is the same "servantbad.q" as above, with the same built in error.
+         However although the new servant is used 100% of the time, the amount of time is only 1/4 of the above
+         and in this case that is not enough time for `VOD to be picked randomly by the client 3 times.
+         So the canary will end normally.
+         Before the canary ends you should see messages like "phase-in 12 < 100%  error 1 of 3"
+         When the canary ends: "*****\n end phase-in - hold at 100% \n*****"
+         Afterwards: "phase-in holding at 100%"
+2.8      After this all the new servant will continue to be used 100% of the time, 
+         and there may well be additional errors. But pretend you don't see them.
+2.9      Use "finishPhaseIn" to make the change permanent.
+         Type: "finishPhaseIn[]"
+         Should print: "awaiting contextSource\n received context source\n servant closed"
+2.10     Kill the client and server. (type \\).
+         Done !
+
+### 3. Test two successive canaries, and alterPhaseIn, without precomp.
+
+3.1-3.7 Repeat test (2)
+3.8     Holding at 100%, and there may be additional errors, but this time you see them. 
+3.9     Instead of calling finishPhaseIn, call alterPhaseIn["0%";""]
+3.10    After this, the status messages should change to  "phase-in holding at 0%"        
+        And the symbol `VOD should always be routed to servant.q on port 5004.
+        As in (1) wait for one or more of these, then stop the timer, check more closly, and resume the timer.
+3.11    Use "cancelPhaseIn[]" as in (1) to restore the original routing table
+3.12    Stop the client, and check the routing table context source have been resorted correctly as in (1).
+3.13+   Without stopping the server, restart the client, and repeat test (1) exactly.
+        Everything should work same as before. 
+
+### 4. Test precomp interface
+
+Note: Add the "precomp.q" plugin BEFORE "scripted.q".
+
+4.1 start mserve: MSERVE_PLUGINS='precomp.q,scripted.q' q mserve_np.q scripted.csv -p 5000
+    observe: 4 servant processes should start up on ports 5001-5004.
+4.2 Type "routingTable"
+    Should print content of the scripted.csv file with a "h" column of handles added.
+4.3 Type "contextSource"
+    Should be SeanO's dictionary:
+    fileName                | `:booleans_out.bin
+    numBools                | 4
+    allowedValuesByDimension| ,`GS`AAPL`BA`VOD`MSFT`GOOG`IBM`UBS
+    dimensionNames          | ,`symbol
+4.4 Check the following:
+```
+    contextValues[([symbol:`AAPL]); contextSource] -> 1001b
+    contextValues[([symbol:`BA]); contextSource]   -> 1001b
+    contextValues[([symbol:`GS]); contextSource]   -> 0101b
+    contextValues[([symbol:`GOOG]); contextSource] -> 0101b
+    contextValues[([symbol:`IBM]); contextSource]  -> 0101b
+    contextValues[([symbol:`MSFT]); contextSource] -> 0011b
+    contextValues[([symbol:`VOD]); contextSource]  -> 0001b
+    contextValues[([symbol:`UBS]); contextSource]  -> 0001b
+```
+
+### 4. Test canary failover with precomp
+
+Repeat test 1 with the precomp.q plugin in place.
+This means starting mserve as in (4), but otherwize following the steps of 1.
+
+
+### 5. Test successfull canary with precomp.
+
+Repeat test 2 with precomp.q in place.
+
+### 6. Test two successive canaries, and alterPhaseIn, wit0h precomp.
+
+Repeat test 3 with 
+
+### 7+. Test all edit functions using admincli.
+
+
+
