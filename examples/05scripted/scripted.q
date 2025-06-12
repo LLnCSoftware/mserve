@@ -21,12 +21,29 @@
 /them from a precomputed store, or evaluating them in a decision tree. In this case a routingDescriptor must be provided 
 /according to the requirements of that plugin.
 
-algo: enlist "script-plugin" ;                     /plugin name and options (no options in this case)
-if[not `getRoutingCriteria in key `. ; getRoutingCriteria:{[arg;opt] ([symbol:arg 1])} ];   .
-if[not `routingDescriptor  in key `. ; routingDescriptor:(::) ];                           
+/ ContextSource is an abstraction to allow a plugin to provide a faster way to compute 
+/ the routing bit vector such as using precomputed values or a decision tree.
+/ The default "contextSource" is just the  routing table condition column, and this is also the 
+/ input to the "getContextSource" function, which the plugin would override, along with the "contextValues" 
+/ function which actually computes the bit vector given the routing criteria and context source.  
 
-makens:{[ns;dict](` sv `,ns) set ((`,key dict)!(::),value dict)}; /Evaluate boolean expressions with variable values comming
-contextValues:{[dict;exprList] makens[`ctx;dict]; system "d .ctx"; r:value each exprList; system "d ."; r} /from a dictionary
+/ The requestContextSource is intended to be overridden by a plugin which will make an asynchronous call to an
+/ external process which will build the contextSource and return it to receiveContextSource in a callback.
+/ However, by default requestContextSource simply calls receiveContextSource directly.
+/ A new contextSource is needed at startup and whenever the routingTable is edited or a canary is finalized.
+/ At startup the received object is simply set in the contexSource global.
+/ However when the routeingTable is edited or a canary is finalized, receiveContextSource will be replaced
+/ by an appropriate projection of the alterRouting function, which also manipulates the canary control globals.
+algo: enlist "script-plugin" ;                     /plugin name and options (no options in this case)
+if[not `getRoutingCriteria   in key `. ; getRoutingCriteria:{[arg;opt] ([symbol:arg 1])} ];   .
+if[not `routingDescriptor    in key `. ; routingDescriptor:(::) ];                           
+if[not `requestContextSource in key `. ; requestContextSource:{[cond;rd] receiveContextSource cond}] ;
+if[not `contextValues in key `. ; contextValues:{[vars;cs] makens[`ctx;vars]; system "d .ctx"; r:value each cs; system "d ."; r}];
+receiveContextSource:{ contextSource::x} ;
+
+/ContextValues by default evaluates the boolean expressions from the routing table in a namespace
+/The following function creates that namespace from the dictionary returned by getRoutingCriteria.
+makens:{[ns;dict](` sv `,ns) set ((`,key dict)!(::),value dict)}; 
 
 check:{[]
   /compute "route" for new requests as a bit vector selecting matching rows from the dispach table.
@@ -118,22 +135,6 @@ connectServant:{[route]
   newh
  };
 
-/ ContextSource is an abstraction to allow a plugin to provide a faster way to compute 
-/ the routing bit vector such as using precomputed values or a decision tree.
-/ The default "contextSource" is just the  routing table condition column, and this is also the 
-/ input to the "getContextSource" function, which the plugin would override, along with the "contextValues" 
-/ function which actually computes the bit vector given the routing criteria and context source.  
-
-/ The requestContextSource is intended to be overridden by a plugin which will make an asynchronous call to an
-/ external process which will build the contextSource and return it to receiveContextSource in a callback.
-/ However, by default requestContextSource simply calls receiveContextSource directly.
-/ A new contextSource is needed at startup and whenever the routingTable is edited or a canary is finalized.
-/ At startup the received object is simply set in the contexSource global.
-/ However when the routeingTable is edited or a canary is finalized, receiveContextSource will be replaced
-/ by an appropriate projection of the alterRouting function, which also manipulates the canary control globals.
-requestContextSource:{[conditions; routingDescriptor] receiveContextSource conditions} ;
-receiveContextSource:{ contextSource::x} ;
-
 /***** Startup ******
 /Load Routing Table (afile= file name from command line) 
 routingTable:("SSJ*S"; enlist ",") 0: `$":",afile ;        /routing table (host:port|stype|sversion|condition|qfile)
@@ -145,6 +146,9 @@ servant: (":" vs/: string routingTable `address);             /servants to be la
 servant: servant ,' enlist each string routingTable `qfile ;  /append q-file to load.
 
 /Mserve callback provides handles to routing table
+/We can't load the configuration editor edconfig.q until after the handles are provided
+/because it edconfig.q, creates the editable copy of the routing table upon load, 
+/and expectes the handles to be included.
 readyCallback:{[x] 
   routingTable:: routingTable,'([] h:x) ;
   system "l edconfig.q" ;
