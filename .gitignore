@@ -1,4 +1,5 @@
 .*.swp
+examples/07precomp/*.bin
 
 # Windows image file caches
 Thumbs.db
