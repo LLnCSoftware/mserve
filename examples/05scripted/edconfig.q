@@ -201,7 +201,7 @@ clearChanges:{
 applyChanges:{[pct_increment; per_interval]
   /Convert canary paramters from string.
   pct_increment: "J"$ ssr[;"%";""] pct_increment ;  /percentage eg. "25%" to integer
-  per_interval: interval per_interval ;             /time interval eg "3h" to milliseconds
+  per_interval: interval2ms per_interval ;          /time interval eg "3h" to milliseconds
 
   if[(ed_buffer~routingTable) and all 0=count each (ed_phasein; ed_phaseout); :"no changes to apply"] ;
   if[(not null pct_increment) and all 0=count each (ed_phasein; ed_phaseout); :"nothing to phase in or out"];
@@ -258,7 +258,9 @@ finishPhaseIn:{[]
 / Specify 0N to leave increment or interval unchanged.
 / Specify increment as 0 or -1 to hold at 0% or 100% respectively.
 alterPhaseIn:{[increment; interval]
-  if[null cn_increment; ":No active phase-in to modify"];
+  increment:$[10=type increment; "J"$ ssr[increment; "%"; ""]; increment] ;
+  interval:$[10=type interval; interval2ms interval; interval] ;
+  if[null cn_increment; :"No active phase-in to modify"];
   if[not null increment; cn_increment::increment; cn_start::0Np; cn_cnterr::0] ;
   if[not null interval: cn_interval::interval; cn_start::0Np; cn_cnterr::0] ;
  } ;
@@ -334,8 +336,8 @@ moveItemInList:{[data;fr;to]
   data raze $[fr<to; (a;c;d;b;e); (a;d;b;c;e)]
  };  
 
-interval:{u:last x; x: -1_ x; ("J"$x)* $[u="m"; 60000; u="h"; 60*60000; u="d"; 24*60*60000; 0N]} ;
-asInter:{{t:last where x>0; (string x t),t} "mhd"!(x div 60000; x div 60*60000; x div 24*60*60000)} ;
+interval2ms:{u:last x; x: -1_ x; ("J"$x)* $[u="m"; 60000; u="h"; 60*60000; u="d"; 24*60*60000; 0N]} ;
+ms2interval:{{t:last where x>0; (string x t),t} "mhd"!(x div 60000; x div 60*60000; x div 24*60*60000)} ;
 
 updaterow:{[r;d] updatefield[r] .' {(y;x[y])}[d] each key d ;};
 updatefield:{[r;c;v] ed_buffer[r-1;c]:v ;} ;
