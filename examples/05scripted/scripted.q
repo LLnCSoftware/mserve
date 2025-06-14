@@ -47,12 +47,12 @@ makens:{[ns;dict](` sv `,ns) set ((`,key dict)!(::),value dict)};
 
 check:{[]
   /compute "route" for new requests as a bit vector selecting matching rows from the dispach table.
-  upd: validateRouting exec qid! routingBitVector'[query;client_options] from queries where null route ;
+  upd: validateRouting exec qid! routingBitVector'[query;client_options] from queries where 0=count each route ;
   update route: upd[qid] from `queries where qid in key upd ;  
-
+  
   /For each enqueued query, find the first matching row corresponding to a not-busy handle 
   notbusy: enlist notbusyBitVector[] ;
-  hit: select qid, rtRow:first each where each (("1"= string route) and' ((count qid)#notbusy)) from queries where location=`master ;
+  hit: select qid, rtRow:first each where each (route and' ((count qid)#notbusy)) from queries where location=`master ;
   hit: select from hit where not null rtRow ;
   if[0<count hit; qid:(hit 0)`qid; hdl:(routingTable `h) (hit 0)`rtRow; send_query[hdl; qid]] ;
  };
@@ -61,7 +61,7 @@ check:{[]
 validateRouting:{[upd]
    err: where {all x=0} each upd ;
    send_result[;"Error: No qualifying server"; (::)] each err ;
-   `$ raze each string upd
+   upd
  };
 
 /Obtain variables for substitution from "getRoutingCriteria"
@@ -130,7 +130,7 @@ connectServant:{[route]
   newh: neg hopen hsym route `address ;
   h[newh]:() ;
   h2addr[newh]: {(":" vs string x `address), enlist string x `qfile} route ;
-  h2route[newh]: ` ;
+  h2route[newh]: enlist () ;
   h2idle[newh]: 0Np ;
   newh
  };

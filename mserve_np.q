@@ -81,7 +81,7 @@ queries:([qid:`u#`int$()]
   time_received:`timestamp$();
   time_sent: `timestamp$() ;
   time_returned:`timestamp$();
-  route: `symbol$() ;
+  route: () ;
   backlog: `int$() ;
   servant_address:`symbol$();
   location:`symbol$() 
@@ -116,7 +116,7 @@ send_result:{[qid;result;info]
   total_elapsed: tms .z.P - queries[qid; `time_received] ;
   remaining: exec count i from queries where location in `master`servant ;
   backlog: `long$ queries[qid; `backlog] ;
-  route:queries[qid; `route] ;
+  route: queries[qid; `route] ;
   if[ 99<>type info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
   info,: `route`backlog`remaining!(route; backlog; remaining) ;
   response: filterResponse(client_queryid; result; info) ;
@@ -187,7 +187,7 @@ if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
 / default routing string is first argument to api command
 fixarg:{$[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
 getArguments:{[cmd] if[10=type cmd; cmd:parse cmd]; arg:fixarg each 1_ cmd; (cmd[0], arg) };
-getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; `$ str fixarg cmd[1]} ;
+getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; str fixarg cmd[1]} ;
 if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTING] ;
 
 
@@ -214,7 +214,7 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
     bklg: exec count i from queries where location in `master`servant ;       /queries in queue ahead of this one
     role:getrole[];                                                           /overridden in authent.q plugin
     if[not null role; options[`user]:.z.u; options[`role]:role];
-    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; `; bklg; `; `master); 
+    `queries upsert (sqid; query; cqid; options; (neg .z.w); .z.P; 0Np; 0Np; (); bklg; `; `master); 
     /check for a free slave.If one exists,send oldest query to that slave
     check[];
 	] ;
@@ -283,13 +283,15 @@ ts:{
 
 /describe result
 describeResult:{[x;y]
-  info: "  server=", (str y `qsvr), " route=", (str y `route), " elapsed= ", (str y `elapsed) ;
+  info: "  server=", (str y `qsvr), " route=", (.Q.s1 y `route), " elapsed= ", (str y `elapsed) ;
   if[10=type x; :($[60<count x; (58#x),".."; x], info) ]; 
   /if[10=type x; if["ERROR"~upper 5# x; :($[40<count x; 40#x,".."; x],info)]]; 
 
   t:gettype x; if[t in ("null"; "empty"); :t];
   $[(0>type x); ""; (string count x)," "], t, $[0>type x; " atom"; 0<type x; "s"; ""], info  
  } ; 
+
+formatRoute:{$[0=count x; ""; 10=type x; x; (type x) in (1 4h); raze string x; 0>type x; string x; "." sv string each x]};
 
 gettype:{[x]
   num:abs type x ; 
@@ -335,7 +337,7 @@ readyCallback h ;
 h2addr:h!servant ; 
 
 / map each servant handle to a list of routing symbols from previous queries (initialize to empty)
-h2route: h!(count h)# enlist `$() ;
+h2route: h!(count h)# enlist enlist () ;
 h2idle:  h!(count h)# 0Np ;
 
 /map each servant asynch handle to an empty list and assign resultant dictionary back to h

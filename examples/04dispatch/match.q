@@ -12,13 +12,12 @@
 
 algo: enlist "match-plugin" ;              /plugin name and options (no options in this case)
 routeExpireMs:32000 ;                      /handles allowed to change routes after this many idle ms
-getRoutingSymbol:{(getArguments x) 1} ;    /use first argument to api command as routing symbol (start of date range).
+getRoutingSymbol:{str (getArguments x) 1} ;    /use first argument to api command as routing symbol (start of date range).
 check:{[]
   nextCheck::0Wp ; /disable call on timer
-
   /compute routing symbol for any queries which lack it
-  update route:getRoutingSymbol each query from `queries where location=`master, null route ;
-
+  update route:getRoutingSymbol each query from `queries where location=`master, 0= count each route ;
+  
   /dispatch first enqueued query for which some non-busy handle has the same routing symbol, to the first such handle
   match: select qid, hdl:{first (where x in/: h2route) inter (where 0=count each h) } each route from queries where location=`master ;
   match: select from match where not null hdl ;
