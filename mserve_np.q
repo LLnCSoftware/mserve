@@ -126,69 +126,19 @@ send_result:{[qid;result;info]
  }; 
 filterResponse:{x} ;  /Stub to modify response in a plugin
 
-/** Built-in dispatch methods **
- 
-/original: check if free slave. If free slave exists -> try to send oldest query 
-/this tends to put too many queries on the same slave
-check_orig:{[] 
+/Default ("original") dispatch algorithm: Sent the oldest enqueued query to the first not-busy servant from top of the list. 
+/Note - this tends not to fully utilize servants further down the list - alternte algoithems are provided in examples 4 and 5.
+algo: enlist "original" ;
+check:{[] 
   /0N!"check_orig" ;
 	qid: exec first qid from queries where location=`master;  /oldest query
   if[not 0N=hdl:?[count each h;0];send_query[hdl;qid]] ;
  };
 
-/previous: check for free slave, further down the list than the last one
-/this distributes the queries more evenly across the slaves
-/howerver it can actually degrade performance because more queries run with a cold cache
-lasthdl:0i ;
-check_even:{[]
-  /0N!"check_even" ;
-	qid: exec first qid from queries where location in `master ;
-  list: asc where 0=count each h ;
-  if[0=count list; :(::)] ;
-  hdl: first list where list<lasthdl ;
-  if[null hdl; hdl: first list] ;
-  lasthdl:: hdl; send_query[hdl;qid] ;
- }; 
-
-/current: attempt to send a query to servent with same routing symbol 
-/otherwise attempt to send first query to a servant with an unset or expired routing symbol
-/otherwise request call on the timer
-routeExpireMs:12000 ;
-check_match:{[]
-  nextCheck::0Wp ; /disable call on timer
-
-  /compute routing symbol for any queries which lack it
-  update route:getRoutingSymbol each query from `queries where location=`master, null route ;
-
-  /dispatch first enqueued query for which some non-busy handle has the same routing symbol, to the first such handle
-  match: select qid, hdl:{first (where x in/: h2route) inter (where 0=count each h) } each route from queries where location=`master ;
-  match: select from match where not null hdl ;
-  if[0<count match; 0N!(`match; match[0;`qid]; match[0;`hdl]);  :send_query[ match[0;`hdl]; match[0;`qid] ]] 
-
-  /dispactch first enqueued query for which no handle has the same routing symbol
-  /to first non-busy handle whos routing symbol is unset or expired
-  qry: exec first qid from queries where location=`master, not route in raze h2route ;
-  hdl: first where (0=count each h) and h2idle< addMs[neg routeExpireMs;.z.P] ;
-  if[(not null qry) and not null hdl; 0N!(`claim; qry; hdl); :send_query[hdl; qry] ];
-
-  /If queue not empty, but nothing dispatched, request call on timer
-  if[`master in (value queries) `location; 
-    nextCheck:: addMs[routeExpireMs; min .z.P, value h2idle]; 0N!(`wait; qry; tms nextCheck-.z.P)
-  ]
- };
-
-/ select dispatch algorithm
-algo: " " vs (ssr[;"  "; " "]/) getenv `MSERVE_ALGO ;
-if[0=count algo 0; algo:enlist "match"];
-
-check:(check_orig; check_even; check_match; (::)) `orig`even`match? `$ algo 0 ;
-if[ null check; '"Unknown dispatch algorithm: ", getenv `MSERVE_ALGO] ;
-
-/ default routing string is first argument to api command
+/ Fixarg rejects variable names and function evaluation in arguments, and un-enlists literal symbols enlisted by "parse" in prep for eval.
+/ getArguments parses the api command and provides the arguments, which may be used by plug-in dispatch algorithms to route requests.
 fixarg:{$[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
 getArguments:{[cmd] if[10=type cmd; cmd:parse cmd]; arg:fixarg each 1_ cmd; (cmd[0], arg) };
-getRoutingSymbol:{[cmd] if[10=type cmd; cmd:parse cmd]; str fixarg cmd[1]} ;
-if[0<count getenv `MSERVE_ROUTING; getRoutingSymbol: value getenv `MSERVE_ROUTING] ;
 
 
 /.z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
