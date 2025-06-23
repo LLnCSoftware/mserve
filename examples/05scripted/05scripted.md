@@ -110,8 +110,6 @@ A phase-in (aka canary deployment) will gradualy increase the percentage of quer
 are qualified for while decreasing the percentage of queries that removed servers are qualified for.
 Phase-in may be requested in "applyChanges" via the percent-increment and per-interval arguments.
 
-
-
 ### editServer[address; position; settings] 
 
 1. Find the row with "address" (host and port) in the edit buffer
@@ -167,7 +165,7 @@ NOTE: Because stype can depend on a combination of the properties of the qfile, 
 2. For each row found above, 
 2.1. Create an address for the new server using an unused port on the specified host
 2.2. Invoke copyServer specifying the new address, found position,
-   the host and any stype/sversion from specified settings, and the specified replaceflag
+   any stype/sversion from specified settings, and the specified replaceflag
 
 ### How we find an unused port on given host
 
@@ -180,7 +178,7 @@ NOTE: Because stype can depend on a combination of the properties of the qfile, 
 
 ### Understanding stype and sversion
 
-The "stype" describe the role of the servant in the system, which depends on 
+The "stype" describes the role of the servant in the system, which depends on 
 a combination of the properties of the qfile, host, and the condition. 
 
 A given role may evolve over time, with the same "stype" having multiple "sversion"s.
@@ -209,10 +207,19 @@ That must be ensured by the process (maybe manual) which sets up the hosts.
 We have not tested accessing q-files and plugins that are not within the mserve directory,
 or having a path in the qfile setting or plugin name, there may well be bugs to fix in this area.
 
+The workaround is having a subdirectory of mserve containing symlinks to the available servant q-files. 
+
+
 ### Managing Canary Deployments
+
+A "phase-in" or "canary deployment" gradually increases the percentage of queries which will see
+new servers as qualified, while decreasing the percentage of queries will will see removed or replaced
+server as qualified. This may be requested when the edited routing table is taken live by "applyChanges".
 
 In "applyChanges" a phase-in will be started when percent-increment is an integer between 0 and 100,
 and per-interval is an integer suffixed by one of 'm', 'h', or 'd' (for minutes, hours, days).
+
+To apply the changes without a phase-in (immediately) specify either of these arguments as blank ("" or 0N).
 
 Specifying the increment as 0% will set everything up to start phasing in the new configuration
 but hold the percentage of requests going to new servers at 0, until the increment is changed
@@ -242,18 +249,36 @@ set as the live routing table (after precomputing the routing bit vectors if nec
 
 How these arguments work for a phase-in is descrived above under "Managing Canary Deployments".
 
-1. The phase-in and phase-out lists were already populated by the commands above.
+1. The phase-in and phase-out lists were already populated by editing commands.
 2. Launch and connect to each of the servers on the phase-in list.
-3. When no canary, discard the phase-in and phase-out lists.
-4. When canary, set percent-increment, per-interval, and start-time for canaryFilter.
+3. When no canary: remove servers on the phase-out list, discard the phase-in and phase-out lists.
+4. When canary: set percent-increment, per-interval, and the phase in/out bitvectors for canaryFilter
 4. When using precomp; Precompute a new contextSource based on the edit buffer. 
 5. Replace the live routingTable and contextSource with the contents of the edit buffer, and new contextSource.
 
-### browse
+### browse (address; position; size)
 
-### search
+The browse command accepts a single argument which may be a one, two, or three item list.
+- When there is one argument, 
+  - it is the address or position of a row to be centered (if possible) in a 10 row window.
+- When there are two arguments, 
+  - the first is the address or position of a row and the second is the size of the window.
+- When there are three arguments, 
+  - the first two are the address or position of rows in the table and the second is the size of the window.
+  - the same size window is provided for each row, when the windows overlap their union is used.
+  
+To plan an edit you often need to see a portion of the table around the rule 
+you are editing and a portion around the position you want want to move it to.
 
+Position is important because servants in earlier positions have
+priority when more than one servant qualifies for the query.
 
+### search (list of where clauses as strings)
+
+The search command accepts a single argument which is a list of strings.
+Each string is interprested as a "where" clause filtering the routing table.
+
+## Hot edit with phase-in: To Do and Observe
 
 
 
