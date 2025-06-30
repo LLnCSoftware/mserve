@@ -1,5 +1,7 @@
 .*.swp
 examples/07precomp/*.bin
+tickdemo/tick/log/
+
 
 # Windows image file caches
 Thumbs.db
