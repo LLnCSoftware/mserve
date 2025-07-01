@@ -1,0 +1,1 @@
+../examples/05scripted/edconfig.q

@@ -1,6 +1,6 @@
 / launch from directory containing symbolMaster.csv
 / get sendto port number (always on localhost)
-sendto: "J"$ $[0<count .z.x 0; .z.x 0; "5010"] ;
+sendto: "J"$ $[0<count .z.x 0; .z.x 0; "5001"] ;
 timer: "J"$ $[0<count .z.x 1; .z.x 1; "3000"] ;
 0N!"Starting feed.q... will send to port ", (string sendto), " every ", (string timer), " ms" ;
 
