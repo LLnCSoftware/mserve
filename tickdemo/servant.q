@@ -4,7 +4,7 @@ h ".u.sub[`;`]" ;
 upd:insert ;
 
 / populate hdb
-
+.u.end:{ .Q.dpft[`:data/db; 2025.07.01; `sym; ] each `quote`trade; } ;
 
 / query rdb
 .api.echo:{x} '
@@ -16,7 +16,7 @@ upd:insert ;
 \l ../secure_invocation.q
 .z.ps:{if[.z.w=h; :value x]; validateAndRunAsync x} ;
 
-/-----------------
+/util
 onems: `long$ 1e6 ;
 w2ms:{[w] 
   n:type w; w:`long$ w; 
