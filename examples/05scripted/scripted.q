@@ -146,11 +146,11 @@ servant: (":" vs/: string routingTable `address);             /servants to be la
 servant: servant ,' enlist each string routingTable `qfile ;  /append q-file to load.
 
 /Mserve callback provides handles to routing table
-/We can't load the configuration editor edconfig.q until after the handles are provided
-/because it edconfig.q, creates the editable copy of the routing table upon load, 
-/and expectes the handles to be included.
+/To allow loading the configuration editor before that occurs we must avoid initializing
+/the editor state until after the handles are added to the routing table. The confguration
+/editor will override the "initialize" method for that purpose.
+initialize:{} ;
 readyCallback:{[x] 
   routingTable:: routingTable,'([] h:x) ;
-  system "l edconfig.q" ;
+  initialize[] ;
  } ;
-

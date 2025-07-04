@@ -10,20 +10,15 @@ if[ not `routingTable in key `.;
     stype: 20# `local:servA ;
     sversion: 20?(1 1 2 1) ;
     condition:  "boolean expression ",/: string 1+til 20;
-    qfile: 20# `servant.q; 
+    qfile: 20# `servant.q;
     h:neg 5+til 20
    );
   update qfile:`servantbad.q from `routingTable where sversion=2 ; 
   
   routingDescriptor:(::) ;
   contextSource: routingTable `condition ;
-  alterRoutingReq:{[cn; newRT]
-    routingTable::newRT; contextSource::newRT `condition ;
-    if[ cn~(::); cn:([increment:0N;interval:0N]) ];
-    cn_increment:: cn `increment; cn_interval:: cn `interval ;
-    cn_phasein::$[`phasein in key cn; cn `phasein; (count newRT)#0b] ;
-    cn_phaseout::$[`phaseout in key cn; cn `phaseout; (count newRT)#0b] ;
-  };
+  receiveContextSource:{ contextSource:: x;} ;
+  requestContextSource:{[x;y] receiveContextSource x;} ;
 
   / Launch new servers
   launch:{-1 "simulate Launch ", (x 2), " on `:", (x 0), ":", (x 1); 0N} ;
@@ -49,7 +44,7 @@ if[ not `routingTable in key `.;
   cn_interval: 0N ;
   cn_phasein: (count routingTable)#0b ;
   cn_phaseout: (count routingTable)#0b ;
- ];
+ ]; /end dummy globals for testing w/o scripted.q
 
 /**** search or browse the editBuffer ****
 
@@ -105,17 +100,25 @@ browse:{
 /************ Editing commands ***********
 
 /Find row containing "address", apply "settings" and move to postion "pos".
-/Setting condition to "0b" would take the server out out service; instead, put on phase-out list to allow canary.
 editServer:{[address; pos; settings]
   if[not null cn_increment; :"Phase-in in progress - cannot edit"] ;
   if[-11=type pos; pos: 1+(ed_buffer `address) ? pos; if[pos>count ed_buffer; :"ERROR: address not found"]] ;
   target: 1+ (ed_buffer `address) ? address ; if[target>count ed_buffer; :"ERROR: address not found"] ;
   if[not `ok~ t:allow[settings] fields except `address`qfile; :t] ;
-  if[0<count settings `condition; if[(settings `condition) in ("0b"; "(0b)"); settings _: `condition; ed_phaseout,::address]];  
+  /if[0<count settings `condition; if[(settings `condition) in ("0b"; "(0b)"); settings _: `condition; ed_phaseout,::address]];  
   if[null pos; pos:target] ;
   if[pos<0; pos:1+count ed_buffer] 
   updaterow[target; settings] ;
   ed_buffer::moveItemInList[ed_buffer; target; pos] ;
+  `ok
+ } ;
+
+/Put specified server on phase-out list, for removal after possible phase-out
+removeServer:{[address]
+  if[not null cn_increment; :"Phase-in in progress - cannot edit"] ;
+  target: $[(type address) in (-7 -5h); address; (ed_buffer `address) ? address];
+  if[target>=count ed_buffer; :"ERROR: address not found"] ;
+  ed_phaseout,::ed_buffer [target; `address] ;  
   `ok
  } ;
 
@@ -197,6 +200,7 @@ clearChanges:{
   ed_phaseout:: (routingTable `address) where cn_phaseout ;
   ed_buffer::routingTable ;
  };
+initialize:clearChanges;
 
 applyChanges:{[pct_increment; per_interval]
   /Convert canary paramters from string.
