@@ -1,6 +1,6 @@
 .*.swp
 examples/07precomp/*.bin
-tickdemo/tick/log/
+log/
 data/
 
 # Windows image file caches

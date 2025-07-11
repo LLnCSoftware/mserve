@@ -1,23 +1,22 @@
+
 / populate rdb
 h: hopen 5001 ;
 h ".u.sub[`;`]" ;
 upd:insert ;
 
 / populate hdb
-.u.end:{ .Q.dpft[`:data/db; 2025.07.01; `sym; ] each `quote`trade; } ;
+/.u.end:{ .Q.dpft[`:data/db; 2025.07.01; `sym; ] each `quote`trade; } ;
+.u.end:{ -1 ".u.end invoked in rdb.q" ;} ;
 
 / query rdb
 .api.echo:{x} '
 .api.lcommands:{ key `.api} ;
 .api.ltables:{ {(x; count get x)} each tables[] } ;
-.api.vwap:{[daterange;w]
-  if[1=count daterange; daterange:(daterange;daterange) ;
-  select trades:count i, sum size, vwap:size wavg price by sym, (onems*w2ms x) xbar time from trade
- }
+.api.vwap:{ select trades:count i, sum size, vwap:size wavg price by sym, (onems*w2ms x) xbar time from trade} ;
 
 / interface
 \l ../secure_invocation.q
-.z.ps:{if[.z.w=h; :value x]; validateAndRunAsync x} ;
+.z.ps:{0N!x; if[.z.w=h; :value x]; validateAndRunAsync x} ;
 
 /util
 onems: `long$ 1e6 ;
