@@ -71,14 +71,7 @@ batch:{
  // useful if you want to look up symbols in qx via val... n[val] -> locations of val in qx
  n:where each qx=/:til cnt; // creates n, a list of locations of vals, using index as val key (inverted index by value)
  // reminder: list*list is element wise multiplication -> result is same length as input, lists must match in length
- 0N!d;
- 0N!n;
  temp: prds each d n; // (prices)*[ (straight products over d: x random nums); ('stacking' products over n) ]
- 0N!temp;
- 0N!s:p*temp;
- 0N!count p;
- 0N!count d;
- 0N!count n;
  qp::x#0.0; // 
  (qp raze n):rnd raze s;
  p::last each s;
