@@ -85,4 +85,3 @@ init 0
 
 "feed.q ready"
 system "t ", string timer ;
-
