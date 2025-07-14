@@ -38,8 +38,8 @@ e:cnt # "NONNONONNN" / ex  ⚠️
 / init.q
 
 pi:acos -1 // calc pi = 3.141592... ✅
-gen:{exp 0.001 * normalrand x} // generates random number according to scaled normal distribution using normalrand (defined next) ✅
-normalrand:{(cos 2 * pi * x ? 1f) * sqrt neg 2 * log x ? 1f} // generates random, normally distributed number ✅
+gen:{exp 0.001 * normalrand x} // generates random numbers according to scaled normal distribution using normalrand (defined next). Just gens and rescales. ✅
+normalrand:{(cos 2 * pi * x ? 1f) * sqrt neg 2 * log x ? 1f} // generates x random, normally distributed numbers ✅
 // randomize -> sets a random seed for sim 
 // concats "\\S " with an integer representing the number of seconds since BoT scaled by 80% using the comma operator. 
 // value <-- extracts and executes command \S, setting a random seed this way.
@@ -71,7 +71,7 @@ batch:{
  // useful if you want to look up symbols in qx via val... n[val] -> locations of val in qx
  n:where each qx=/:til cnt; // creates n, a list of locations of vals, using index as val key (inverted index by value)
  // reminder: list*list is element wise multiplication -> result is same length as input, lists must match in length
- temp: prds each d n; // (prices)*[ (straight products over d: x random nums); ('stacking' products over n) ]
+ s: p*prds each d n; // (prices)*[ (straight products over d: x random nums); ('stacking' products over n) ]
  qp::x#0.0; // 
  (qp raze n):rnd raze s;
  p::last each s;
@@ -79,7 +79,6 @@ batch:{
  }
 / gen feed for ticker plant
 
-/
 len:10000
 batch len
 
@@ -111,9 +110,9 @@ init:{
  len:floor d%113;
  feedm each `timespan$o+asc len?d;}
 
-/ h:neg hopen sendto
-/ / h(".u.upd";`quote;q 15);
-/ / h(".u.upd";`trade;t 5);
+h:neg hopen sendto
+/ h(".u.upd";`quote;q 15);
+/ h(".u.upd";`trade;t 5);
 
 init 0
 .z.ts:feed
