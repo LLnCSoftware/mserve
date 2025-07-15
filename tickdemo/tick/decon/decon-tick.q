@@ -54,7 +54,7 @@ if[system"t";
 
   upd:{[t;x]                       /set upd function to receive: table name, rows to append from feed
     if[not -16=type first first x;     /if type of first column of received data is not "timespan"
-      if[d<"d"$ a:.z.P;. z.ts[]];                            /if end of day, call .z.ts to publish accumulated values in tables
+      if[d<"d"$ a:.z.P;.z.ts[]];                            /if end of day, call .z.ts to publish accumulated values in tables
       a:"n"$a;                                               /convert current timestamp to timespan
       x:$[0>type first x;a,x;(enlist(count first x)#a), x]   /prepend column of current timespan to x ? (makes no sense)
     ];             
