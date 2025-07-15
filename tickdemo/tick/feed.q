@@ -1,10 +1,16 @@
+/convert suffixed time interval (99s seconds; 99m minutes; 99h hours; 99d days) to milliseconds.
+inter2ms:{t:last x; v:"J"$ -1_ x; $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]} ;
+onems: `long$ 1e6;
+
 / launch from directory containing symbolMaster.csv
 / get sendto port number (always on localhost)
-sendto: "J"$ $[0<count .z.x 0; .z.x 0; "5001"] ;
-timer: "J"$ $[0<count .z.x 1; .z.x 1; "3000"] ;
+sendto: "J"$ $[0<count .z.x 0; .z.x 0; "5001"] ;            /sendto port number 
+timer: "J"$ $[0<count .z.x 1; .z.x 1; "3000"] ;             /send a batch every this many ms.
+interval: inter2ms $[0< count .z.x 2; .z.x 2; "3000"] ;     /time interval covered per batch
+start: "P"$ $[0< count .z.x 3; .z.x 3; read0 `:feedtime] ;  /starting or saved highwater timestamp
 0N!"Starting feed.q... will send to port ", (string sendto), " every ", (string timer), " ms" ;
 
-/ get symbols with company name from symbolMaster.csv
+/ get symbols with company name from symbolMaster./csv
 sn: flip ("S  *"; ";") 0: 1 _  read0 `:symbolMaster.csv ;
 cnt:count sn
 s:first each sn
@@ -47,7 +53,7 @@ batch:{
 len:10000
 batch len
 
-maxn:15 / max trades per tick
+maxn:5 / max trades per tick
 qpt:2   / avg quotes per trade
 
 / =========================================================
@@ -61,25 +67,35 @@ q:{
  i:qx n:qn+til x;p:qp n;qn+:x;
  (s i;p-qb n;p+qa n;vol x;vol x;x?m;e i)}
 
-feed:{h$[rand 2;
- (".u.upd";`trade;t 1+rand maxn);
- (".u.upd";`quote;q 1+rand qpt*maxn)];}
+ts:{n:neg count first x; 0N!(n; start, interval);
+ t: start+ onems* asc n ? interval; 
+ (enlist `date$ t), (enlist `time$ t), x} ;                     
 
-feedm:{h$[rand 2;
- (".u.upd";`trade;(enlist a#x),t a:1+rand maxn);
- (".u.upd";`quote;(enlist a#x),q a:1+rand qpt*maxn)];}
+feed:{ 
+  h (".u.upd";`quote; ts q 1+rand qpt*maxn); 
+  h (".u.upd";`trade; ts t 1+rand maxn);
+  `:feedtime 0: enlist string start+::interval*onems ; 
+ } ;
 
-init:{
- o:"t"$9e5*floor (.z.T-3600000)%9e5;
- d:.z.T-o;
- len:floor d%113;
- feedm each `timespan$o+asc len?d;}
+/feed:{h$[rand 2;    /replaced
+/ (".u.upd";`trade;t 1+rand maxn);
+/ (".u.upd";`quote;q 1+rand qpt*maxn)];}
+
+/feedm:{h$[rand 2;    /removed
+/ (".u.upd";`trade;(enlist a#x),t a:1+rand maxn);
+/ (".u.upd";`quote;(enlist a#x),q a:1+rand qpt*maxn)];}
+
+/init:{                /removed
+/ o:"t"$9e5*floor (.z.T-3600000)%9e5;
+/ d:.z.T-o;
+/ len:floor d%113;
+/ feedm each `timespan$o+asc len?d;}
 
 h:neg hopen sendto
-/ h(".u.upd";`quote;q 15);
-/ h(".u.upd";`trade;t 5);
+/ h(".u.upd";`quote;q 15);   /example
+/ h(".u.upd";`trade;t 5);    /example
 
-init 0
+/init 0                      /removed
 .z.ts:feed
 .z.pc:{-1 "destination lost"; exit 0}
 
