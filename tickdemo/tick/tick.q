@@ -1,6 +1,6 @@
 /tick.q functionality deconstructed. 
 /comments and whitespace added, no code changes
-"kdb+tick 2.8 2014.03.12"
+"kdb+tick 2.8 2014.03.12 modified since 2025.07.15 Eric Lazarus"
 
 /q tick.q schmea-file log-directory [-p 5001] [-o h]  
 system "l tick/",(src:first .z.x,enlist"schema"),".q"; /default schema file changed sym -> schema  
@@ -9,26 +9,19 @@ if[not system"p";system"p 5001"] ;                     /default port changed 501
 \l tick/u.q                                            /extend the .u namespace from u.q (pub-sub)
 \d .u                                                  
 
-
-i:j:0 ;
-
 /Create or rotate log file
+i:j:0 ;
 ld:{[x]                                               /input parameter is the current date
   L::`$(-10_string L),string x;                       /replace date suffix on log file with input parameter x
   if[not type key L; .[L;();:;()]; i::j::0];          /if file does not exist, use "amend" to create an empty file                                     
-  /i::j::-11!(-2;L);                                   /replay log file, initializing "i" and "j" to its current length.
-  /if[0<=type i;                                       /if -11! returns a list, log file is corrupt, second item is
-  /  -2 (string L)," is a corrupt log. Truncate to length ",(string last i)," and restart"; /position of first invalid rec.
-  /  exit 1
-  /];
   hopen L                                             /Open log file; return handle
  };
 
 /Initialization
 tick:{[x;y]                                           /Input paramters are the schema file and log directory from cmd line
   init[];                                                       /initialize u.q
-  if[not min(`date`time`sym~3#key flip value@) each .u.t; '`timesym];   /Require that first 2 cols of each table are time and sym
-  @[;`sym;`g#] each .u.t;                                          /Apply the "g" attribute to the sym column of each table
+  if[not min(`date`time`sym~3#key flip value@) each .u.t; '`datetimesym];   /Require first 3 cols of each table named date time sym
+  @[;`sym;`g#] each .u.t;                                       /Apply the "g" attribute to the sym column of each table
   d::.z.D;                                                      /set global "d" to the current date
   if[l::count y;                                                /if log directory specified,
     L::`$":",y,"/",x,10#".";                                    / set log file path a with placeholder for date
@@ -61,7 +54,7 @@ if[system"t";
     /  a:"n"$a;                                               /convert current timestamp to timespan
     /  x:$[0>type first x;a,x;(enlist(count first x)#a), x]   /prepend column of current timespan to x ? (makes no sense)
     /];             
-    0N!(t;x);
+    0N!(t; count first x; first first x);
     t insert x;                       /save received rows in table t (to be published on next timer tick)
     if[l;l enlist (`upd;t;x);j+:1];   /if logging, write upd command to log, increment received record count
  }];
