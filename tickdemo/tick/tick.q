@@ -15,61 +15,58 @@ ld:{[x]                                               /input parameter is the cu
   L::`$(-10_string L),string x;                       /replace date suffix on log file with input parameter x
   if[not type key L; .[L;();:;()]; i::j::0];          /if file does not exist, use "amend" to create an empty file                                     
   hopen L                                             /Open log file; return handle
- };
+ }
 
 /Initialization
+d:0Nd; L:""; l:0i ;                                   /Current date according to incoming data; current log file path; current log handle 
 tick:{[x;y]                                           /Input paramters are the schema file and log directory from cmd line
   init[];                                                       /initialize u.q
-  if[not min(`date`time`sym~3#key flip value@) each .u.t; '`datetimesym];   /Require first 3 cols of each table named date time sym
+  if[not min(`id`date`time`sym~4#key flip value@) each .u.t; '"iddatetimesym"]; /Require first 4 cols of each table named: id date time sym
   @[;`sym;`g#] each .u.t;                                       /Apply the "g" attribute to the sym column of each table
-  d::.z.D;                                                      /set global "d" to the current date
-  if[l::count y;                                                /if log directory specified,
-    L::`$":",y,"/",x,10#".";                                    / set log file path a with placeholder for date
-    l::ld d                                                     / open log file for current date, set global "l" to its handle.
-  ]
+  if[0<count y; L::`$":",y,"/",x,10#"." ];                      /If log directory specified, provide log file name w placeholder for date
  };
 
 / end of day processing
-/ 1. call .u.end in u.q to invoke .u.end (end of day) in each subscriber
-/ 2. increment the current day
+/ 1. x will be current date according to input data. Global date "d" is initially null.
+/ 2. Except of startup (d=0Nd), call .u.end in u.q to invoke .u.end (end of day) in each subscriber
+/ 2. Set global date "d" to received value "x".
 / 3. If logging, close log file, and reopen by sending ".u.ld d" command to handle 0.
-endofday:{ end d; d+:1; if[l; hclose l; l::0(`.u.ld;d)]};  
+endofday:{if[d<>0Nd; end d]; d::x; if[0<l; hclose l]; if[0<count L; l::0(`.u.ld; d)]};  
 
-/ detect end of day
-/ input parameter is current day. If greater than global "g"  invoke "endofday" above
-ts:{if[d<x; if[d<x-1; system"t 0";'"more than one day?"]; endofday[]]};
+/ validate date sequence. Input parameters are first and last date in current burst of data.
+/ Each burst must contain only a single date, which must increase in increments of one day.
+/ Upon change of date, call "endofday" to rotate log file.
+ts:{
+  if[x<>y; system "t 0"; '"more than one day in burst"] ;
+  if[d>x; system "t 0"; '"reversal in date sequence"] ;
+  if[d<x; if[(d<>0Nd)& d<x-1; system"t 0";'"gap in date sequence"]; endofday x]
+ };
 
 / When timer frequency set on command line
 / Will accumulate records in temporay tables, and publish on timer
 if[system"t";
   .z.ts:{                       /on timer: here "t" is global .u.t from u.q, containing all table names from schema
-    pub'[t;value each t];          /publish content of each table listed in "t".
-    @[`.; t; @[;`sym;`g#] 0#];     /Drop all rows from each tale listed in "t" and reapply the "g" attribute.
-    i::j;ts .z.D                   /set log record count to received record count
+    -2 "pub" ;
+    pub'[t;value each t] ;         /publish content of each table listed in "t".
+    @[`.; t; @[;`sym;`g#] 0#] ;    /Drop all rows from each tale listed in "t" and reapply the "g" attribute.
+    i::j                           /set log record count to received record count
   };
-
+ 
   upd:{[t;x]                       /set upd function to receive: table name, rows to append from feed
-    /if[not -16=type first first x;     /if type of first column of received data is not "timespan"
-    /  if[d<"d"$ a:.z.P; .z.ts[]];                            /if end of day, call .z.ts to publish accumulated values in tables
-    /  a:"n"$a;                                               /convert current timestamp to timespan
-    /  x:$[0>type first x;a,x;(enlist(count first x)#a), x]   /prepend column of current timespan to x ? (makes no sense)
-    /];             
-    0N!(t; count first x; first first x);
+    -2 "delay '", (string t), "' last ts= ", (string last x 1), " ", (string last x 2), "  count=", (string count first x) ;
+    /0N!(t; count first x; last x[1]; last x[2]); /debug
+    ts[first x 1; last x 1] ;         /check for end of day
     t insert x;                       /save received rows in table t (to be published on next timer tick)
     if[l;l enlist (`upd;t;x);j+:1];   /if logging, write upd command to log, increment received record count
  }];
 
 /When timer frequency not set on command line
-/Will run timer every second to check for end of day, but publish received rows immediately.
+/Timer should not run. Will publish received rows immediately.
 if[not system"t";                           
-  system"t 1000";                              /Default timer fequency to one second
-  .z.ts:{ts .z.D};                             /Check for end of day using current date.                                            
   upd:{[t;x]                                   /Set upd function to receive: table name, rows to append from feed.
-    a:.z.P; ts "d"$a ;                              /Get current timestame, use date portion to check for end of day
-    if[not -16=type first first x;                  /If first column of rows to append is not a timespan
-      a:"n"$a;                                                /convert current timestamp to timespan
-      x:$[0>type first x; a,x; (enlist(count first x)#a), x]  /prepend column of current timespan to x ? (makes no sense)
-    ];
+    -2 "immed '", (string t), "' last ts= ", (string last x 1), " ", (string last x 2), "  count=", (string count first x) ;
+    /0N!(t; count first x; last x 1; last x 2) ;     /debug
+    ts[first x 1; last x 1] ;                       /check for end of date
     f:key flip value t;                             /get column names for table name "t".
     pub[t;$[0>type first x; enlist f!x; flip f!x]]; /publish data for "t" after applying column names
     if[l;l enlist (`upd;t;x);i+:1];                 /if logging, write upd command to log, increment log record count.
