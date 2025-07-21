@@ -1,14 +1,38 @@
-/convert suffixed time interval (99s seconds; 99m minutes; 99h hours; 99d days) to milliseconds.
+/utilities needed to ingest command line arguments
+onems: `long$ 1e6; msPerDay:24*60*60000 ;
 inter2ms:{t:last x; v:"J"$ -1_ x; $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]} ;
-onems: `long$ 1e6;
+writeHiwFile:{ `:feed.hiw 0: ("start=",string start; "quoteid=",string quoteid; "tradeid=",string tradeid)};
+readHiwFile:{a: flip "=" vs/: read0 `:feed.hiw; (`$ a 0) set' parse each a 1} ;
 
-/ launch from directory containing symbolMaster.csv
-/ get sendto port number (always on localhost)
-sendto: "J"$ $[0<count .z.x 0; .z.x 0; "5001"] ;            /sendto port number 
-timer: "J"$ $[0<count .z.x 1; .z.x 1; "3000"] ;             /send a batch every this many ms.
-interval: inter2ms $[0< count .z.x 2; .z.x 2; "3000"] ;     /time interval covered per batch
-start: "P"$ $[0< count .z.x 3; .z.x 3; read0 `:feedtime] ;  /starting or saved highwater timestamp
-0N!"Starting feed.q... will send to port ", (string sendto), " every ", (string timer), " ms" ;
+
+/ Ingest command line arguments
+sendto: "J"$ $[0<count .z.x 0; .z.x 0; "5001"] ;               /sendto port number 
+timer: "J"$ $[0<count .z.x 1; .z.x 1; "3000"] ;                /ms per timer tick.
+msSimDay: inter2ms $[0< count .z.x 2; .z.x 2; "1d"] ;          /time allowed to generate one simulated day of activity (default real time).
+interval: "j"$ timer * msPerDay % msSimDay ;                   /simulated time covered by activity generated per timer tick
+maxn: "J"$ {$[0<count x; x; "50"]} ("/" vs .z.x 3) 0;          /maximum thousands of trades per simulated day
+maxn: "j"$ 1000 * maxn * interval % msPerDay ;                 /maximum trades per timer tick
+qpt:  "J"$ {$[0<count x; x; "2"]} ("/" vs .z.x 3) 1;           /average quotes per trade
+start: "P"$ $[0< count .z.x 4; .z.x 4; ""] ;                   /starting timestamp
+
+/Starting timestamp should be specified ONLY when creating a NEW database
+/Otherwise it will come from the highwater file which also contains the starting
+/sequence numbers for all tables (ie. quotes and trades) to be generated.
+/This ensures that regardless of the system being started and stopped
+/an unbroken sequence of timestamps and unique identifiers is generated.
+if[not null start; 
+  if[0<count key `:feed.hiw;
+   -2 "Specifying start date would invalidate date/time sequence in existing data" ;
+   -2 "To create a new database, delete feed.hiw and all log files for current database" ;
+   '"feed.hiw"
+  ] ;
+  quoteid:1; tradeid:1; writeHiwFile[];
+ ] ;
+if[null start; readHiwFile[] ;] 
+ 
+-1 "Starting feed.q... will send to port ", (string sendto), " every ", (string timer), " ms." ;
+-1 "Speed: ",(string `long$ msPerDay%msSimDay), "x;   Ms covered per send: ", (string interval)
+  , ";  Max trades per send: ",(string maxn), ";  Avg quotes per trade: ", (string qpt) ;
 
 / get symbols with company name from symbolMaster./csv
 sn: flip ("S  *"; ";") 0: 1 _  read0 `:symbolMaster.csv ;
@@ -48,56 +72,43 @@ batch:{
  (qp raze n):rnd raze s;
  p::last each s;
  qn::0}
-/ gen feed for ticker plant
 
 len:10000
 batch len
 
-maxn:5 / max trades per tick
-qpt:2   / avg quotes per trade
-
 / =========================================================
-t:{
+t:{ 
  if[not (qn+x)<count qx;batch len];
  i:qx n:qn+til x;qn+:x;
  (s i;qp n;`int$x?99;1=x?20;x?c;e i)}
 
-q:{
+q:{ 
  if[not (qn+x)<count qx;batch len];
  i:qx n:qn+til x;p:qp n;qn+:x;
  (s i;p-qb n;p+qa n;vol x;vol x;x?m;e i)}
 
-ts:{n:neg count first x; 0N!(n; start, interval);
- t: start+ onems* asc n ? interval; 
- (enlist `date$ t), (enlist `time$ t), x} ;                     
+dt:{n:neg count first x; 
+ t: start+ onems* asc n ? interval;
+ (enlist `date$ t), (enlist `time$ t), x
+ } ;                     
+
+tid:{n:count first x; 
+ id: tradeid+ til n; tradeid::(last id)+1; (enlist id), x};
+
+qid:{n:count first x; 
+ id: quoteid+ til n; quoteid::(last id)+1; (enlist id), x};
 
 feed:{ 
-  h (".u.upd";`quote; ts q 1+rand qpt*maxn); 
-  h (".u.upd";`trade; ts t 1+rand maxn);
-  `:feedtime 0: enlist string start+::interval*onems ; 
+  h (".u.upd";`trade; tid dt t rand maxn);
+  h (".u.upd";`quote; qid dt q rand qpt*maxn); 
+  start+::interval*onems ;
+  writeHiwFile[] ;
  } ;
 
-/feed:{h$[rand 2;    /replaced
-/ (".u.upd";`trade;t 1+rand maxn);
-/ (".u.upd";`quote;q 1+rand qpt*maxn)];}
-
-/feedm:{h$[rand 2;    /removed
-/ (".u.upd";`trade;(enlist a#x),t a:1+rand maxn);
-/ (".u.upd";`quote;(enlist a#x),q a:1+rand qpt*maxn)];}
-
-/init:{                /removed
-/ o:"t"$9e5*floor (.z.T-3600000)%9e5;
-/ d:.z.T-o;
-/ len:floor d%113;
-/ feedm each `timespan$o+asc len?d;}
-
 h:neg hopen sendto
-/ h(".u.upd";`quote;q 15);   /example
-/ h(".u.upd";`trade;t 5);    /example
 
-/init 0                      /removed
 .z.ts:feed
 .z.pc:{-1 "destination lost"; exit 0}
 
-"feed.q ready"
 system "t ", string timer ;
+"feed.q running"
