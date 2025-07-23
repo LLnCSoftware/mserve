@@ -1,30 +1,61 @@
+/ rdb - realtime database
+/ usage: q rdb.q schema log -p port
 
-/ populate rdb
-h: hopen 5001 ;
-h ".u.sub[`;`]" ;
-upd:insert ;
 
-/ populate hdb
-/.u.end:{ .Q.dpft[`:data/db; 2025.07.01; `sym; ] each `quote`trade; } ;
-.u.end:{ -1 ".u.end invoked in rdb.q" ;} ;
+\l tick/tplog.q                       /module to load back data from log files
+system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from log files.
 
-/ query rdb
-.api.echo:{x} '
+/ query api endpoints
+.api.echo:{x} ;
 .api.lcommands:{ key `.api} ;
 .api.ltables:{ {(x; count get x)} each tables[] } ;
-.api.vwap:{ select trades:count i, sum size, vwap:size wavg price by sym, (onems*w2ms x) xbar time from trade} ;
+.api.vwap:{ select trades:count i, sum size, vwap:size wavg price by sym, date, (inter2ms x) xbar time from trade} ;
 
-/ interface
+/interface
 \l ../secure_invocation.q
-.z.ps:{0N!x; if[.z.w=h; :value x]; validateAndRunAsync x} ;
+.z.ps:{if[cons; 0N!(.z.w; x 0; x 1; count x 2)]; if[.z.w in (0i;h); :value x]; validateAndRunAsync x} ;
+.z.pg:{"Use Async"} ;
 
-/util
-onems: `long$ 1e6 ;
-w2ms:{[w] 
-  n:type w; w:`long$ w; 
-  if[n within (-7;-5); :w]; if[n=-18; :1000*w]; if[n=-17; :60000*w]; 
-  '"window size type error: expect integer (ms), second (h:m:s), or minute (h:m)"; 
+/receive tick data
+startup:1b ; cons:1b ; 
+upd:{[t;x]
+  if[.z.w=0; t:`$ (string t),"_t"] ; /upd from handle zero is log replay, store in temporay table
+  insert[t;x] ; 
+  if[startup; 0 (`go;0)] ;
  };
 
+/startup
 
-/system "t 10000" ;
+quote_t: quote ;    /temporary tables for log replay, same schema
+trade_t: trade ;
+h: hopen 5001 ;     /subscribe to tick.q - all tables all symbols.
+h ".u.sub[`;`]" ;
+
+go:{
+ qlo: (first quote) `id ;
+ tlo: (first trade) `id ;
+ if[(null qlo) or (null tlo); :(::)] ;
+ startup::0b ;
+
+ rep[-2; 0] ;        /begin replaying log files
+ system "sleep 8" ;  /simulate long replay
+
+ quote:: (select from quote_t where id< qlo), quote ;
+ trade:: (select from trade_t where id< tlo), trade ;
+ cons::0b ;
+ -2 "\n*** rdb ready ***\n" ;
+ };
+
+/purge data older than 3 days
+/Note when .u.end is called NEXT burst of data will be for new day.
+.u.end:{ 
+  -2 "end of day ", string max trade `date ;
+  delete from `quote where date< -1+ max date ;
+  delete from `trade where date< -1+ max date ;
+ } ;
+
+
+/util
+inter2ms:{t:last x; v:"J"$ -1_ x; $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]} ;
+
+
