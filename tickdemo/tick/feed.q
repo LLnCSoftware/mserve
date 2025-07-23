@@ -99,9 +99,10 @@ qid:{n:count first x;
  id: quoteid+ til n; quoteid::(last id)+1; (enlist id), x};
 
 feed:{ 
-  h (".u.upd";`trade; tid dt t rand maxn);
-  h (".u.upd";`quote; qid dt q rand qpt*maxn); 
+  h (".u.upd";`trade; tid dt t 1+ rand maxn);
+  h (".u.upd";`quote; qid dt q 1+ rand qpt*maxn); 
   start+::interval*onems ;
+  0N!(start; quoteid; tradeid) ;
   writeHiwFile[] ;
  } ;
 

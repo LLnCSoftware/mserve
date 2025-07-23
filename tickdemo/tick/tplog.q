@@ -3,24 +3,29 @@
 
 /Replay all logs from "fr" to "to" days prior to most recent log on file
 rep:{[fr;to]
-  fr: abs fr; to: abs to;
-  if[fr<to; a:fr; fr:to; to:a] ;
-
   ls: (.z.x 1),"/", (.z.x 0), "*" ; 
   -1 "log files: ", ls;
   list: desc system "ls ", ls ;
   if[0=count list; '"No logs found"] ;
+
+  dates: "D"$ -10#/: list ;
+  if[-14h= type fr; n:dates?fr; if[n>=count dates; '"No log for date ", string fr]; fr:n] ; 
+  if[-14h= type to; n:dates?to; if[n>=count dates; '"No log for date ", string to]; to:n] ;
+  
+  fr: abs fr; to: abs to;
+  if[fr<to; a:fr; fr:to; to:a] ;
   if[fr>=count list; fr:-1+ count list; if[fr<to; '"No logs prior to ",(string to), "days before most recent log"]] ;
 
   list: reverse list to+ til 1+fr-to ;
-  dates: 0N! "D"$ (-1+ count ls)_/: list ;
+  dates: dates: 0N! "D"$ -10#/: list ;
   if[not all 1= 1_ dates - prev dates; '"Error: log dates not contiguous (missing days)"] ;
   rep2 each `$":",/: list ;
  };
 
 rep2:{[logfile] 
-  0N!(type logfile; logfile) ;
+  0N!(logfile) ;
   @[-11! ; logfile; repError] ;
+  repDayEnd "D"$ -10# string logfile ;
  };
 
 repError:{[e]
@@ -33,6 +38,9 @@ repError:{[e]
   ];
  };
 
-upd:{[t;x] -2 "replay '", (string t), "' last ts= ", (string last x 1), " ", (string last x 2), "  count=", (string count first x) } ;
+repDayEnd:{[date] -2 "endofday: ", string date; } ; /Override to process data after replaying each log file
+upd:{[t;x] 
+ /-2 "replay '", (string t), "' last ts= ", (string last x 1), " ", (string last x 2), "  count=", (string count first x) 
+ } ;
 
  
