@@ -1,6 +1,6 @@
 .*.swp
 examples/07precomp/*.bin
-feedtime
+feed.hiw
 log/
 data/
 
