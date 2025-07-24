@@ -34,6 +34,7 @@ h ".u.sub[`;`]" ;
 go:{
  qlo: (first quote) `id ;
  tlo: (first trade) `id ;
+ if[x; qlo: 0W^qlo; tlo: 0W^tlo] ;
  if[(null qlo) or (null tlo); :(::)] ;
  startup::0b ;
 
@@ -42,6 +43,10 @@ go:{
 
  quote:: (select from quote_t where id< qlo), quote ;
  trade:: (select from trade_t where id< tlo), trade ;
+ quote[`sym]: `g# quote `sym ;
+ quote[`id]:  `u# quote `id  ;
+ trade[`sym]: `g# trade `sym ;
+ trade[`id]:  `u# trade `id ;
  cons::0b ;
  -2 "\n*** rdb ready ***\n" ;
  };
