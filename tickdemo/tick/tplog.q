@@ -13,8 +13,9 @@ rep:{[fr;to]
   if[-14h= type to; n:dates?to; if[n>=count dates; '"No log for date ", string to]; to:n] ;
   
   fr: abs fr; to: abs to;
-  if[fr<to; a:fr; fr:to; to:a] ;
-  if[fr>=count list; fr:-1+ count list; if[fr<to; '"No logs prior to ",(string to), "days before most recent log"]] ;
+  /0N!(fr; to; count list) ;
+  if[fr>=count list; fr:-1+ count list] ; 
+  if[fr<to; -2 "Already up to date. (earliest requested ", (string fr), " day prior, latest ", (string to), ")"; :(::)] ;
 
   list: reverse list to+ til 1+fr-to ;
   dates: dates: 0N! "D"$ -10#/: list ;
