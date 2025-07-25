@@ -2,13 +2,7 @@
 system "l ", "tick/",(.z.x 0),".q";   /table schema needed to accept data from log files.
 dbpath: .z.x 2 ;                      /Arguments: schema, log, db (path to hdb directory.
 
-/ query rdb
-.api.echo:{x} ;
-.api.lcommands:{ key `.api} ;
-.api.ltables:{ {(x; count get x)} each tables[] } ;
-.api.vwap:{select trades:count i, sum size, vwap:size wavg price by sym, date, (inter2ms x) xbar time from trade} ;
-
-/ interface
+\l api.q                              /Api common to rdb and hdb
 \l ../secure_invocation.q
 .z.ps:{if[.z.w=0i; :value x]; validateAndRunAsync x} ;
 
@@ -31,20 +25,19 @@ if[0=count dbpath; '"Usage: q hdb.q schema log database-path"];
 ls: key `$":", dbpath ;
 
 /start date to load is day after latest per-day directory
-start: max "D"$ string ls where ls like "[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]" ;
-start: $[start=-0Wd; -3650; start+1]  /if database empty load up to 10 years 
--2 "Start replay at: ", string start ;
+lastday: max "D"$ string ls where ls like "[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]" ;
+if[lastday=-0Wd; lastday: -3651] ;  /if database empty load up to 10 years 
+-2 "Start replay at: ", string lastday+1 ;
 
 /replay log files
 upd:insert ;
-rep[start; -2] ; 
+rep[lastday+1; -2] ; 
 
 /when replay finished
-![`.; (); 0b; tables[]];   /delete all tables
+ls: key `$":", dbpath ;    /Update "lastday" to include new data
+lastday: max "D"$ string ls where ls like "[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]" ;
+
+![`.; (); 0b; tables[]];   /delete the in-memory tables
 system "l ", dbpath  ;     /load the partitioned database on disk
 -2 "Database ", dbpath, " opened" ;
-
-
-/util
-inter2ms:{t:last x; v:"J"$ -1_ x; $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]} ;
 

@@ -5,13 +5,7 @@
 \l tick/tplog.q                       /module to load back data from log files
 system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from log files.
 
-/ query api endpoints
-.api.echo:{x} ;
-.api.lcommands:{ key `.api} ;
-.api.ltables:{ {(x; count get x)} each tables[] } ;
-.api.vwap:{ select trades:count i, sum size, vwap:size wavg price by sym, date, (inter2ms x) xbar time from trade} ;
-
-/interface
+\l api.q                              /api common to rdb and hdb
 \l ../secure_invocation.q
 .z.ps:{if[cons; 0N!(.z.w; x 0; x 1; count x 2)]; if[.z.w in (0i;h); :value x]; validateAndRunAsync x} ;
 .z.pg:{"Use Async"} ;
@@ -39,7 +33,7 @@ go:{
  startup::0b ;
 
  rep[-2; 0] ;        /begin replaying log files
- system "sleep 8" ;  /simulate long replay
+ system "sleep 4" ;  /simulate long replay
 
  quote:: (select from quote_t where id< qlo), quote ;
  trade:: (select from trade_t where id< tlo), trade ;
