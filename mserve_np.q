@@ -124,7 +124,8 @@ send_result:{[qid;result;info]
 	client_handle response ;
   h2idle[neg .z.w]: .z.P ;
  }; 
-filterResponse:{x} ;  /Stub to modify response in a plugin
+filterResponse:{x} ;               /Stub to modify response in a plugin
+servantMessage:{[id;cmd;arg] } ;   /Stub to handle non-response messages from servants
 
 /Default ("original") dispatch algorithm: Sent the oldest enqueued query to the first not-busy servant from top of the list. 
 /Note - this tends not to fully utilize servants further down the list - alternte algoithems are provided in examples 4 and 5.
@@ -171,6 +172,7 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
 	[ /response - (server qid; result; info)
     /0N!(`servantrsp; x) ;
     qid:x[0]; result:x[1]; info:x[2];
+    if[0>qid; :servantMessage[qid; result; info]] ; /Divert negative query id's for special processing.
   	/try to send result back to client
   	.[send_result;
   		(qid;result;info);

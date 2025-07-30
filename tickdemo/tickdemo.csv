@@ -1,5 +1,5 @@
 address,stype,sversion,condition,qfile
-localhost:5001,tick,1,0b,tick/tick.q schema tick/log -t 1000
-localhost:5002,rdb,1,startday<3,rdb.q
-localhost:5003,hdbA,1,(startday>=3) and offline<>"A",hdb.q
-localhost:5004,hdbB,2,(startday>=3) and offline<>"B",hdb.q
+localhost:5001,tick,1,0b,tick/tick.q schema log
+localhost:5002,rdb,1,loday>=-2,rdb.q schema log
+localhost:5003,hdbA,1,(hiday<=-2),hdb.q schema log data/hdb
+localhost:5004,hdbB,2,(hiday<=-2),hdb.q schema log data/hdb

@@ -83,11 +83,12 @@ validateAndRunAsync:{[req]
 /Defaults for override by plugins
 getrole:{[opt] $[99=type opt; opt `role; `]} ;   /overridden in authent.q
 allowedfn:{[role] value `.api} ;                 /overridden in authriz.q
+servantof:0Ni ;                                  /callback handle when exclusive connection.
 
 / Environment Options
 if[0<count getenv `Q_PLUGINS; {system "l ", x} each "," vs getenv `Q_PLUGINS] ; /When Q_PLUGINS specified, load listed "q-files".                                                                                 /When Q_SERVANTOF specified,
 if[0<count getenv `Q_SERVANTOF;                                                 /When Q_SERVANTOF specified:
  .z.pw:{[u;p] (getenv `Q_SERVANTOF)~ "." sv string `int$ 0x0 vs .z.a};          / accept connection only from specified IP.
- .z.po:{.z.pw:{[u;p] 0b}; .z.pc:{exit 0}} ;                                     / accept only single connection, terminate on close
+ .z.po:{0N!servantof::x; .z.pw:{[u;p] 0b}; .z.pc:{exit 0}} ;                       / accept only single connection, terminate on close
  ];
 0N!"secure_invocation.q loaded" ;
