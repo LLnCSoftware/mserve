@@ -107,7 +107,7 @@ send_query:{[hdl; qid]
 
 /** Send Result (or error) to Client **
 send_result:{[qid;result;info]
-	query:queries[qid;`query] ;
+	if[queries[qid; `location]=`client; :(::)];    /send only first result for query (tolerate double error message).
 	queries[qid;`location`time_returned]:(`client;.z.P);
 	client_handle:queries[qid;`client_handle] ;
   client_queryid: queries[qid; `client_qid] ;

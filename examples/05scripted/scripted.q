@@ -47,7 +47,7 @@ makens:{[ns;dict](` sv `,ns) set ((`,key dict)!(::),value dict)};
 
 check:{[]
   /compute "route" for new requests as a bit vector selecting matching rows from the dispach table.
-  upd: validateRouting exec qid! routingBitVector'[query;client_options] from queries where 0=count each route ;
+  upd: validateRouting exec qid!routingBitVector'[qid;query;client_options] from queries where 0=count each route ;
   update route: upd[qid] from `queries where qid in key upd ;  
   
   /For each enqueued query, find the first matching row corresponding to a not-busy handle 
@@ -64,10 +64,16 @@ validateRouting:{[upd]
    upd
  };
 
+
+/Trap error obtaining routing bit vector
+routingBitVector:{[qid;qry;opt] 
+  .[routingBitVector1; (qry;opt); {send_result[x; 0N!"Error: routing failed '", y, "' likely syntax error" ; (::)]; (count routingTable)#0b}[qid;] ] 
+ };
+
 /Obtain variables for substitution from "getRoutingCriteria"
 /Substitute into "condition" field to evaluate the boolean expressions.
 /Return bit vector corresponding to routingTable rows, where 1 means "ok for this query".
-routingBitVector:{[qry;opt]
+routingBitVector1:{[qry;opt]
   vars: getRoutingCriteria[getArguments qry; opt] ;
   restrictFallback canaryFilter contextValues[vars; contextSource]  
  };
