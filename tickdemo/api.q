@@ -1,8 +1,11 @@
 /api common to rdb.q and hdb.q
 
 .api.echo:{x} ;
-.api.lcommands:{ key `.api} ;
-.api.ltables:{ {(x; count get x)} each tables[] } ; 
+.api.myCommands:{[ignore]  key `.api} 
+.api.myTables:{[ignore]
+  t:tables[]; db:$[`dbpath in key `.; `$ last "/" vs dbpath; `rdb] ; 
+  ([] db:(count t)#db; table:t) ,' raze {select rows:count date, beg:min date+time, end:max date+time from x} each t
+ } ;
 .api.vwap:{[d;s;w]
   if[0=count d; d: @[;`date] select max date from trade]; if[1=count d; d: raze (d; d)] ;
   if[s~`; :select trades:count i, sum size, vwap:size wavg price by sym, date, (inter2ms w) xbar time from trade where date within d]; 

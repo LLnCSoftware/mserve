@@ -33,11 +33,11 @@ if[lastday=-0Wd; lastday: -3651] ;  /if database empty load up to 10 years
 upd:insert ;
 rep[lastday+1; -2] ; 
 
-/when replay finished
-ls: key `$":", dbpath ;    /Update "lastday" to include new data
-lastday: max "D"$ string ls where ls like "[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]" ;
-
 ![`.; (); 0b; tables[]];   /delete the in-memory tables
 system "l ", dbpath  ;     /load the partitioned database on disk
 -2 "Database ", dbpath, " opened" ;
 
+servantof:{[h_servantof]
+  /0N!"mserve connect hdb.q: ",dbpath ;
+  (neg h_servantof) (-1; `$ "hdb", (last dbpath), "ready"); /report `hdbXready to tickdemo.q
+ };

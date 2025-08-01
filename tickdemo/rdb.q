@@ -25,17 +25,17 @@ upd:{[t;x]
  };
 
 /startup
-
 quote_t: quote ;    /temporary tables for log replay, same schema
 trade_t: trade ;
 h: hopen 5001 ;     /subscribe to tick.q - all tables all symbols.
 h ".u.sub[`;`]" ;
 
+h_servantof:0Ni ;
+servantof:{h_servantof:: x} ;
 go:{
  qlo: (first quote) `id ;
  tlo: (first trade) `id ;
  if[x; qlo: 0W^qlo; tlo: 0W^tlo] ;
- 0N!(x; qlo; tlo) ;
  if[(null qlo) or (null tlo); :(::)] ;
  startup::0b ;
 
@@ -44,11 +44,13 @@ go:{
 
  quote:: (select from quote_t where id< qlo), quote ;
  trade:: (select from trade_t where id< tlo), trade ;
+ delete quote_t from `. ;
+ delete trade_t from `. ;
  quote[`sym]: `g# quote `sym ;
  quote[`id]:  `u# quote `id  ;
  trade[`sym]: `g# trade `sym ;
  trade[`id]:  `u# trade `id ;
- if[servantof>0; (neg servantof) (-1; `initdate; (max trade `date) & max quote `date)] ; 
+ if[h_servantof>0; (neg h_servantof) (-1; `initdate; (max trade `date) | max quote `date)] ; 
  cons::0b ;
  -2 "\n*** rdb ready ***\n" ;
  };
@@ -57,7 +59,7 @@ go:{
 /.u.end is called as part of the usual subscription processing in tick.q.
 /Note when .u.end is called NEXT burst of data will be for new day.
 /Call back to tickdemo.q to restart hdb processes to incorporate new data.
-.u.end:{[dat] -2 "end of day: ", string dat;  mserve_handle (-1; `endofday; dat)} 
+.u.end:{[dat] -2 "end of day: ", string dat; (neg h_servantof) (-1; `endofday; dat)} 
 
 /purge data in rdb from any days prior to the day before the day that just ended.
 /this is called via a "special message" tickdemo.q AFTER hdb processes have been restarted

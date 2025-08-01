@@ -5,8 +5,8 @@
 rep:{[fr;to]
   ls: (.z.x 1),"/", (.z.x 0), "*" ; 
   -1 "log files: ", ls;
-  list: desc system "ls ", ls ;
-  if[0=count list; '"No logs found"] ;
+  list: desc @[system; "ls ", ls, " 2>/dev/null"; ()] ;
+  if[0=count list; -2 "No logs found (new database)"; :(::)] ;
 
   dates: "D"$ -10#/: list ;
   if[-14h= type fr; n:dates?fr; if[n>=count dates; '"No log for date ", string fr]; fr:n] ; 

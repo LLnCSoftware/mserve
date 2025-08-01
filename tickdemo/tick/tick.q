@@ -36,24 +36,24 @@ endofday:{if[d<>0Nd; end d]; d::x; if[0<l; hclose l]; if[0<count L; l::0(`.u.ld;
 / validate date sequence. Input parameters are first and last date in current burst of data.
 / Each burst must contain only a single date, which must increase in increments of one day.
 / Upon change of date, call "endofday" to rotate log file.
-ts:{
-  if[x<>y; system "t 0"; '"more than one day in burst"] ;
-  if[d>x; system "t 0"; '"reversal in date sequence"] ;
-  if[d<x; if[(d<>0Nd)& d<x-1; system"t 0";'"gap in date sequence"]; endofday x]
+ts:{[x;y]
+  /if[x<>y; '"more than one day in burst"] ;
+  if[d>x;  '"reversal in date sequence"] ;
+  if[d<x; if[(d<>0Nd)& d<x-1; '"gap in date sequence"]; endofday x]
  };
 
 / When timer frequency set on command line
 / Will accumulate records in temporay tables, and publish on timer
 if[system"t";
   .z.ts:{                       /on timer: here "t" is global .u.t from u.q, containing all table names from schema
-    -2 "pub" ;
+    /-2 "pub" ;
     pub'[t;value each t] ;         /publish content of each table listed in "t".
     @[`.; t; @[;`sym;`g#] 0#] ;    /Drop all rows from each tale listed in "t" and reapply the "g" attribute.
     i::j                           /set log record count to received record count
   };
  
   upd:{[t;x]                       /set upd function to receive: table name, rows to append from feed
-    -2 "delay '", (string t), "' last ts= ", (string last x 1), " ", (string last x 2), "  count=", (string count first x) ;
+    /-2 "delay '", (string t), "' last ts= ", (string last x 1), " ", (string last x 2), "  count=", (string count first x) ;
     /0N!(t; count first x; last x[1]; last x[2]); /debug
     ts[first x 1; last x 1] ;         /check for end of day
     t insert x;                       /save received rows in table t (to be published on next timer tick)
@@ -64,7 +64,7 @@ if[system"t";
 /Timer should not run. Will publish received rows immediately.
 if[not system"t";                           
   upd:{[t;x]                                   /Set upd function to receive: table name, rows to append from feed.
-    -2 "immed '", (string t), "' last ts= ", (string last x 1), " ", (string last x 2), "  count=", (string count first x) ;
+    /-2 "immed '", (string t), "' last ts= ", (string last x 1), " ", (string last x 2), "  count=", (string count first x) ;
     /0N!(t; count first x; last x 1; last x 2) ;     /debug
     ts[first x 1; last x 1] ;                       /check for end of date
     f:key flip value t;                             /get column names for table name "t".
