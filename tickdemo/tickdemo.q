@@ -14,8 +14,8 @@ servantMessage:{[id;cmd;arg]
   if[null currentdate; :(::)]; 
   if[cmd~`hdbAready; restart "B"; :(::)] ;
   if[cmd~`hdbBready; 
-    d:currentdate; currentdate::nextdate; 
-    {x (`endofdayok; y)}[;d] each where h2addr[;2] like "rdb.q *" ;  
+    currentdate::nextdate; 
+    {x (`startofday; y)}[;currentdate] each where h2addr[;2] like "rdb.q *" ;  
   ];
  };
 

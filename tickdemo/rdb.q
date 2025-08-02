@@ -10,7 +10,7 @@ system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from l
 .z.ps:{
   if[cons; 0N!(.z.w; x 0; x 1; count x 2)];  /log to console
   if[.z.w in (0i;h); :value x];              /if subscription or log replay, just process it.
-  if[`endofdayok~x 0; :endofdayok x 1];      /if special message `endofdataok, just process it.
+  if[`startofday~x 0; :startofday x 1];      /if special message `endofdataok, just process it.
   if[`go~x 0; :0 x] ;                        /allow startup without feed.q (invoke manually from mserve console).
   validateAndRunAsync x                      /process query via secure_invocation.q
  } ;
@@ -59,14 +59,14 @@ go:{
 /.u.end is called as part of the usual subscription processing in tick.q.
 /Note when .u.end is called NEXT burst of data will be for new day.
 /Call back to tickdemo.q to restart hdb processes to incorporate new data.
-.u.end:{[dat] -2 "end of day: ", string dat; (neg h_servantof) (-1; `endofday; dat)} 
+.u.end:{[dat] -2 "\nend of day: ", string dat; (neg h_servantof) (-1; `endofday; dat)} 
 
 /purge data in rdb from any days prior to the day before the day that just ended.
 /this is called via a "special message" tickdemo.q AFTER hdb processes have been restarted
-endofdayok:{[dat] 
-  -2 "end of day ok: ", string dat ;
-  delete from `quote where date< -1+ dat ;
-  delete from `trade where date< -1+ dat ;
+startofday:{[dat] 
+  -2 "\nstartofday: ", string dat ;
+  delete from `quote where date< -2+ dat ;
+  delete from `trade where date< -2+ dat ;
  } ;
 
 
