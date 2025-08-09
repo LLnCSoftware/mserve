@@ -159,7 +159,7 @@ getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users 
 .z.ps:{[x] 
 	$[not(w:neg .z.w)in key h;
 	[ /request - (client qid; query; options)	
-    -1 ts[], "-> Receive Request: #", (" " sv str each x) ; 
+    -1 ts[], "-> Receive Request: #", (" " sv .Q.s1 each x) ; 
     cqid:x[0]; query:x[1]; options: x[2]; if[99<>type options; options:([])]; /options must be a dictionary
     sqid: 1^1+exec last qid from queries;                                     /server id for new query
     bklg: exec count i from queries where location in `master`servant ;       /queries in queue ahead of this one
@@ -211,11 +211,12 @@ purgeCompleted:{ delete from `queries where location=`client, purgeCompletedMs< 
 / expect "launcher" listening on port 5999 on each host other than "localhost".
 servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
 local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
-loclaunch:{value 0N!"system \"", local_env, " ", (.z.X 0), " ", x, " &\"" ;} ;
 
+\l launchQ.q  /launchQ[base-directory; env-settings; cmd] 
+/Use above to launch on localhost or send a message to launcher.q on remote host.
 launch:{-1 "mserve_np.q: Launch ", (x 2), " on `:", (x 0), ":", (x 1); 
-  cmd:(x 2), " -s ", mys, " -p ", (x 1) ;  
-  if[(x 0) in (""; "localhost"); loclaunch cmd; :0N] ;
+  cmd:(x 2), " -s ", mys, " -p ", (x 1) ;
+  if[(x 0) in (""; "localhost"); launchQ[getenv `LAUNCHQ_BASE; local_env;cmd]; :0N] ;
   hh:hopen `$":",(x 0), ":5999" ; 
   hh "setEnvString \"", servant_env, "\"" ; 
   (neg hh) cmd; (neg hh)[]; 
