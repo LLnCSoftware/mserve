@@ -139,7 +139,7 @@ check:{[]
 / Fixarg rejects variable names and function evaluation in arguments, and un-enlists literal symbols enlisted by "parse" in prep for eval.
 / getArguments parses the api command and provides the arguments, which may be used by plug-in dispatch algorithms to route requests.
 fixarg:{$[11=type x; $[1=count x; x 0; x]; 0=type x; $[(1=count x)&11=type x 0; x 0; (100>type x 0); x; enlist~x 0; 1_ x; `invaid]; x]};
-getArguments:{[cmd] if[10=type cmd; cmd:parse cmd]; arg:fixarg each 1_ cmd; (cmd[0], arg) };
+getArguments:{[cmd] if[10=type cmd; cmd:parse cmd]; if[(::)~cmd 1; :1#cmd]; arg:fixarg each 1_ cmd; (cmd[0], arg) };
 
 
 /.z.ps is where all the action resides. As said already, all communication is asynch, so any request from a client
@@ -267,7 +267,7 @@ alltypes:(0 1 2 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19h)!("mixed"; "boolean";
 readyCallback:{} ; /pass handles back to (scripted.q) plugin after startup
 
 / Load plugins
-if[0<count getenv `MSERVE_PLUGINS;   {system "l ",x;} each "," vs getenv `MSERVE_PLUGINS];
+if[0<count getenv `MSERVE_PLUGINS;   {system "l ", 0N!resolve[getenv `LAUNCHQ_BASE] x;} each "," vs getenv `MSERVE_PLUGINS];
 
 -1 "servant addresses" ;
 -1 each .Q.s1 each servant ;

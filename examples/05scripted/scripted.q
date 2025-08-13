@@ -39,7 +39,7 @@ if[not `getRoutingCriteria   in key `. ; getRoutingCriteria:{[arg;opt] ([symbol:
 if[not `routingDescriptor    in key `. ; routingDescriptor:(::) ];                           
 if[not `requestContextSource in key `. ; requestContextSource:{[cond;rd] receiveContextSource cond}] ;
 if[not `contextValues in key `. ; contextValues:{[vars;cs] makens[`ctx;vars]; system "d .ctx"; r:value each cs; system "d ."; r}];
-receiveContextSource:{ contextSource::x} ;
+receiveContextSource:{contextSource::x} ;
 
 /ContextValues by default evaluates the boolean expressions from the routing table in a namespace
 /The following function creates that namespace from the dictionary returned by getRoutingCriteria.
@@ -67,7 +67,7 @@ validateRouting:{[upd]
 
 /Trap error obtaining routing bit vector
 routingBitVector:{[qid;qry;opt] 
-  .[routingBitVector1; (qry;opt); {send_result[x; 0N!"Error: routing failed '", y, "' likely syntax error" ; (::)]; (count routingTable)#0b}[qid;] ] 
+  .[routingBitVector1; (qry;opt); {send_result[x; 0N!"Error: Routing failed '", y; (::)]; (count routingTable)#0b}[qid;] ] 
  };
 
 /Obtain variables for substitution from "getRoutingCriteria"
@@ -143,13 +143,28 @@ connectServant:{[route]
 
 /***** Startup ******
 /Load Routing Table (afile= file name from command line) 
-routingTable:("SSJ*S"; enlist ",") 0: `$":",afile ;        /routing table (host:port|stype|sversion|condition|qfile)
-cn_phasein:cn_phaseout: (count routingTable)# 0b ;         /initialize phase in/out bitvectors to 0 of proper length.
+/Note: The scripted dispatch method uses a alternate form of the mserve_np.q command line
+/which specifies the routing table csv file ("afile") instead of a number of servers, and a server launch command.
+/This alternate form is recognized by having only a single argument on the command line. 
+/Having only a single argument precludes adding available remote hosts as additional arguments.
+/However, with scripted dispatch the host for each servant is provided in the routing table, so that is not necessary.
+/A more serious limitation is that there seems to be no way to supply arguments to the servers for such things
+/as the location of the database, except in the routing table csv file itself.
+/To allow servant arguments on the mserve command line we typically combine them with the servant path
+/in a single quoted argument: mserve_np.q 3 "server.q arg1 arg2.. ". 
+/We can do the same thing with scripted dispatch except the argument starts with the routing table rather than
+/a servant q-file: mserve_np.q "routing.csv arg1 arg2.. ", from which we can supply the arguments to 
+/all q-files in the routing.csv table. Arguments from the mserve command line will be appended to any
+/already supplied along with the q-file in the routing table.
 
+routingTable:("SSJ*S"; enlist ",") 0: `$":", resolve[getenv `LAUNCHQ_BASE] {(x?" ")#x} afile ; /read routing table from csv. 
+cn_phasein:cn_phaseout: (count routingTable)# 0b ;                /initialize phase in/out bitvectors to 0 of proper length.
+
+show routingTable ; 
 requestContextSource[routingTable `condition; routingDescriptor]; /request initial context source
 
-servant: (":" vs/: string routingTable `address);             /servants to be launched by the mserve startup
-servant: servant ,' enlist each string routingTable `qfile ;  /append q-file to load.
+servant: (":" vs/: string routingTable `address);                 /servants to be launched by the mserve startup
+servant: servant ,' enlist each (string routingTable `qfile),\: {(x?" ")_x} afile ;
 
 /Mserve callback provides handles to routing table
 /To allow loading the configuration editor before that occurs we must avoid initializing
