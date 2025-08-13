@@ -1,4 +1,6 @@
 /api common to rdb.q and hdb.q
+/Arguments: schema, log, [ dbpath ]
+lastdate: {$[x=-0Wd; 0Nd; x]} max "D"$ -10#/: system "ls ", (.z.x 1),"/", (.z.x 0), "*" ;
 
 .api.echo:{x} ;
 .api.myCommands:{[ignore]  key `.api} 
@@ -7,7 +9,7 @@
   ([] db:(count t)#db; table:t) ,' raze {select rows:count date, beg:min date+time, end:max date+time from x} each t
  } ;
 .api.vwap:{[d;s;w]
-  if[0=count d; d: @[;`date] select max date from trade]; if[1=count d; d: raze (d; d)] ;
+  if[0=count d; d: @[;`date] select max date from trade]; if[1=count d; d: raze (d; d)]; d:int2date d;
   if[s~`; :select trades:count i, sum size, vwap:size wavg price by sym, date, (inter2ms w) xbar time from trade where date within d]; 
   select trades:count i, sum size, vwap:size wavg price by sym, date, (inter2ms w) xbar time 
   from trade where date within d, sym in s
@@ -19,5 +21,11 @@ inter2ms:{ /accept an interger as ms, or a string containing a suffixed integer 
   if[10<>abs type x; :"j"$x]; x:raze x; t:last x; v:1^"J"$ -1_ x; 
   $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]
  } ;
+int2date:{ /when date specified as integer, take as offset from lastdate
+  if[14=(abs type x); :x] ;
+  if[(abs type x) within (5 7); :(neg abs x)+lastdate] ;
+  '"Date or integer range expected, got: ", .Q.s1 x ;  
+ };
+
 
 

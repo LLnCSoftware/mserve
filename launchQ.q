@@ -11,8 +11,9 @@ launchQ:{[base;env;cmd]
   dir:abspath[base; b 0]; 
   if[notfound[dir;c]; dir:abspath[""; b 0]; if[notfound[dir;c]; '"file not found: ",c]] ;
 
-  if[0<count dir; system 0N!"cd ", dir] ;
+  if[0<count dir; sav:first system "pwd"; system 0N!"cd ", dir] ;
   system 0N!trim env, " ", (a 0), " ", (.z.X 0), " ", (b 1), " &" ;   
+  if[0<count dir; system "cd ", sav] ;
  };
 splitEnv:{a:b:0; if["("=x 0; a:1; b:x?")"]; trim (a _ (b-count x)_ x; (b+a>0)_ x)} ;
 splitDir:{t:((count x)^first where x=" ")# x; n:0^last where t="/"; (n # x; (n+n>0) _ x)} ;

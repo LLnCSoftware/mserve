@@ -1,6 +1,6 @@
-/tick.q functionality deconstructed. 
-/comments and whitespace added, no code changes
+/tick.q functionality deconstructed. comments and whitespace added
 "kdb+tick 2.8 2014.03.12 modified since 2025.07.15 Eric Lazarus"
+if[(first system "pwd") like "*/tick"; system "cd ../"];   /If invoked from 'tick' directory, move to parent directory.
 
 /q tick.q schmea-file log-directory [-p 5001] [-o h]  
 system "l tick/",(src:first .z.x,enlist"schema"),".q"; /default schema file changed sym -> schema  
