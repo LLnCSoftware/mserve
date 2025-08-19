@@ -24,10 +24,16 @@ splitCmd:{(x?" ")# x} ;
 abspath:{[base; path] 
   if["/"=first path; :path] ;
   if[ path like "~/*";    :(getenv `HOME), {$[""~x; ""; "/",x]} 2_ path] ;
-  if[ 0=count base; :path] ;
+  if["/"<>first base; base:(first system "pwd"), "/", base] ;
   if[ path like "../*";   :("/" sv -2_ "/" vs base), {$[""~x; ""; "/",x]} 3_ path] ;
   if[ path like "./*";    :("/" sv -1_ "/" vs base), {$[""~x; ""; "/",x]} 2_ path] ;    
   ("/" sv -1_  "/" vs base), {$[""~x; ""; "/",x]} path
+ };
+relpath:{[path]
+  if["/"<>first path; :path] ;
+  d: first system "pwd"; if[path like d, "/*"; :(1+count d)_ path] ;
+  d: getenv `HOME; if[ path like d, "/*"; :"~/", (1+count d)_ path] ;
+  path
  };
 notfound:{0=type key `$":", $[x~""; y; x,"/",y]} ;
 resolve:{[d;f] 

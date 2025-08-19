@@ -214,12 +214,15 @@ local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
 
 \l launchQ.q  /launchQ[base-directory; env-settings; cmd] 
 /Use above to launch on localhost or send a message to launcher.q on remote host.
-launch:{-1 "mserve_np.q: Launch ", (x 2), " on `:", (x 0), ":", (x 1); 
+launch:{
+  -1 "mserve_np.q: Launch ", (x 2), " on `:", (x 0), ":", (x 1); 
   cmd:(x 2), " -s ", mys, " -p ", (x 1) ;
   if[(x 0) in (""; "localhost"); launchQ[getenv `LAUNCHQ_BASE; local_env;cmd]; :0N] ;
+
+  cmd: resolve[getenv `LAUNCHQ_BASE; cmd]; ho: getenv `HOME ;
+  if[cmd like ho, "/*"; cmd: "~", (count ho)_ cmd];
   hh:hopen `$":",(x 0), ":5999" ; 
-  hh "setEnvString \"", servant_env, "\"" ; 
-  (neg hh) cmd; (neg hh)[]; 
+  (neg hh) "(",servant_env,") ", cmd; (neg hh)[]; 
   hh 
  } ; 
 
