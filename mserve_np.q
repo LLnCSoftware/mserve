@@ -34,7 +34,6 @@
 /  match - computes a routing string for each query. Prefer a servant whos previous query had same routing string.
 
 \c 10 133
-
 / Ingest Arguments
 / Delay startup until after application and plugins are loaded
 / to allow a plugin to change the startup procedure
@@ -206,23 +205,21 @@ purgeCompleted:{ delete from `queries where location=`client, purgeCompletedMs< 
  };
 \t 5000
 
-
 / Launch to servants
 / expect "launcher" listening on port 5999 on each host other than "localhost".
 servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
 local_env:"Q_SERVANTOF='127.0.0.1' Q_PLUGINS='", (getenv `Q_PLUGINS), "'" ;
+launchq_base:{ho:getenv `HOME; $[x like ho,"/*"; "~/", (1+count ho)_ x; x]} getenv `LAUNCHQ_BASE ;
 
 \l launchQ.q  /launchQ[base-directory; env-settings; cmd] 
 /Use above to launch on localhost or send a message to launcher.q on remote host.
 launch:{
   -1 "mserve_np.q: Launch ", (x 2), " on `:", (x 0), ":", (x 1); 
   cmd:(x 2), " -s ", mys, " -p ", (x 1) ;
-  if[(x 0) in (""; "localhost"); launchQ[getenv `LAUNCHQ_BASE; local_env;cmd]; :0N] ;
+  if[(x 0) in (""; "localhost"); launchQ[launchq_base; local_env;cmd]; :0N] ;
 
-  cmd: resolve[getenv `LAUNCHQ_BASE; cmd]; ho: getenv `HOME ;
-  if[cmd like ho, "/*"; cmd: "~", (count ho)_ cmd];
   hh:hopen `$":",(x 0), ":5999" ; 
-  (neg hh) "(",servant_env,") ", cmd; (neg hh)[]; 
+  (neg hh) (launchq_base; servant_env; cmd); (neg hh)[]; 
   hh 
  } ; 
 
@@ -270,7 +267,10 @@ alltypes:(0 1 2 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19h)!("mixed"; "boolean";
 readyCallback:{} ; /pass handles back to (scripted.q) plugin after startup
 
 / Load plugins
-if[0<count getenv `MSERVE_PLUGINS;   {system "l ", 0N!resolve[getenv `LAUNCHQ_BASE] x;} each "," vs getenv `MSERVE_PLUGINS];
+-1 "mserve startup "; 
+-1 "launchq=", launchq_base ; 
+-1 "current=", first system "pwd" ;
+if[0<count getenv `MSERVE_PLUGINS;   {system "l ",0N! resolve[launchq_base] x;} each "," vs getenv `MSERVE_PLUGINS];
 
 -1 "servant addresses" ;
 -1 each .Q.s1 each servant ;

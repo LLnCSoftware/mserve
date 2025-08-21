@@ -20,11 +20,14 @@ splitDir:{t:((count x)^first where x=" ")# x; n:0^last where t="/"; (n # x; (n+n
 splitCmd:{(x?" ")# x} ;
 
 /Convert to absolute using a base path.
-/Note: When the base path does not end in '/' you get a path alongside - not under - the base path.
 abspath:{[base; path] 
   if["/"=first path; :path] ;
-  if[ path like "~/*";    :(getenv `HOME), {$[""~x; ""; "/",x]} 2_ path] ;
+  if[ path like "~/*"; :(getenv `HOME), {$[""~x; ""; "/",x]} 2_ path] ;
+
+  if[ base like "~/*"; base:(getenv `HOME), {$[""~x; ""; "/",x]} 2_ base] ;
   if["/"<>first base; base:(first system "pwd"), "/", base] ;
+  if["/"<>last base; base:base,"/"] ;
+
   if[ path like "../*";   :("/" sv -2_ "/" vs base), {$[""~x; ""; "/",x]} 3_ path] ;
   if[ path like "./*";    :("/" sv -1_ "/" vs base), {$[""~x; ""; "/",x]} 2_ path] ;    
   ("/" sv -1_  "/" vs base), {$[""~x; ""; "/",x]} path

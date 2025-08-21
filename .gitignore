@@ -2,7 +2,7 @@
 examples/07precomp/*.bin
 feed.hiw
 log/
-data/
+data
 
 # Windows image file caches
 Thumbs.db
