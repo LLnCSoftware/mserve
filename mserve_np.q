@@ -219,7 +219,7 @@ launch:{
   if[(x 0) in (""; "localhost"); launchQ[launchq_base; local_env;cmd]; :0N] ;
 
   hh:hopen `$":",(x 0), ":5999" ; 
-  (neg hh) (launchq_base; servant_env; cmd); (neg hh)[]; 
+  (neg hh) (`launchQ; launchq_base; servant_env; cmd); (neg hh)[]; 
   hh 
  } ; 
 

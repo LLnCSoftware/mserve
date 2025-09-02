@@ -14,15 +14,28 @@ getRoutingCriteria:{[arg;opt]
 servantMessage:{[id;cmd;arg]
   -2 "tickdemo.q servant message: ", .Q.s1 (id; cmd; arg) ;
   if[cmd~`initdate; currentdate:: arg; :(::)] ;
-  if[cmd~`endofday; nextdate::arg+1; restart "A"; :(::)] ;
+  if[cmd~`endofday; if[nextdate<arg+1; nextdate::arg+1; requestSync[]; :(::)] ;
+  if[cmd~`finishSync; remotes::remotes _ arg; if[0=count remotes; restart "A"]] ;  
   if[null currentdate; :(::)]; 
   if[cmd~`hdbAready; restart "B"; :(::)] ;
   if[cmd~`hdbBready; 
     currentdate::nextdate; 
-    {x (`startofday; y)}[;currentdate] each where h2addr[;2] like "rdb.q *" ;  
+    {x (`startofday; y)}[;currentdate] each where h2addr[;2] like "rdb.q *" ; 
   ];
  };
 
+/Send `requestSync message to all remote hosts before starting the endofday processing.
+/This will bring all remote logs up to date, before restarting the hdb instances to ingest new data.
+/Note: it is not necessary to stop the log updates while data is being ingested because the file ingested
+/will be at least 2 days old, but all future updates will only affect files for the current date or later.
+remotes:(`$())!(`int$()) ;
+requestSync:{[] 
+  remotes::{x!(count x)#1} `$ (hosts where not hosts~""),\:":5999"; 
+  if[0=count remotes; :restart "A"] ;
+  {h: hopen x; (neg h) (`requestSync; 0) (neg h)[]; hclose h} each key remotes ;
+ };
+
+/Restart hdb.q on the hdbA or hdbB database; to ingest new data from tick.q log.
 restart:{[suffix]
   -2 "restart hdb",suffix ;
   A: select from routingTable where stype like ("hdb", suffix) ;    /routing table rows for hdb servers to restart
@@ -41,3 +54,4 @@ restart:{[suffix]
   cn_phasein:: (count routingTable)#0b ;                            /clear the phasein bit vector.
   cn_increment:: 0N ;                                               /stop the canary.
  };
+
