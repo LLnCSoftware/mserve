@@ -12,6 +12,7 @@ syncdirs:  2_ .z.x ;                             /Sync these directories to same
 
 /Async requests and responses
 .z.ps:{
+  connected:1b ;
   if[`launchQ=x 0; :doLaunch 1_ x] ;
   if[`requestSync=x 0; :requestSync[] ] ;
   if[`finishsync=x 0; :finishsync[] ] ;
