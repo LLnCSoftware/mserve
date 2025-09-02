@@ -31,24 +31,25 @@ doLaunch:{
 /To ensure directories are up-to-date as of a given point in time, we provide a "requestSync" command.
 /This always starts a new rsync operation, if one is running already, a new one is started as soon as the old one finishes.
 /When the new rsync finishes a "finishSync" message is relayed back to the requesting program.
+/The sync_flag global is the handle to relay the message back to. 
+/When positive, it indicates that an rsync job was already running, and a new rsync is needed before sending the message back. 
 /When this message is received, the  directories are up-to-date as of the time of the request
 /In the mserve tick demo, this is needed in 2 places: before the hdb instances are restarted at "endofday",
 /and whenever an rdb instance starts up on a remote host.
 /Note: restarting timer sends next tick immediately 
 sync_flag:0; syncbegin:0Np; connected:0b ;
 requestSync:{[] 
-  -1 "\ndirectory sync request\n";  sync_flag:2; 
-  if[null syncbegin; sync_flag=1; syncCount::syncEvery; system "t ", string timerFreq;]
+  -1 "\ndirectory sync request\n";  sync_flag::.z.w; 
+  if[null syncbegin; sync_flag::neg .z.w; syncnow[]]
  } ; 
-
 
 finishsync:{
   -1 finishmsg[]; syncbegin::0Np; 
-  if[sync_flag=2; sync_flag::1; syncCount::syncEvery; system "t ", string timerFreq];
-  if[sync_flag=1; sync_flag::0; (neg .z.w) (`finishSync; `$ myip, ":5999")] ;
+  if[sync_flag>0; sync_flag::neg sync_flag; :syncnow[]];
+  if[sync_flag<0; sync_flag (`finishSync; `$ myip, ":5999"); sync_flag::0] ;
  };
 finishmsg:{ 
-  a: "rsyncjob finished ", (string `long$ .000001* .z.p-syncbegin),"ms  flag=", string sync_flag ;
+  a: "rsyncjob finished ", (string `long$ .000001* .z.p-syncbegin),"ms  flag=", (string sync_flag) ;
   b: "directory sizes ", " " sv  {{(x?"\t")#x} first system "du -h -d 0 ", x} each syncdirs ;
   a, " ", b
  };
@@ -59,10 +60,11 @@ syncEvery:12 ;     /sync every 2 minutes
 syncCount:0 ;
 .z.ts:{ 
   -1 "timer ", string syncCount ;
-  if[syncEvery<syncCount+::1; syncCount::0; dosyncdir[]]; 
+  if[syncEvery<syncCount+::1; syncCount::0]; 
+  if[syncCount=1; dosyncdir[]] ;
   if[not connected; connected::@[doannounce;0;0b]] 
  };
-syncnow:{syncCount:syncEvery; system "t ", string timerFreq} ;
+syncnow:{syncCount::0; system "t ", string timerFreq} ;
 syncnow[] ;
 
 /Start up
