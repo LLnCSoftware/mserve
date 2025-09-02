@@ -32,16 +32,14 @@ abspath:{[base; path]
   if[ path like "./*";    :("/" sv -1_ "/" vs base), {$[""~x; ""; "/",x]} 2_ path] ;    
   ("/" sv -1_  "/" vs base), {$[""~x; ""; "/",x]} path
  };
-relpath:{[path]
-  if["/"<>first path; :path] ;
-  d: first system "pwd"; if[path like d, "/*"; :(1+count d)_ path] ;
-  d: getenv `HOME; if[ path like d, "/*"; :"~/", (1+count d)_ path] ;
-  path
- };
 notfound:{0=type key `$":", $[x~""; y; x,"/",y]} ;
 resolve:{[d;f] 
   file: abspath[d;f];  if[0<count key `$":",file; :file]; 
   file: abspath["";f]; if[0<count key `$":",file; :file]; 
   '"not found: ", f;
- }
+ };
+tilda:{[path]
+  d: getenv `HOME; if[ path like d, "/*"; :"~/", (1+count d)_ path] ;
+  path
+ };
 
