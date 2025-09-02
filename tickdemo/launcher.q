@@ -35,11 +35,16 @@ doLaunch:{
 /and whenever an rdb instance starts up on a remote host.
 /Note: restarting timer sends next tick immediately 
 sync_flag:0; syncbegin:0Np; connected:0b ;
-requestSync:{[] -1 "\ndirectory sync request\n";  sync_flag:1; if[null syncbegin; sync_flag=2; system "t ",timerFreq;]} ; 
+requestSync:{[] 
+  -1 "\ndirectory sync request\n";  sync_flag:2; 
+  if[null syncbegin; sync_flag=1; syncCount::syncEvery; system "t ", string timerFreq;]
+ } ; 
+
+
 finishsync:{
   -1 finishmsg[]; syncbegin::0Np; 
-  if[sync_flag=2; sync_flag:1; system "t ",timerFreq];
-  if[sync_flag=1; sync_flag:0; (neg .z.w) (`finishSync; `$ myip, ":5999") ;
+  if[sync_flag=2; sync_flag::1; syncCount::syncEvery; system "t ", string timerFreq];
+  if[sync_flag=1; sync_flag::0; (neg .z.w) (`finishSync; `$ myip, ":5999")] ;
  };
 finishmsg:{ 
   a: "rsyncjob finished ", (string `long$ .000001* .z.p-syncbegin),"ms  flag=", string sync_flag ;
@@ -47,15 +52,16 @@ finishmsg:{
   a, " ", b
  };
 
-Timer calls
-timerFreq:10000 ;  /announce every 10 seconds
+/Timer calls
+timerFreq:5000 ;  /announce every 10 seconds
 syncEvery:12 ;     /sync every 2 minutes
 syncCount:0 ;
 .z.ts:{ 
+  -1 "timer ", string syncCount ;
   if[syncEvery<syncCount+::1; syncCount::0; dosyncdir[]]; 
   if[not connected; connected::@[doannounce;0;0b]] 
  };
-syncnow:{syncCount:syncEvery; system "t ", timerFreq} ;
+syncnow:{syncCount:syncEvery; system "t ", string timerFreq} ;
 syncnow[] ;
 
 /Start up
