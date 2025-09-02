@@ -10,7 +10,8 @@ system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from l
 .z.ps:{
   if[cons; 0N!(.z.w; x 0; x 1; count x 2)];  /log to console
   if[.z.w in (0i;h); :value x];              /if subscription or log replay, just process it.
-  if[`startofday~x 0; :startofday x 1];      /if special message `endofdataok, just process it.
+  if[`startofday~x 0; startofday[]];         /if special message `startofday, purge data more than 2 days old.
+  if[`finishsync~x 0; :go2[]];               /if special message `finishSync, continue startup after syncing log
   if[`go~x 0; :0 x] ;                        /allow startup without feed.q (invoke manually from mserve console).
   validateAndRunAsync x                      /process query via secure_invocation.q
  } ;
@@ -39,6 +40,19 @@ go:{
  if[(null qlo) or (null tlo); :(::)] ;
  startup::0b ;
 
+ /Attempt to open port 5999 on localhost. On a remote host this should be launcher.q
+ /On local host (the mserve machine) there should be no launcher and this should fail.
+ /In that case continue with "go2" below.
+ /Otherwise send the "requestSync" message to launcher.q
+ /Which will respond with the "finishSync" message, when fresh copy of tick.q log has been made, using "rsync".
+ /The "finishSync" message just invokes "go2" below, as in the local case.
+ /Note we do this AFTER receving the first record by subscription, which should ensure that the first subscription
+ /record will also be in the log, and so we have overlap rather than a gap between the log and subscription data.
+ hh:@[hopen; 5999; 0N]; if[null hh; :go2[]] ;
+ (neg hh) (`requestSync; 0); (neg hh)[]; hclose hh;
+ };
+
+go2:{
  rep[-2; 0] ;        /begin replaying log files
  system "sleep 4" ;  /simulate long replay
 
@@ -55,14 +69,13 @@ go:{
  -2 "\n*** rdb ready ***\n" ;
  };
 
-
 /.u.end is called as part of the usual subscription processing in tick.q.
 /Note when .u.end is called NEXT burst of data will be for new day.
 /Call back to tickdemo.q to restart hdb processes to incorporate new data.
 .u.end:{[dat] -2 "\nend of day: ", string dat; (neg h_servantof) (-1; `endofday; dat)} 
 
-/purge data in rdb from any days prior to the day before the day that just ended.
-/this is called via a "special message" tickdemo.q AFTER hdb processes have been restarted
+/Purge data in rdb from any earlier than 2 days prior to the current date - retaining the most recent 3 days in the rdb.
+/Note: This occurs after both hdbA and hdbB instances have been restarted and have presumably ingested this data.
 startofday:{[dat] 
   -2 "\nstartofday: ", string dat ;
   delete from `quote where date< -2+ dat ;
