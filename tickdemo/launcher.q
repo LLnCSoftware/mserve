@@ -59,7 +59,7 @@ timerFreq:5000 ;  /announce every 10 seconds
 syncEvery:12 ;     /sync every 2 minutes
 syncCount:0 ;
 .z.ts:{ 
-  -1 "timer ", string syncCount ;
+  /-1 "timer ", string syncCount ;
   if[syncEvery<syncCount+::1; syncCount::0]; 
   if[syncCount=1; dosyncdir[]] ;
   if[not connected; connected::@[doannounce;0;0b]] 
