@@ -155,8 +155,10 @@ getArguments:{[cmd] if[10=type cmd; cmd:parse cmd]; if[(::)~cmd 1; :1#cmd]; arg:
 /if .z.w does not exist in h => message is a new request from a client
 
 getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users table 
+remotes:([]); /overridden in plugin "tickdemo.q" (handles used to message launcher.q for which response is expected)
 .z.ps:{[x] 
-	$[not(w:neg .z.w)in key h;
+  0N!value remotes ;
+	$[not(w:neg .z.w)in (key h), neg value remotes;
 	[ /request - (client qid; query; options)	
     -1 ts[], "-> Receive Request: #", (" " sv .Q.s1 each x) ; 
     cqid:x[0]; query:x[1]; options: x[2]; if[99<>type options; options:([])]; /options must be a dictionary
