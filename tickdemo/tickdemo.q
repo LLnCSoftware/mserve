@@ -14,7 +14,7 @@ getRoutingCriteria:{[arg;opt]
 servantMessage:{[id;cmd;arg]
   -2 "tickdemo.q servant message: ", .Q.s1 (id; cmd; arg) ;
   if[cmd~`initdate; currentdate:: arg; :(::)] ;
-  if[cmd~`endofday; if[nextdate<arg+1; nextdate::arg+1; requestSync[]; :(::)] ;
+  if[cmd~`endofday; if[nextdate<arg+1; nextdate::arg+1; requestSync[]; :(::)]] ;
   if[cmd~`finishSync; remotes::remotes _ arg; if[0=count remotes; restart "A"]] ;  
   if[null currentdate; :(::)]; 
   if[cmd~`hdbAready; restart "B"; :(::)] ;
@@ -30,7 +30,7 @@ servantMessage:{[id;cmd;arg]
 /will be at least 2 days old, but all future updates will only affect files for the current date or later.
 remotes:(`$())!(`int$()) ;
 requestSync:{[] 
-  remotes::{x!(count x)#1} `$ (hosts where not hosts~""),\:":5999"; 
+  remotes::{x!(count x)#1} `$ (hosts where not hosts~\:""),\:":5999"; 
   if[0=count remotes; :restart "A"] ;
   {h: hopen x; (neg h) (`requestSync; 0) (neg h)[]; hclose h} each key remotes ;
  };

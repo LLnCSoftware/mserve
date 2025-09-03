@@ -18,7 +18,7 @@ system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from l
 .z.pg:{"Use Async"} ;
 
 /receive tick data
-startup:1b ; cons:1b ; 
+startup:1b ; cons:0b ; 
 upd:{[t;x]
   if[.z.w=0; t:`$ (string t),"_t"] ; /upd from handle zero is log replay, store in temporay table
   insert[t;x] ; 

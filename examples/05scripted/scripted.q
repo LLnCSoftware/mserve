@@ -165,6 +165,7 @@ requestContextSource[routingTable `condition; routingDescriptor]; /request initi
 
 servant: (":" vs/: string routingTable `address);                 /servants to be launched by the mserve startup
 servant: servant ,' enlist each (string routingTable `qfile),\: {(x?" ")_x} afile ;
+hosts: {$[x in ("localhost";"127.0.0.1");"";x]} each  distinct first (flip servant)
 
 /Mserve callback provides handles to routing table
 /To allow loading the configuration editor before that occurs we must avoid initializing
