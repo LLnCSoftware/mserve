@@ -39,19 +39,19 @@ doLaunch:{
 /Note: restarting timer sends next tick immediately 
 sync_flag:0; syncbegin:0Np; connected:0b ;
 requestSync:{[] 
-  -1 "\ndirectory sync request\n";  sync_flag::.z.w; 
-  if[null syncbegin; sync_flag::neg .z.w; syncnow[]]
+  -1 "\ndirectory sync request";  sync_flag::.z.w; 
+  if[null syncbegin; sync_flag::neg .z.w; syncnow[]] ;
  } ; 
 
 finishsync:{
-  -1 finishmsg[]; syncbegin::0Np; 
+  -1 finishmsg[]; syncbegin::0Np;
   if[sync_flag>0; sync_flag::neg sync_flag; :syncnow[]];
-  if[sync_flag<0; sync_flag (`finishSync; `$ myip, ":5999"); sync_flag::0] ;
+  if[sync_flag<0; sync_flag 0N!(-1; `finishSync; `$":", myip, ":5999"); sync_flag::0] ;
  };
 finishmsg:{ 
   a: "rsyncjob finished ", (string `long$ .000001* .z.p-syncbegin),"ms  flag=", (string sync_flag) ;
   b: "directory sizes ", " " sv  {{(x?"\t")#x} first system "du -h -d 0 ", x} each syncdirs ;
-  a, " ", b
+  a, " ", b, "\n"
  };
 
 /Timer calls
