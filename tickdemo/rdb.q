@@ -31,6 +31,7 @@ trade_t: trade ;
 h: hopen 5001 ;     /subscribe to tick.q - all tables all symbols.
 h ".u.sub[`;`]" ;
 
+hh:0Ni ;
 h_servantof:0Ni ;
 servantof:{h_servantof:: x} ;
 go:{
@@ -48,11 +49,15 @@ go:{
  /The "finishSync" message just invokes "go2" below, as in the local case.
  /Note we do this AFTER receving the first record by subscription, which should ensure that the first subscription
  /record will also be in the log, and so we have overlap rather than a gap between the log and subscription data.
- hh:@[hopen; 5999; 0N]; if[null hh; :go2[]] ;
- (neg hh) (`requestSync; 0); (neg hh)[]; hclose hh;
+ hh:@[hopen; 5999; 0Ni]; if[null hh; :go2[]] ;
+ (neg hh) (`requestSync; 0); (neg hh)[]; 
  };
 
 go2:{
+ if[not null hh; hclose hh; hh::0Ni] ;
+ qlo: 0W^(first quote) `id ;
+ tlo: 0W^(first trade) `id ;
+
  rep[-2; 0] ;        /begin replaying log files
  system "sleep 4" ;  /simulate long replay
 
