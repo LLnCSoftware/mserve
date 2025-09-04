@@ -10,7 +10,7 @@ system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from l
 .z.ps:{
   if[cons; 0N!(.z.w; x 0; x 1; count x 2)];  /log to console
   if[.z.w in (0i;h); :value x];              /if subscription or log replay, just process it.
-  if[`startofday~x 0; startofday[x 1]];      /if special message `startofday, purge data more than 2 days old.
+  if[`startofday~x 0; :startofday[x 1]];      /if special message `startofday, purge data more than 2 days old.
   if[`finishsync~x 0; :go2[]];               /if special message `finishSync, continue startup after syncing log
   if[`go~x 0; :0 x] ;                        /allow startup without feed.q (invoke manually from mserve console).
   validateAndRunAsync x                      /process query via secure_invocation.q
