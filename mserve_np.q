@@ -172,7 +172,8 @@ remotes:([]); /overridden in plugin "tickdemo.q" (handles used to message launch
 	] ;
 	[ /response - (server qid; result; info)
     /0N!(`servantrsp; x) ;
-    qid:x[0]; result:x[1]; info:x[2];
+    qid:x[0]; result:x[1]; info:x[2]; 
+    if[(type qid) not in (5 6 7h); :-2 "expect integer query id in response: got ", .Q.s1 x] ;
     if[0>qid; :servantMessage[qid; result; info]] ; /Divert negative query id's for special processing.
   	/try to send result back to client
   	.[send_result;
