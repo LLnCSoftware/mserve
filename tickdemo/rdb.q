@@ -28,7 +28,7 @@ upd:{[t;x]
 /startup
 quote_t: quote ;    /temporary tables for log replay, same schema
 trade_t: trade ;
-h: hopen 5001 ;     /subscribe to tick.q - all tables all symbols.
+h: hopen `$":",(getenv `Q_SERVANTOF),":5001" ;     /subscribe to tick.q - all tables all symbols.
 h ".u.sub[`;`]" ;
 
 hh:0Ni ;
@@ -50,6 +50,7 @@ go:{
  /Note we do this AFTER receving the first record by subscription, which should ensure that the first subscription
  /record will also be in the log, and so we have overlap rather than a gap between the log and subscription data.
  hh:@[hopen; 5999; 0Ni]; if[null hh; :go2[]] ;
+ -1 "starting remote rdb: sync log directory" ;
  (neg hh) (`requestSync; 0); (neg hh)[]; 
  };
 
@@ -58,6 +59,7 @@ go2:{
  qlo: 0W^(first quote) `id ;
  tlo: 0W^(first trade) `id ;
 
+ -1 "Load back data into rdb from log directory" ;
  rep[-2; 0] ;        /begin replaying log files
  system "sleep 4" ;  /simulate long replay
 
