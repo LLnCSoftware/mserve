@@ -10,7 +10,7 @@ system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from l
 .z.ps:{
   if[cons; 0N!(.z.w; x 0; x 1; count x 2)];  /log to console
   if[.z.w in (0i;h); :value x];              /if subscription or log replay, just process it.
-  if[`startofday~x 0; startofday[]];         /if special message `startofday, purge data more than 2 days old.
+  if[`startofday~x 0; startofday[x 1]];      /if special message `startofday, purge data more than 2 days old.
   if[`finishsync~x 0; :go2[]];               /if special message `finishSync, continue startup after syncing log
   if[`go~x 0; :0 x] ;                        /allow startup without feed.q (invoke manually from mserve console).
   validateAndRunAsync x                      /process query via secure_invocation.q
@@ -82,7 +82,7 @@ go2:{
 /Purge data in rdb from any earlier than 2 days prior to the current date - retaining the most recent 3 days in the rdb.
 /Note: This occurs after both hdbA and hdbB instances have been restarted and have presumably ingested this data.
 startofday:{[dat] 
-  -2 "\nstartofday: ", string dat ;
+  -2 "\nrdb startofday: ", string dat ;
   delete from `quote where date< -2+ dat ;
   delete from `trade where date< -2+ dat ;
  } ;
