@@ -157,7 +157,6 @@ getArguments:{[cmd] if[10=type cmd; cmd:parse cmd]; if[(::)~cmd 1; :1#cmd]; arg:
 getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users table 
 remotes:([]); /overridden in plugin "tickdemo.q" (handles used to message launcher.q for which response is expected)
 .z.ps:{[x] 
-  0N!value remotes ;
 	$[not(w:neg .z.w)in (key h), neg value remotes;
 	[ /request - (client qid; query; options)	
     -1 ts[], "-> Receive Request: #", (" " sv .Q.s1 each x) ; 
@@ -173,7 +172,7 @@ remotes:([]); /overridden in plugin "tickdemo.q" (handles used to message launch
 	[ /response - (server qid; result; info)
     /0N!(`servantrsp; x) ;
     qid:x[0]; result:x[1]; info:x[2]; 
-    if[(type qid) not in (5 6 7h); :-2 "expect integer query id in response: got ", .Q.s1 x] ;
+    if[not (type qid) in (-5 -6 -7h); :-2 "expect integer query id in response: got ", (.Q.s1 (type qid; qid)),"  ",.Q.s1 x;];
     if[0>qid; :servantMessage[qid; result; info]] ; /Divert negative query id's for special processing.
   	/try to send result back to client
   	.[send_result;
