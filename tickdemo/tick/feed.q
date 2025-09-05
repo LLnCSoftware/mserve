@@ -106,10 +106,9 @@ feed:{
   writeHiwFile[] ;
  } ;
 
-h:neg hopen sendto
-
-.z.ts:feed
-.z.pc:{-1 "destination lost"; exit 0}
+h:0Ni ;
+.z.ts:{if[null h; h::@[hopen; sendto; 0Ni]; if[null h; :(::)]]; feed x} ;
+.z.pc:{-1 "connection lost"; h::0Ni} ;
 
 system "t ", string timer ;
 "feed.q running"
