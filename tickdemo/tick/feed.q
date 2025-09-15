@@ -1,19 +1,21 @@
+if[0=count .z.w; '"Usage: q tick/tick.q sendto timer msPerSimDay maxTradesPerDay[/avgQuotesPerTrade] hiwDirectory [startdate]"];
+
 /utilities needed to ingest command line arguments
 onems: `long$ 1e6; msPerDay:24*60*60000 ;
 inter2ms:{t:last x; v:"J"$ -1_ x; $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]} ;
-writeHiwFile:{ `:feed.hiw 0: ("start=",string start; "quoteid=",string quoteid; "tradeid=",string tradeid)};
-readHiwFile:{a: flip "=" vs/: read0 `:feed.hiw; (`$ a 0) set' parse each a 1} ;
-
+writeHiwFile:{ hiw 0: ("start=",string start; "quoteid=",string quoteid; "tradeid=",string tradeid)};
+readHiwFile:{a: flip "=" vs/: read0 hiw; (`$ a 0) set' parse each a 1} ;
 
 / Ingest command line arguments
-sendto: "J"$ $[0<count .z.x 0; .z.x 0; "5001"] ;               /sendto port number 
-timer: "J"$ $[0<count .z.x 1; .z.x 1; "3000"] ;                /ms per timer tick.
-msSimDay: inter2ms $[0< count .z.x 2; .z.x 2; "1d"] ;          /time allowed to generate one simulated day of activity (default real time).
-interval: "j"$ timer * msPerDay % msSimDay ;                   /simulated time covered by activity generated per timer tick
-maxn: "J"$ {$[0<count x; x; "50"]} ("/" vs .z.x 3) 0;          /maximum thousands of trades per simulated day
-maxn: "j"$ 1000 * maxn * interval % msPerDay ;                 /maximum trades per timer tick
-qpt:  "J"$ {$[0<count x; x; "2"]} ("/" vs .z.x 3) 1;           /average quotes per trade
-start: "P"$ $[0< count .z.x 4; .z.x 4; ""] ;                   /starting timestamp
+sendto: "J"$ $[0<count .z.x 0; .z.x 0; "5001"] ;                /sendto port number 
+timer: "J"$ $[0<count .z.x 1; .z.x 1; "3000"] ;                 /ms per timer tick.
+msSimDay: inter2ms $[0< count .z.x 2; .z.x 2; "1d"] ;           /time allowed to generate one simulated day of activity (default real time).
+interval: "j"$ timer * msPerDay % msSimDay ;                    /simulated time covered by activity generated per timer tick
+maxn: "J"$ {$[0<count x; x; "50"]} ("/" vs .z.x 3) 0;           /maximum thousands of trades per simulated day
+maxn: "j"$ 1000 * maxn * interval % msPerDay ;                  /maximum trades per timer tick
+qpt:  "J"$ {$[0<count x; x; "2"]} ("/" vs .z.x 3) 1;            /average quotes per trade
+hiw: `$":", $[0<count .z.x 4; .z.x 4; "data/log"], "/feed.hiw"; /highwater file (starting timestamp, trade id, and quote id) 
+start: "P"$ $[0< count .z.x 5; .z.x 5; ""] ;                    /starting timestamp
 
 /Starting timestamp should be specified ONLY when creating a NEW database
 /Otherwise it will come from the highwater file which also contains the starting
@@ -21,7 +23,7 @@ start: "P"$ $[0< count .z.x 4; .z.x 4; ""] ;                   /starting timesta
 /This ensures that regardless of the system being started and stopped
 /an unbroken sequence of timestamps and unique identifiers is generated.
 if[not null start; 
-  if[0<count key `:feed.hiw;
+  if[0<count key hiw;
    -2 "Specifying start date would invalidate date/time sequence in existing data" ;
    -2 "To create a new database, delete feed.hiw and all log files for current database" ;
    '"feed.hiw"
@@ -32,7 +34,8 @@ if[null start; readHiwFile[] ;]
  
 -1 "Starting feed.q... will send to port ", (string sendto), " every ", (string timer), " ms." ;
 -1 "Speed: ",(string `long$ msPerDay%msSimDay), "x;   Ms covered per send: ", (string interval)
-  , ";  Max trades per send: ",(string maxn), ";  Avg quotes per trade: ", (string qpt) ;
+  , ";  Max trades per send: ",(string maxn), ";  Avg quotes per trade: ", (string qpt) 
+  , ";  Highwater file: ", (string hiw) ;
 
 / get symbols with company name from symbolMaster./csv
 sn: flip ("S  *"; ";") 0: 1 _  read0 `:symbolMaster.csv ;

@@ -81,7 +81,7 @@ myip: "." sv string `int$ 0x0 vs .z.a ;
 /Run an rsync job periodically
 if[(0<count servantof) and 0<count syncdirs;
   rsyncjob: tilda each resolve[""] each syncdirs ;
-  rsyncjob: ";\n" sv {"rsync -avz ", servantof, ":", x, "/ ", x, " 1>/dev/null 2>1" } each rsyncjob ;
+  rsyncjob: ";\n" sv {"rsync -avz --exclude feed.hiw ", servantof, ":", x, "/ ", x, " 1>/dev/null 2>1" } each rsyncjob ;
   callback: "echo 'h:hopen 5999; (neg h) (`finishsync; 0); (neg h)[]; exit 0' | q &" ;
   -1 "rsyncjob:\n", rsyncjob, "\n" ;
   dosyncdir:{ syncbegin::.z.p; system rsyncjob, "; ", callback ;}
