@@ -1,6 +1,6 @@
 /api common to rdb.q and hdb.q
 /Arguments: schema, log, [ dbpath ]
-lastdate: {$[x=-0Wd; 0Nd; x]} max "D"$ -10#/: system "ls ", (.z.x 1),"/", (.z.x 0), "*" ;
+lastdate: {$[x=-0Wd; 0Nd; x]} max "D"$ -10#/: @[system; "ls ", (.z.x 1),"/", (.z.x 0), "*"; ()] ;
 
 .api.echo:{x} ;
 .api.myCommands:{[ignore]  key `.api} 
