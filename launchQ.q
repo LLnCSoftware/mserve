@@ -34,8 +34,8 @@ abspath:{[base; path]
  };
 notfound:{0=type key `$":", $[x~""; y; x,"/",y]} ;
 resolve:{[d;f] 
-  file: abspath[d;f];  if[0<count key `$":",file; :file]; 
-  file: abspath["";f]; if[0<count key `$":",file; :file]; 
+  file: abspath[d;f];  if[0<>type key `$":",file; :file]; 
+  file: abspath["";f]; if[0<>type key `$":",file; :file]; 
   '"not found: ", f;
  };
 tilda:{[path]
