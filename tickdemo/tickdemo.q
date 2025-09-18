@@ -24,6 +24,7 @@ servantMessage:{[id;cmd;arg]
   ];
  };
 
+
 /To run without data comming in from feed.q, invoke this from console after startup.
 go:{if[null currentdate; {x (`go; 1)} each where h2addr[;2] like "rdb.q *"; :"sent 'go' message to rdb.q"]; "ready now"};
  
