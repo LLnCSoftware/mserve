@@ -3,8 +3,8 @@
 currentdate:0Nd; nextdate:0Nd; 
 getRoutingCriteria:{[arg;opt] 
   d:arg 1; 0N!(`getRoutingCriteria; d; currentdate); 
-  /If request arrives before rdb receives a record from feed.q, send "go" message to initialize rdb, and reject the request.
-  if[null currentdate; {x (`go; 1)} each where h2addr[;2] like "rdb.q *"; '"rdb.q not ready; sent 'go' message"];
+  /If request arrives before rdb receives a record from feed.q, currentdate will be unset because rdb.q has not initialized
+  if[null currentdate; '"rdb.q not ready; (invoke 'go[]' from console)"];
   /Route based on offset from current date
   if[(abs type d) within (6 7); :([loday:first d; hiday: last d])] ; 
   if[ 14<>abs type d; :([hiday:0N; loday:0N]) ];
@@ -24,6 +24,9 @@ servantMessage:{[id;cmd;arg]
   ];
  };
 
+/To run without data comming in from feed.q, invoke this from console after startup.
+go:{if[null currentdate; {x (`go; 1)} each where h2addr[;2] like "rdb.q *"; :"sent 'go' message to rdb.q"]; "ready now"};
+ 
 /Send `requestSync message to all remote hosts before starting the endofday processing.
 /This will bring all remote logs up to date, before restarting the hdb instances to ingest new data.
 /Note: it is not necessary to stop the log updates while data is being ingested because the file ingested
