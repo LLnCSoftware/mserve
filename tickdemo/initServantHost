@@ -1,0 +1,96 @@
+#!/bin/bash
+# Run this from the /home/servant directory after servant host boots up to copy application files from dev1.
+# Copy the current version of this script from /home/ubuntu/bin on dev1 before running
+
+dev1='172.30.1.205'
+echo "$USER"
+if ! [ "$USER" = "servant" ]
+then 
+  echo "Run ONLY to initially configure a new servant host"
+  echo "Execpt linux user 'servant' got: $USER" 
+  exit 1
+fi
+
+cd /home/servant
+pwd
+
+echo "Copy kdb+q"
+scp -r $dev1:/home/ubuntu/q .
+
+echo "Clone mserve repo"
+rm -rf mserve
+git clone ubuntu@$dev1:/home/ubuntu/mserve
+
+echo "Sync mserve repo with dev1"  
+rsync -avz --exclude '.git' --exclude 'log' ubuntu@$dev1:mserve/ mserve/
+
+echo "Copy certain benchmarking files"
+mkdir benchmarking
+mkdir benchmarking/xmserve
+scp  $dev1:/home/ubuntu/benchmarking/xmserve/test-svr.q benchmarking/xmserve
+scp  $dev1:/home/ubuntu/benchmarking/xmserve/launcher.q benchmarking/xmserve
+
+echo "Copy buildhdb.q from sfidemo"
+scp $dev1:/home/ubuntu/sfidemo/hdb/buildhdb.q .
+
+echo "Create symlinks to /data (dev1 does not have a /data, directory sync uses one of these links)"
+rm -f data; ln -s /data
+cd benchmarking
+rm -f data; ln -s /data
+cd ../mserve
+rm -f data; ln -s /data
+cd ../mserve/tickdemo
+rm -f data; ln -s /data
+cd
+echo "" 
+
+read name fstype mountpoint <  <( lsblk -f -o NAME,FSTYPE,MOUNTPOINT | grep nvme1n1 )
+echo "$name $fstype $mountpoint"
+if [ "$name" = "" ]
+then
+  echo "No second volume"
+else
+  echo "Second volume present"
+  if [ "$fstype" = "" ]
+  then
+    echo "Create ext4 filesystem on 2nd volume" 
+    sudo mkfs.ext4 /dev/nvme1n1
+  else
+    echo "$fstype filesystem already in place"
+  fi
+  if [ "$mountpoint" = "" ]
+  then
+    echo "Mount 2nd volume as /data"
+    sudo mount /dev/nvme1n1 /data
+    sudo chown -R servant:servant /data
+    rm -rf /data/lost+found
+  else
+    echo "Already mounted on $mountpoint"
+  fi
+fi
+
+if [ "$(ls /data | grep log)" = "" ]
+then
+  mkdir /data/log
+fi
+
+#if [ "$name" = "" ]  #this means no second volume attached  
+#then                 #which means its an rdb not an hdb
+#  echo "RDB Retrive latest 3 startup logs from dev1"
+#
+#else
+#  echo "HDB Retrive all startup logs from dev1"
+#
+#  echo "Run hdb.q startup to create starting hdb"
+#fi
+
+# start launcher.q - use data symlink to find the logs on dev1
+cd mserve/tickdemo
+echo ""
+echo "Start launcher.q from $(pwd)" 
+q launcher.q $dev1 - data/log -p 5999 </dev/null &
+sleep 2
+echo ""
+echo "--ready--" 
+echo ""
+
