@@ -1,6 +1,8 @@
 \l tick/tplog.q                       /module to load back data from log files
 system "l ", "tick/",(.z.x 0),".q";   /table schema needed to accept data from log files.
 dbpath: .z.x 2 ;                      /Arguments: schema, log, db (path to hdb directory.
+suffix: .z.x 3 ;                      /A/B suffix for hdb.q process
+if[0=count suffix; '"Usage: q hdb.q schema log database-path suffix"];
 
 \l api.q                              /Api common to rdb and hdb
 \l ../secure_invocation.q
@@ -21,7 +23,6 @@ repDayEndTable:{[d;t]
  };
 
 /locate database - expect it to be partitioned by date.
-if[0=count dbpath; '"Usage: q hdb.q schema log database-path"];
 ls: key `$":", dbpath ;
 
 /start date to load is day after latest per-day directory
@@ -39,5 +40,5 @@ system "l ", dbpath  ;     /load the partitioned database on disk
 
 servantof:{[h_servantof]
   /0N!"mserve connect hdb.q: ",dbpath ;
-  (neg h_servantof) (-1; `$ "hdb", (last dbpath), "ready"); /report `hdbXready to tickdemo.q
- };
+  (neg h_servantof) (-1; `$ "hdb", (suffix), "ready"); /report `hdbXready to tickdemo.q
+ }
