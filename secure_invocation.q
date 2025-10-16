@@ -28,7 +28,9 @@ validateAndRunSync:{[req]
 / request: (id; query; [options])
 / response: (id; result) 
 validateAndRunAsync:{[req] 
-  cmd:.[.si.validate; (req 1; req 2); {x}];       /validate command
+  if[not (type req 0) in (-7 -6h); '"Async request must begin with a positve integer id, got ", (.Q.s1 req), " handle=", string .z.w];
+  if[0> req 0; '"Async request must begin with a positve integer id, got ", (.Q.s1 req), " handle=", string .z.w] ;
+  cmd:.[.si.validate; (req 1; req 2); {x}];           /validate command
   if[10=type cmd; :.si.send[.z.w;] 0N!(req 0; cmd)];  /if string returned its an error
   res: .[cmd 0; cmd 1; {[nam;e] "Error: in ",nam, ", ", e}[cmd 2;]] ; /invoke command
   .si.send[.z.w;] (req 0; res) ;                      /return result or error

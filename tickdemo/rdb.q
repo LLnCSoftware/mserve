@@ -9,9 +9,9 @@ system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from l
 \l ../secure_invocation.q
 .z.ps:{
   if[cons; 0N!(.z.w; x 0; x 1; count x 2)];  /log to console
-  if[.z.w in (0i;h); :value x];              /if subscription or log replay, just process it.
-  if[`startofday~x 0; :startofday[x 1]];      /if special message `startofday, purge data more than 2 days old.
-  if[`finishsync~x 0; :go2[]];               /if special message `finishSync, continue startup after syncing log
+  if[.z.w in (0i;h;hfs); :value x];          /if subscription or log replay, just process it.
+  if[`startofday~x 0; :startofday[x 1]];     /if special message `startofday, purge data more than 2 days old.
+  if[`finishSync~x 0; :`go2[]];              /if special message `finishSync, continue startup after syncing log
   if[`go~x 0; :0 x] ;                        /allow startup without feed.q (invoke manually from mserve console).
   validateAndRunAsync x                      /process query via secure_invocation.q
  } ;
@@ -20,7 +20,7 @@ system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from l
 /receive tick data
 startup:1b ; cons:0b ; 
 upd:{[t;x]
-  if[.z.w=0; t:`$ (string t),"_t"] ; /upd from handle zero is log replay, store in temporay table
+  if[.z.w<>h; t:`$ (string t),"_t"] ; /upd from handle zero (or hfs) is log replay, store in temporay table
   insert[t;x] ; 
   if[startup; 0 (`go;0)] ;
  };
@@ -31,7 +31,7 @@ trade_t: trade ;
 h: hopen `$":",(getenv `Q_SERVANTOF),":5001" ;     /subscribe to tick.q - all tables all symbols.
 h ".u.sub[`;`]" ;
 
-hh:0Ni ;
+hh:0Ni; hfs:0Ni ;
 h_servantof:0Ni ;
 servantof:{h_servantof:: x} ;
 go:{
@@ -49,15 +49,16 @@ go:{
  /The "finishSync" message just invokes "go2" below, as in the local case.
  /Note we do this AFTER receving the first record by subscription, which should ensure that the first subscription
  /record will also be in the log, and so we have overlap rather than a gap between the log and subscription data.
- hh:@[hopen; 5999; 0Ni]; if[null hh; :go2[]] ;
+ hh:@[hopen; 5999; 0Ni]; if[null hh;  :go2[]] ;
  -1 "starting remote rdb: sync log directory" ;
  (neg hh) (`requestSync; 0); (neg hh)[]; 
  };
 
 go2:{
- if[not null hh; hclose hh; hh::0Ni] ;
+ hfs::.z.w;
  qlo: 0W^(first quote) `id ;
  tlo: 0W^(first trade) `id ;
+ if[not null hh; hclose hh; hh::0Ni] ;
 
  -1 "Load back data into rdb from log directory" ;
  rep[-2; 0] ;        /begin replaying log files
@@ -72,7 +73,7 @@ go2:{
  trade[`sym]: `g# trade `sym ;
  trade[`id]:  `u# trade `id ;
  if[h_servantof>0; (neg h_servantof) (-1; `initdate; (max trade `date) | max quote `date)] ; 
- cons::0b ;
+ cons::0b ; hfs::0Ni ;
  -2 "\n*** rdb ready ***\n" ;
  };
 

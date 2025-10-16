@@ -4,9 +4,10 @@
 /3. Announce itself as available to the "servantof" machine (if any).
 
 /usage: q launcher.q servantof-ip announce-port dir1 dir2 ...
-servantof: $[0=count .z.x; ""; .z.x 0] ;         /This program serves requests only from this ip address
-announce:  "J"$ $[0=count .z.x; ""; .z.x 1] ;    /Annouce IP of this host to servantof machine on this port number
-syncdirs:  2_ .z.x ;                             /Sync these directories to same path on servantof machine
+servantof: $[0=count .z.x; ""; .z.x 0] ;            /This program serves requests only from this ip address
+announce:  "J"$ $[0=count .z.x; ""; .z.x 1] ;       /Annouce IP of this host to servantof machine on this port number
+syncdirs:  2_ .z.x ;                                /Sync these directories to same path on servantof machine
+isHdb: 0<count ss[raze system "mounted"; "/data "]; /Hdb server has 2nd volume mounted at /data (needs different `finishSync msg)
 
 \l launchQ.q
 
@@ -36,6 +37,9 @@ doLaunch:{
 /When this message is received, the  directories are up-to-date as of the time of the request
 /In the mserve tick demo, this is needed in 2 places: before the hdb instances are restarted at "endofday",
 /and whenever an rdb instance starts up on a remote host.
+/The hdb finishSync message is sent to tickdemo.q so must pass though the mserve .z.ps,
+/and therefore needs a "-1" query id in order to be identified as a servant message.
+/The rdb finishSync needs to be sent without the -1 prefix.
 /Note: restarting timer sends next tick immediately 
 sync_flag:0; syncbegin:0Np; connected:0b ;
 requestSync:{[] 
@@ -43,10 +47,12 @@ requestSync:{[]
   if[null syncbegin; sync_flag::neg .z.w; syncnow[]] ;
  } ; 
 
+/Note: finishsync is the message sent back to launcher.q from the rsync shell script.
+/finishSync (capital S) is the message relayed back to sync_flag (the handle that sent the request).
 finishsync:{
-  -1 finishmsg[]; syncbegin::0Np;
+  if[sync_flag<>0; -1 finishmsg[]]; syncbegin::0Np;
   if[sync_flag>0; sync_flag::neg sync_flag; :syncnow[]];
-  if[sync_flag<0; sync_flag 0N!(-1; `finishSync; `$":", myip, ":5999"); sync_flag::0] ;
+  if[sync_flag<0; sync_flag {$[isHdb; -1,x; x]} (`finishSync; `$":", myip, ":5999"); sync_flag::0] ;
  };
 finishmsg:{ 
   a: "rsyncjob finished ", (string `long$ .000001* .z.p-syncbegin),"ms  flag=", (string sync_flag) ;
