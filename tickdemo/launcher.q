@@ -14,9 +14,9 @@ isHdb: 0<count ss[raze system "mounted"; "/data "]; /Hdb server has 2nd volume m
 /Async requests and responses
 .z.ps:{
   connected:1b ;
-  if[`launchQ=x 0; :doLaunch 1_ x] ;
-  if[`requestSync=x 0; :requestSync[] ] ;
-  if[`finishsync=x 0; :finishsync[] ] ;
+  if[`launchQ~x 0; :doLaunch 1_ x] ;
+  if[`requestSync~x 0; :requestSync[] ] ;
+  if[`finishsync~x 0; :finishsync[] ] ;
   '"unexpected command: ", .Q.s1 x  ;
  } ;
 
