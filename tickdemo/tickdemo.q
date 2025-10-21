@@ -21,9 +21,11 @@ servantMessage:{[id;cmd;arg]
   if[cmd~`hdbBready; if[0=0|restarting-::1;
     currentdate::nextdate; 
     {x (`startofday; y)}[;currentdate] each where h2addr[;2] like "rdb.q *" ; 
-  ]];
+    ls: @[system; "ls data/log/schema* 2>/dev/null"; ()] ;                     /move log files more than 2 days old to archive
+    ls: ls where ("D"$ -10#/:ls)< -2+ currentdate ;                            /this will cause the rsync job (w --delete)
+    {system "mv ", x, " data/archive"} each ls ;                               /to remove these log files from all servants
+  ]];                                                                          /now that they have been added to hdb
  };
-
 
 /To run without data comming in from feed.q, invoke this from console after startup.
 go:{if[null currentdate; {x (`go; 1)} each where h2addr[;2] like "rdb.q *"; :"sent 'go' message to rdb.q"]; "ready now"};

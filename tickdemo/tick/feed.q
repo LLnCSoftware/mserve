@@ -3,7 +3,7 @@ if[0=count .z.w; '"Usage: q tick/tick.q sendto timer msPerSimDay maxTradesPerDay
 /utilities needed to ingest command line arguments
 onems: `long$ 1e6; msPerDay:24*60*60000 ;
 inter2ms:{t:last x; v:"J"$ -1_ x; $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]} ;
-writeHiwFile:{ hiw 0: ("start=",string start; "quoteid=",string quoteid; "tradeid=",string tradeid)};
+writeHiwFile:{ hiw 0: ("start=",string start; "stop=", string stop; "quoteid=",string quoteid; "tradeid=",string tradeid)};
 readHiwFile:{a: flip "=" vs/: read0 hiw; (`$ a 0) set' parse each a 1} ;
 
 / Ingest command line arguments
@@ -16,12 +16,14 @@ maxn: "j"$ 1000 * maxn * interval % msPerDay ;                  /maximum trades 
 qpt:  "J"$ {$[0<count x; x; "2"]} ("/" vs .z.x 3) 1;            /average quotes per trade
 hiw: `$":", $[0<count .z.x 4; .z.x 4; "data/log"], "/feed.hiw"; /highwater file (starting timestamp, trade id, and quote id) 
 start: "P"$ $[0< count .z.x 5; .z.x 5; ""] ;                    /starting timestamp
+stop: "P"$ $[0< count .z.x 6; .z.x 6; ""] ;                     /ending timestamp
 
-/Starting timestamp should be specified ONLY when creating a NEW database
-/Otherwise it will come from the highwater file which also contains the starting
+/Starting and ending timestamp should be specified ONLY when creating a NEW database
+/Otherwise they will come from the highwater file which also contains the starting
 /sequence numbers for all tables (ie. quotes and trades) to be generated.
 /This ensures that regardless of the system being started and stopped
 /an unbroken sequence of timestamps and unique identifiers is generated.
+/Ending timestamp allows scheduling a stop before disk fills up.
 if[not null start; 
   if[0<count key hiw;
    -2 "Specifying start date would invalidate date/time sequence in existing data" ;
@@ -102,6 +104,7 @@ qid:{n:count first x;
  id: quoteid+ til n; quoteid::(last id)+1; (enlist id), x};
 
 feed:{ 
+  if[(not null stop) and start>=stop; -1 "stop: ", (string start), " >= ", (string stop); exit 0] ;
   h (".u.upd";`trade; tid dt t 1+ rand maxn);
   h (".u.upd";`quote; qid dt q 1+ rand qpt*maxn); 
   start+::interval*onems ;
