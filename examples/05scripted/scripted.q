@@ -103,6 +103,8 @@ cn_increment:0N; cn_interval:0N; cn_start:0Np;
 cn_phasein:`boolean$(); cn_phaseout:`boolean$(); cn_backupRT:(::); cn_backupCS:(::);
 cn_percentage:{0^ cn_increment* 1+ (`long$ .000001* .z.P-cn_start) div 60000|cn_interval} ;
 canaryFilter:{[bitvector]
+  bitvector&:: not null routingTable `h ;
+
   if[null cn_increment; :bitvector] ;                                                 /no canary
   if[cn_increment<0; -1 "phase-in holding at 100%"; :bitvector and not cn_phaseout] ; /canary holding at 100% 
   if[cn_increment=0; -1 "phase-in holding at 0%" ;  :bitvector and not cn_phasein]  ; /canary holding at 0% 

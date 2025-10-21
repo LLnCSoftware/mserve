@@ -53,8 +53,6 @@ restart:{[suffix]
   A: select from routingTable where stype like ("hdb", suffix) ;    /routing table rows for hdb servers to restart
   restarting::count A ; 
   -2 "restart hdb",suffix," ",(string restarting),"instances" ;
-  cn_phasein:: exec stype like ("hdb", suffix) from routingTable ;  /phasein bit vector for these rows.
-  cn_increment:: 0 ;                                                /start canary - holding at 0%. 
   hclose each abs A `h ;                                            /close handle for each server to be restarted.
   system "sleep 1" ;                                                /wait for connections to drop
   h:: h _/ A `h ;                                                    /remove these handles
@@ -65,7 +63,5 @@ restart:{[suffix]
   launchAll A ;                                                     /Launch new servers corresponding to these rows; then wait 5 sec.
   hdl: connectServant each A ;                                      /Connect to the new servers, obtaining new handles.
   update h:hdl from `routingTable where address in (A `address) ;   /set new handles in corresponding routing table rows.
-  cn_phasein:: (count routingTable)#0b ;                            /clear the phasein bit vector.
-  cn_increment:: 0N ;                                               /stop the canary.
  };
 

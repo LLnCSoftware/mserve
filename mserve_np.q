@@ -188,11 +188,15 @@ remotes:([]); /overridden in plugin "tickdemo.q" (handles used to message launch
 
 /Change location of queries outstanding on the dead servant to master
 .z.pc:{
+  -1 "mserve_np.q: disconnected handle ", (string x), " ", " " sv h2addr neg x;
 	update location:`master from `queries where qid in h@neg x; /reassign lost queries to master process (for subsequent re-assignment)
-	h::h _ (neg x); /remove dead servant handle from h
-	check[];
+	h::h _ (neg x); /remove dead servant handle from all "h dictionaries"
+  h2addr:: h2addr _ (neg x) ;
+  h2route:: h2route _ (neg x) ;
+  h2idle:: h2idle _ (neg x) ;
 	/if client handle went down, remove outstanding queries
 	delete from `queries where location=`master,client_handle=neg x;
+	check[];
  };
 
 / Purge completed queries from the table
