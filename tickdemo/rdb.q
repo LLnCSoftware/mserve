@@ -1,9 +1,10 @@
 / rdb - realtime database
-/ usage: q rdb.q schema log -p port
+/ usage: q rdb.q schema log tickport -p port
 
 
-\l tick/tplog.q                       /module to load back data from log files
-system "l ", "tick/",(.z.x 0),".q"    /table schema needed to accept data from log files.
+\l tick/tplog.q                       /module to load back data from log files (this uses args 0 and 1)
+system "l ", "tick/",(.z.x 0),".q";   /table schema needed to accept data from log files.
+tickport: .z.x 2 ;                    /port on to subscribe to tick.q (if blank run without tick.q).
 
 \l api.q                              /api common to rdb and hdb
 \l ../secure_invocation.q
@@ -26,10 +27,14 @@ upd:{[t;x]
  };
 
 /startup
+h:0Ni ;
+if[ not ""~tickport;
+  h: hopen `$":",(getenv `Q_SERVANTOF),":",tickport ;     /subscribe to tick.q - all tables all symbols.
+  h ".u.sub[`;`]" ;
+ ];
+
 quote_t: quote ;    /temporary tables for log replay, same schema
 trade_t: trade ;
-h: hopen `$":",(getenv `Q_SERVANTOF),":5001" ;     /subscribe to tick.q - all tables all symbols.
-h ".u.sub[`;`]" ;
 
 hh:0Ni; hfs:0Ni ;
 h_servantof:0Ni ;
@@ -90,8 +95,8 @@ startofday:{[dat]
   delete from `trade where date< -2+ dat ;
  } ;
 
-
 /util
 inter2ms:{t:last x; v:"J"$ -1_ x; $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]} ;
 
+if[""~tickport; go 1] ; /if no tick, don't wait for feed
 

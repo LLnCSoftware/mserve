@@ -1,5 +1,5 @@
 address,stype,sversion,condition,qfile
 localhost:5001,tick,1,0b,tick/tick.q schema data/log
-localhost:5002,rdb,1,loday>=-2,rdb.q schema data/log
-172.30.1.219:5003,hdbA,1,(hiday<=-2),hdb.q schema data/log data/hdbA
-172.30.1.219:5004,hdbB,1,(hiday<=-2),hdb.q schema data/log data/hdbB
+localhost:5002,rdb,1,loday>=-2,rdb.q schema data/log 5001
+172.30.1.219:5003,hdbA,1,(hiday<=-2),hdb.q schema data/log data/hdb A
+172.30.1.219:5004,hdbB,1,(hiday<=-2),hdb.q schema data/log data/hdb B
