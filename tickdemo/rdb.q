@@ -2,11 +2,12 @@
 / usage: q rdb.q schema log tickport -p port
 
 
-\l tick/tplog.q                       /module to load back data from log files (this uses args 0 and 1)
-system "l ", "tick/",(.z.x 0),".q";   /table schema needed to accept data from log files.
-tickport: .z.x 2 ;                    /port on to subscribe to tick.q (if blank run without tick.q).
+\l tick/tplog.q                          /module to load back data from log files (this uses args 0 and 1)
+system "l ", "tick/",(.z.x 0),".q";      /table schema needed to accept data from log files.
+tickport: .z.x 2 ;                       /port on to subscribe to tick.q (if blank run without tick.q).
+if["$"=first tickport; tickport:"5001"]; /if tickport substitution not satisfied, default to 5001.
 
-\l api.q                              /api common to rdb and hdb
+\l api.q                                /api common to rdb and hdb
 \l ../secure_invocation.q
 .z.ps:{
   if[cons; 0N!(.z.w; x 0; x 1; count x 2)];  /log to console
@@ -19,7 +20,7 @@ tickport: .z.x 2 ;                    /port on to subscribe to tick.q (if blank 
 .z.pg:{"Use Async"} ;
 
 /receive tick data
-startup:1b ; cons:0b ; 
+startup:1b ; ready:0b; cons:0b ; 
 upd:{[t;x]
   if[.z.w<>h; t:`$ (string t),"_t"] ; /upd from handle zero (or hfs) is log replay, store in temporay table
   insert[t;x] ; 
@@ -31,6 +32,7 @@ h:0Ni ;
 if[ not ""~tickport;
   h: hopen `$":",(getenv `Q_SERVANTOF),":",tickport ;     /subscribe to tick.q - all tables all symbols.
   h ".u.sub[`;`]" ;
+  -1 "rdb: subscribed to tick.q" ;
  ];
 
 quote_t: quote ;    /temporary tables for log replay, same schema
@@ -38,13 +40,17 @@ trade_t: trade ;
 
 hh:0Ni; hfs:0Ni ;
 h_servantof:0Ni ;
-servantof:{h_servantof:: x} ;
+servantof:{ 
+  h_servantof::x ; -1 "rdb:connected to tickdemo" ; 
+  if[ready; (neg h_servantof) (-1; `initdate; (max trade `date) | max quote `date)];
+ };
+
 go:{
  qlo: (first quote) `id ;
  tlo: (first trade) `id ;
  if[x; qlo: 0W^qlo; tlo: 0W^tlo] ;
  if[(null qlo) or (null tlo); :(::)] ;
- startup::0b ;
+ startup::0b ; -1 "rdb: go" ;
 
  /Attempt to open port 5999 on localhost. On a remote host this should be launcher.q
  /On local host (the mserve machine) there should be no launcher and this should fail.
@@ -65,7 +71,7 @@ go2:{
  tlo: 0W^(first trade) `id ;
  if[not null hh; hclose hh; hh::0Ni] ;
 
- -1 "Load back data into rdb from log directory" ;
+ -1 "rdb: Load back data from log directory" ;
  rep[-2; 0] ;        /begin replaying log files
  system "sleep 4" ;  /simulate long replay
 
@@ -78,7 +84,7 @@ go2:{
  trade[`sym]: `g# trade `sym ;
  trade[`id]:  `u# trade `id ;
  if[h_servantof>0; (neg h_servantof) (-1; `initdate; (max trade `date) | max quote `date)] ; 
- cons::0b ; hfs::0Ni ;
+ ready::1b; cons::0b ; hfs::0Ni ;
  -2 "\n*** rdb ready ***\n" ;
  };
 
@@ -98,5 +104,4 @@ startofday:{[dat]
 /util
 inter2ms:{t:last x; v:"J"$ -1_ x; $[t="s";1000*v; t="m";60000*v; t="h";60*60000*v; t="d";24*60*60000*v; "J"$x]} ;
 
-if[""~tickport; go 1] ; /if no tick, don't wait for feed
-
+if[""~tickport; go 1] ;

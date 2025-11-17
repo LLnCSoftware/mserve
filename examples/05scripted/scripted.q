@@ -104,7 +104,6 @@ cn_phasein:`boolean$(); cn_phaseout:`boolean$(); cn_backupRT:(::); cn_backupCS:(
 cn_percentage:{0^ cn_increment* 1+ (`long$ .000001* .z.P-cn_start) div 60000|cn_interval} ;
 canaryFilter:{[bitvector]
   bitvector&:: not null routingTable `h ;
-
   if[null cn_increment; :bitvector] ;                                                 /no canary
   if[cn_increment<0; -1 "phase-in holding at 100%"; :bitvector and not cn_phaseout] ; /canary holding at 100% 
   if[cn_increment=0; -1 "phase-in holding at 0%" ;  :bitvector and not cn_phasein]  ; /canary holding at 0% 
@@ -122,7 +121,7 @@ endPhaseIn:{ cn_increment::-1; cn_start::0Np; -1 "\n*****\n end phase-in - hold 
 / When canary in effect, screen responses for errors. Revert to original config when error count exceeds maximum. 
 cn_cnterr: 0 ;
 cn_maxerr: 3^ "J"$ getenv `CN_MAXERR ;
-filterResponse:{                                          /x= (id; result; info)
+canaryFailover:{                                          
   if[(0>=cn_increment) or all cn_phasein=0b; :x] ;        /No canary, 0%, or nothing to phase in -- just return
   if[10<>type x 1; :x; not "ERROR"~ upper 5# x 1; :x];    /Error is a string result strarting with ERROR; no error -- just return
   phasein: (routingTable `address) where cn_phasein ;     /Get phase in addresses from routing table
@@ -132,6 +131,7 @@ filterResponse:{                                          /x= (id; result; info)
   cn_increment::0; cn_start::0Np; 
   x                   /return response
  } ;
+filterResponse:canaryFailover ;                    
 
 /**** connect new servant (used by configuration editor) *****
 connectServant:{[route]
@@ -153,21 +153,32 @@ connectServant:{[route]
 /A more serious limitation is that there seems to be no way to supply arguments to the servers for such things
 /as the location of the database, except in the routing table csv file itself.
 /To allow servant arguments on the mserve command line we typically combine them with the servant path
-/in a single quoted argument: mserve_np.q 3 "server.q arg1 arg2.. ". 
-/We can do the same thing with scripted dispatch except the argument starts with the routing table rather than
-/a servant q-file: mserve_np.q "routing.csv arg1 arg2.. ", from which we can supply the arguments to 
-/all q-files in the routing.csv table. Arguments from the mserve command line will be appended to any
-/already supplied along with the q-file in the routing table.
+/in a single quoted argument: mserve_np.q 3 'server.q arg1 arg2.. '. 
+/We can do the same thing with scripted dispatch: mserve_np.q mserve_np.q 'routing.csv arg1 arg2.. '.
+/Except here the additional arguments specify substitutions to be made into the routing table.
+/This is used in the tickdemo to allow rdb to startup without data comming in from feed.q.
+/The rdb lines in the routing table will specify the port to connect to tick.q as $tick$,
+/and the command line will be mserve_np.q 'routingtable.csv tick=' to override the default of 5001'
 
-routingTable:("SSJ*S"; enlist ",") 0: `$":", resolve[getenv `LAUNCHQ_BASE] {(x?" ")#x} afile ; /read routing table from csv. 
-cn_phasein:cn_phaseout: (count routingTable)# 0b ;                /initialize phase in/out bitvectors to 0 of proper length.
+/ Allow subsitituions specified on command line in the routing table
+substitute:{[expr]
+  arg: " " vs afile ;
+  if[2>count arg; :expr] ;
+  k: {(x?"=")#x} each 1_ arg ;
+  v: {(1+ x?"=")_ x} each 1_ arg ;
+  k: {if["$"<>first x; x:"$",x]; if["$"<>last x; x:x,"$"]; x} each k ;
+  {[d;e;x] ssr[e; x; $[x in key d; d x; x]]}[k!v;]/ [expr; k]
+ };
+
+routingTable: read0 `$":", resolve[getenv `LAUNCHQ_BASE] {(x?" ")#x} afile ; /read routing table from csv 
+routingTable: ("SSJ*S"; enlist ",") 0: substitute each routingTable ;
+
+servant: (":" vs/: string routingTable `address) ,' enlist each (string routingTable `qfile) ;
+hosts: {$[x in ("localhost";"127.0.0.1");"";x]} each  distinct first (flip servant)
+cn_phasein:cn_phaseout: (count routingTable)# 0b ; /initialize phase in/out bitvectors to 0 of proper length.
 
 show routingTable ; 
 requestContextSource[routingTable `condition; routingDescriptor]; /request initial context source
-
-servant: (":" vs/: string routingTable `address);                 /servants to be launched by the mserve startup
-servant: servant ,' enlist each (string routingTable `qfile),\: {(x?" ")_x} afile ;
-hosts: {$[x in ("localhost";"127.0.0.1");"";x]} each  distinct first (flip servant)
 
 /Mserve callback provides handles to routing table
 /To allow loading the configuration editor before that occurs we must avoid initializing

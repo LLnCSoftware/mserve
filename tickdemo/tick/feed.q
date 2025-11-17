@@ -32,7 +32,8 @@ if[not null start;
   ] ;
   quoteid:1; tradeid:1; writeHiwFile[];
  ] ;
-if[null start; readHiwFile[] ;] 
+if[null start; readHiwFile[]] ; 
+if[null stop; stop:0Np] ;
  
 -1 "Starting feed.q... will send to port ", (string sendto), " every ", (string timer), " ms." ;
 -1 "Speed: ",(string `long$ msPerDay%msSimDay), "x;   Ms covered per send: ", (string interval)

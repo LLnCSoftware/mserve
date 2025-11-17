@@ -13,7 +13,8 @@ getRoutingCriteria:{[arg;opt]
 
 servantMessage:{[id;cmd;arg]
   -2 "tickdemo.q servant message: ", .Q.s1 (id; cmd; arg) ;
-  if[cmd~`initdate; currentdate:: arg; :(::)] ;
+  msgqueue::msgqueue, (string `int$ .z.T),"-", (str cmd), ";" ;
+  if[cmd~`initdate; nextdate:: currentdate:: arg; :(::)] ;
   if[cmd~`endofday; if[null currentdate; currentdate::arg]; if[nextdate<arg+1; nextdate::arg+1; requestSync[]; :(::)]] ;
   if[cmd~`finishSync; hclose remotes[arg]; remotes::remotes _ arg; if[0=count remotes; restart "A"]; :(::)] ;  
   if[null currentdate; :(::)]; 
@@ -25,6 +26,14 @@ servantMessage:{[id;cmd;arg]
     ls: ls where ("D"$ -10#/:ls)< -2+ currentdate ;                            /this will cause the rsync job (w --delete)
     {system "mv ", x, " data/archive"} each ls ;                               /to remove these log files from all servants
   ]];                                                                          /now that they have been added to hdb
+ };
+
+/Add record of servant messages received to response "info" dictionary using "filterResponse" stub in mserve_np.q
+/This stub has previously been overriden by "canaryFailover" in scripted.q, so invoke that at the end.
+msgqueue:"" ;
+filterResponse:{
+  x[2;`events]: msgqueue; msgqueue::"" ; 
+  canaryFailover x
  };
 
 /To run without data comming in from feed.q, invoke this from console after startup.
