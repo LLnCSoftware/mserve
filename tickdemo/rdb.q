@@ -50,7 +50,7 @@ go:{
  tlo: (first trade) `id ;
  if[x; qlo: 0W^qlo; tlo: 0W^tlo] ;
  if[(null qlo) or (null tlo); :(::)] ;
- startup::0b ; -1 "rdb: go" ;
+ startup::0b ; -1 "rdb: go ", str x ;
 
  /Attempt to open port 5999 on localhost. On a remote host this should be launcher.q
  /On local host (the mserve machine) there should be no launcher and this should fail.
