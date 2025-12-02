@@ -11,13 +11,14 @@ getRoutingCriteria:{[arg;opt]
   ([loday:(first d)-currentdate ; hiday:(last d)-currentdate])
  } ;
 
+eventBaseTime:.z.P ;
 servantMessage:{[id;cmd;arg]
   -2 "tickdemo.q servant message: ", .Q.s1 (id; cmd; arg) ;
-  msgqueue::msgqueue, (string `int$ .z.T),"-", (str cmd), ";" ;
+  msgqueue::msgqueue, (string `long$ (.z.P-eventBaseTime) * .000001),"-", (str cmd), ";" ;
   if[cmd~`initdate; nextdate:: currentdate:: arg; :(::)] ;
   if[cmd~`endofday; if[null currentdate; currentdate::arg]; if[nextdate<arg+1; nextdate::arg+1; requestSync[]; :(::)]] ;
   if[cmd~`finishSync; hclose remotes[arg]; remotes::remotes _ arg; if[0=count remotes; restart "A"]; :(::)] ;  
-  if[null currentdate; :(::)]; 
+  if[(null currentdate)|currentdate=nextdate; :(::)]; 
   if[cmd~`hdbAready; if[0=0|restarting-::1; restart "B"]; :(::)] ;
   if[cmd~`hdbBready; if[0=0|restarting-::1;
     currentdate::nextdate; 
@@ -32,7 +33,9 @@ servantMessage:{[id;cmd;arg]
 /This stub has previously been overriden by "canaryFailover" in scripted.q, so invoke that at the end.
 msgqueue:"" ;
 filterResponse:{
-  x[2;`events]: msgqueue; msgqueue::"" ; 
+  x[2;`events]: msgqueue;  
+  x[2;`eventBaseTime]: `datetime$ eventBaseTime ;
+  msgqueue::""; eventBaseTime:: .z.P ;
   canaryFailover x
  };
 
