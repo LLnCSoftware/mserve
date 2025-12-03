@@ -2,7 +2,7 @@
 \l edconfig.q 
 currentdate:0Nd; nextdate:0Nd; 
 getRoutingCriteria:{[arg;opt] 
-  d:arg 1; 0N!(`getRoutingCriteria; d; currentdate); 
+  d:arg 1; /0N!(`getRoutingCriteria; d; currentdate); 
   /If request arrives before rdb receives a record from feed.q, currentdate will be unset because rdb.q has not initialized
   if[null currentdate; '"rdb.q not ready; (invoke 'go[]' from console)"];
   /Route based on offset from current date
@@ -14,7 +14,7 @@ getRoutingCriteria:{[arg;opt]
 eventBaseTime:.z.P ;
 servantMessage:{[id;cmd;arg]
   -2 "tickdemo.q servant message: ", .Q.s1 (id; cmd; arg) ;
-  msgqueue::msgqueue, (string `long$ (.z.P-eventBaseTime) * .000001),"-", (str cmd), ";" ;
+  msgqueue::msgqueue, (string `long$ (.z.P-eventBaseTime) * .000001),":", (str cmd), ";" ;
   if[cmd~`initdate; nextdate:: currentdate:: arg; :(::)] ;
   if[cmd~`endofday; if[null currentdate; currentdate::arg]; if[nextdate<arg+1; nextdate::arg+1; requestSync[]; :(::)]] ;
   if[cmd~`finishSync; hclose remotes[arg]; remotes::remotes _ arg; if[0=count remotes; restart "A"]; :(::)] ;  
