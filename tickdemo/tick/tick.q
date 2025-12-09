@@ -6,6 +6,9 @@ if[(first system "pwd") like "*/tick"; system "cd ../"];   /If invoked from 'tic
 system "l tick/",(src:first .z.x,enlist"schema"),".q"; /default schema file changed sym -> schema  
 if[not system"p";system"p 5001"] ;                     /default port changed 5010 -> 5001
 
+/For mserve: if Q_SERVANTOF is set, terminate on disconnect.
+if[0< count getenv `Q_SERVANTOF; .z.po:{.z.pc:{exit 0}}]; 
+
 \l tick/u.q                                            /extend the .u namespace from u.q (pub-sub)
 \d .u                                                  
 
