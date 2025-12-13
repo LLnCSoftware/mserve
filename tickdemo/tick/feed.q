@@ -85,12 +85,12 @@ batch len
 / =========================================================
 t:{ 
  if[not (qn+x)<count qx;batch len];
- i:qx n:qn+til x;qn+:x;
+ i:qx n:(qn+til x) mod len; qn+:x;
  (s i;qp n;`int$x?99;1=x?20;x?c;e i)}
 
 q:{ 
  if[not (qn+x)<count qx;batch len];
- i:qx n:qn+til x;p:qp n;qn+:x;
+ i:qx n:(qn+til x) mod len;  p:qp n;  qn+:x;
  (s i;p-qb n;p+qa n;vol x;vol x;x?m;e i)}
 
 dt:{n:neg count first x; 
