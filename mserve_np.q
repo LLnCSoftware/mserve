@@ -91,7 +91,7 @@ queries:([qid:`u#`int$()]
 send_query:{[hdl; qid]
   if[0<hdl; -1 "****ERROR: positive handle ", (string hdl), " will try negation"; hdl:neg hdl] ;
 	if[not null qid;
-    -1 ts[], "-> Forward Request: #", (str queries[qid;`client_qid]), " to ", {x[0],":",x[1], "  (", x[2], ")"} h2addr hdl ;
+    -1 logTs[], "-> Forward Request: #", (str queries[qid;`client_qid]), " to ", {x[0],":",x[1], "  (", x[2], ")"} h2addr hdl ;
   	query:queries[qid;`query];
     options: queries[qid; `client_options];
   	h[hdl],:qid;
@@ -119,7 +119,7 @@ send_result:{[qid;result;info]
   if[ 99<>type info; info: `qsvr`elapsed`execution!(servant_address; total_elapsed; servant_elapsed) ];
   info,: `route`backlog`remaining!(route; backlog; remaining) ;
   response: filterResponse(client_queryid; result; info) ;
-  -1 ts[], "-> Return Response: #", (str response 0), "  ", describeResult[response 1; response 2] ;
+  -1 logTs[], "-> Return Response: #", (str response 0), "  ", describeResult[response 1; response 2] ;
 	client_handle response ;
   h2idle[neg .z.w]: .z.P ;
  }; 
@@ -157,9 +157,10 @@ getArguments:{[cmd] if[10=type cmd; cmd:parse cmd]; if[(::)~cmd 1; :1#cmd]; arg:
 getrole:{`}; /overridden in plugin "authent.q" (looks up role for .z.u in users table 
 remotes:([]); /overridden in plugin "tickdemo.q" (handles used to message launcher.q for which response is expected)
 .z.ps:{[x] 
+  if[lastMile<=.z.P-milestone; logMilestone[]];       
 	$[not(w:neg .z.w)in (key h), neg value remotes;
 	[ /request - (client qid; query; options)	
-    -1 ts[], "-> Receive Request: #", (" " sv .Q.s1 each x) ; 
+    -1 logTs[], "-> Receive Request: #", (" " sv .Q.s1 each x) ; 
     cqid:x[0]; query:x[1]; options: x[2]; if[99<>type options; options:([])]; /options must be a dictionary
     sqid: 1^1+exec last qid from queries;                                     /server id for new query
     bklg: exec count i from queries where location in `master`servant ;       /queries in queue ahead of this one
@@ -200,17 +201,28 @@ remotes:([]); /overridden in plugin "tickdemo.q" (handles used to message launch
  };
 
 / Purge completed queries from the table
-nextCheck:0Wp ;  /check on timer (set by dispatch algo) default +infinity (never check)
+nextCheck:0Wp ;  /check on timer - defalut +infinity ie. never check (used by match.q -should convert to use new timer facility) 
 lastPurge:.z.P ;  /purge completed queries every 5 minutes
 purgeCompletedMs:60000* 30^ "J"$ getenv `MSERVE_PURGE ;  /default 30 minutes
-purgeCompleted:{ delete from `queries where location=`client, purgeCompletedMs< tms .z.P - time_returned } ;
+purgeCompleted:{lastPurge::.z.P; delete from `queries where location=`client, purgeCompletedMs< tms .z.P - time_returned } ;
 
+/new timer facility
+timerSchedule:([] ts:`timestamp$(); cmd:(); arg:()) ; 
+timerNext:{ timerSkip:1b; system "t ", string 10| $[0=count timerSchedule; timerMax; timerMax & tms sched[0;`ts]-.z.P]} ; 
+timerAdd:{[ms;cmd] sched:: `ts xasc sched, `ts`cmd!(.z.P+1000000*ms; cmd); timerNext[]} ;
+
+timerSkip:0b ; lastMile:0Np; milestone:0D00:01:00; timerMax:5000;
 .z.ts:{
-  if[nextCheck<.z.P; check[]] ;
-  if[600000<.z.P-lastPurge; purgeCompleted[]; lastPurge::.z.P]
- };
-\t 5000
+  if[timerSkip; timerSkip::0b; :(::)] ; /reject first call immed after timer set.
+  if[nextCheck<=.z.P; check[]] ; /used ONLY by match.q - new code use timerAdd.
+  if[lastPurge<=.z.P-purgeCompletedMs; purgeCompleted[]] ;
 
+  t:timerSchedule 0; 
+  if[(.z.P>=t `ts)&(0Np<>t `ts); @[t `cmd; t `arg]; timerSchedule::1_ timerSchedule] ;
+  timerNext[] ;
+ } ;
+system "t ", string timerMax ;
+  
 / Launch to servants
 / expect "launcher" listening on port 5999 on each host other than "localhost".
 servant_env:"Q_SERVANTOF='", (ip2string .z.a), "' Q_PLUGINS='", (getenv `Q_PLUGINS), "'";
@@ -231,14 +243,11 @@ launch:{
 
 /****** Formatting for log messages *******
 
-/timestamp
-lastout:0Np ;
-addMinutes:{y+ x*3600000000000} ; /x*60*60000*1000000
-ts:{
-  stime:.z.P ;
-  if[lastout< addMinutes[-15] stime; lastout::stime; -1  ssr[;"D";"  "] -10_ (string stime)];
-  14_ -6_ string .z.P 
- };
+/ Display "date time" at top of each 15 minutes.
+logMilestone:{ts:milestone xbar .z.P; lastMile::ts; -1 "\n", ssr[;"D";"  "] -10_ string ts} ; 
+
+/ Display "min:sec.ms" at start of each message
+logTs:{ 14_ -6_ string .z.P } ;
 
 /describe result
 describeResult:{[x;y]
@@ -291,7 +300,7 @@ h:() ;
 
 / hopen handle to each servant
 -1 "Connect to servants" ;
-h:{neg hopen `$":",( x 0),":", (x 1)} each servant;
+h:{neg hopen 0N!`$":",( x 0),":", (x 1)} each servant;
 readyCallback h ;
 -1 "OK" ;
 

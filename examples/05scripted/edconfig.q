@@ -27,6 +27,13 @@ if[ not `routingTable in key `.;
   h2route: (`int$())!`symbol$() ;     /map handle to routing symbol
   h2idle:  (`int$())!`timestamp$() ;  /map handle to idle timestamp
 
+  launchAll:{[routing]
+    servants: {(":" vs string x `address), enlist string x `qfile} each routing ; 
+    lh: launch each servants ;
+    system "sleep 5" ;
+    {if[not null x; hclose x]} each lh ;  /close handles to launcher on remote hosts.
+   };
+
   connectServant:{[route]
     /newh: neg hopen hsym route `address ;
     newh: -1+ min ed_buffer `h ;
@@ -228,13 +235,6 @@ applyChanges:{[pct_increment; per_interval]
   alterRoutingReq[canary; ed_buffer] ; 
   clearChanges[] ;
   `ok
- };
-
-launchAll:{[routing]
-  servants: {(":" vs string x `address), enlist string x `qfile} each routing ; 
-  lh: launch each servants ;
-  system "sleep 5" ;
-  {if[not null x; hclose x]} each lh ;  /close handles to launcher on remote hosts.
  };
 
 /**** Installation/Phase-In controls for new routing table - typically invoked manually via editor *****

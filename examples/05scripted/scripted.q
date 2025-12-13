@@ -133,7 +133,23 @@ canaryFailover:{
  } ;
 filterResponse:canaryFailover ;                    
 
-/**** connect new servant (used by configuration editor) *****
+/**** servant managment - for configuration editor *****
+/ The original mserve_np.q would sleep for 5 seconds after launching its servants.
+/ That was ok when servants were only launched at startup, but to support hot editing
+/ of the routing table, servants need to start up while queries are being processed,
+/ and its not acceptable to to pause dispatch for that long.
+/ There will still be a 5 second pause at startup, but when servants are launched
+/ after startup, the pause will be implemented using the timer, not sleep.
+
+/ launch all servants from a subset of the routing table
+launchAll:{[routing]
+  servants: {(":" vs string x `address), enlist string x `qfile} each routing ; 
+  lh: launch each servants ;
+  system "sleep 5" ;
+  {if[not null x; hclose x]} each lh ;  /close handles to launcher on remote hosts.
+ }
+
+/connect new servant
 connectServant:{[route]
   newh: neg hopen hsym route `address ;
   h[newh]:() ;
