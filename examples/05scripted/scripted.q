@@ -95,15 +95,15 @@ restrictFallback:{[bits]
 /The handle dictionary may be in a different order because the routing table was edited. 
 /By evaluating "h" on the routingTables "h" column, we get the h[] values in routing table order.
 /Handles mapped to an empty list are not in use, i.e. not busy
-/Return bit vector corresponding to routingTable rows, where 1 means "not busy"
-notbusyBitVector:{ 0= count each h routingTable `h};
+/Handles which are null in the routing table will also be mapped to an empty list, but are not currently available.
+/Return bit vector corresponding to routingTable rows, where 1 means "not busy" and "available"
+notbusyBitVector:{ (0= count each h routingTable `h) and (not null each routingTable `h) };
 
 /**** Canary Filter ******
 cn_increment:0N; cn_interval:0N; cn_start:0Np; 
 cn_phasein:`boolean$(); cn_phaseout:`boolean$(); cn_backupRT:(::); cn_backupCS:(::);
 cn_percentage:{0^ cn_increment* 1+ (`long$ .000001* .z.P-cn_start) div 60000|cn_interval} ;
 canaryFilter:{[bitvector]
-  bitvector&:: not null routingTable `h ;
   if[null cn_increment; :bitvector] ;                                                 /no canary
   if[cn_increment<0; -1 "phase-in holding at 100%"; :bitvector and not cn_phaseout] ; /canary holding at 100% 
   if[cn_increment=0; -1 "phase-in holding at 0%" ;  :bitvector and not cn_phasein]  ; /canary holding at 0% 
@@ -133,7 +133,7 @@ canaryFailover:{
  } ;
 filterResponse:canaryFailover ;                    
 
-/**** servant managment - for configuration editor *****
+/**** servant managment - for configuration editor and restarting serants *****
 / The original mserve_np.q would sleep for 5 seconds after launching its servants.
 / That was ok when servants were only launched at startup, but to support hot editing
 / of the routing table, servants need to start up while queries are being processed,
@@ -141,17 +141,31 @@ filterResponse:canaryFailover ;
 / There will still be a 5 second pause at startup, but when servants are launched
 / after startup, the pause will be implemented using the timer, not sleep.
 
-/ launch all servants from a subset of the routing table
+/ "launchAll" will launch new servants from a subset of the routing table,
+/ replacing the previous handle in the specified routing object (not the live routing table)
+/ with the launcher handle for each remote host, or null for localhost.
+/ The routing object is returned so that it can be passed to "connectAll" 
+/ after waiting 5 seconds on the timer. 
+
+/ "connectAll" will close any handles >0 in the specified routing object
+/ It will then obtain new handles for all servants via hopen, which will be set in the (live) routing table.
+
 launchAll:{[routing]
   servants: {(":" vs string x `address), enlist string x `qfile} each routing ; 
-  lh: launch each servants ;
-  system "sleep 5" ;
-  {if[not null x; hclose x]} each lh ;  /close handles to launcher on remote hosts.
- }
+  hh: launch each servants ;  
+  update h:hh from routing
+ };
+
+connectAll:{[routing]
+   -2 "connect to ",(string count routing), " newly launched instances" ;
+   hclose each abs (routing `h) where 0< routing `h ;
+   hdl:connectServant each routing ;
+   update h:hdl from `routingTable where address in (routing `address) ;
+ };
 
 /connect new servant
 connectServant:{[route]
-  newh: neg hopen hsym route `address ;
+  newh: neg hopen 0N!hsym route `address ;
   h[newh]:() ;
   h2addr[newh]: {(":" vs string x `address), enlist string x `qfile} route ;
   h2route[newh]: enlist () ;

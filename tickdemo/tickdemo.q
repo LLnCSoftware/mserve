@@ -21,7 +21,8 @@ servantMessage:{[id;cmd;arg]
   if[(null currentdate)|currentdate=nextdate; :(::)]; 
   if[cmd~`hdbAready; if[0=0|restarting-::1; restart "B"]; :(::)] ;
   if[cmd~`hdbBready; if[0=0|restarting-::1;
-    currentdate::nextdate; 
+    currentdate::nextdate;
+    msgqueue::msgqueue, (string `long$ (.z.P-eventBaseTime) * .000001),":startofday;" ; 
     {x (`startofday; y)}[;currentdate] each where h2addr[;2] like "rdb.q *" ; 
     ls: @[system; "ls data/log/schema* 2>/dev/null"; ()] ;                     /move log files more than 2 days old to archive
     ls: ls where ("D"$ -10#/:ls)< -2+ currentdate ;                            /this will cause the rsync job (w --delete)
@@ -63,19 +64,26 @@ requestSync:{[]
 /Restart hdb.q on the hdbA or hdbB database; to ingest new data from tick.q log.
 restarting: 0;
 restart:{[suffix]
-  if[restarting<>0; -2 "Warning: previous hdb restart not completed: ", (string restarting), " missing callbacks"];
-  A: select from routingTable where stype like ("hdb", suffix) ;    /routing table rows for hdb servers to restart
-  restarting::count A ; 
-  -2 "restart hdb",suffix," ",(string restarting),"instances" ;
-  hclose each abs A `h ;                                            /close handle for each server to be restarted.
-  system "sleep 1" ;                                                /wait for connections to drop
-  h:: h _/ A `h ;                                                    /remove these handles
-  h2addr:: h2addr _/ A `h ;                                          / from all "h" dictionaries
-  h2route:: h2route _/ A `h ;                                        / ..
-  h2idle:: h2idle _/ A `h ;                                          / ..
-  update h:0Ni from `routingTable where address in (A `address) ;   /remove these handles from the routing table rows.
-  launchAll A ;                                                     /Launch new servers corresponding to these rows; then wait 5 sec.
-  hdl: connectServant each A ;                                      /Connect to the new servers, obtaining new handles.
-  update h:hdl from `routingTable where address in (A `address) ;   /set new handles in corresponding routing table rows.
+  if[restarting<>0; -2 "\nWarning: previous hdb restart not completed: ", (string restarting), " missing callbacks\n"];
+  routing: select from routingTable where stype like ("hdb", suffix) ;  /get routing table rows to be restartred
+  update h:0Ni from `routingTable where address in (routing `address) ; /suppress dispatch by clearing handles in live routing table.
+  restarting::count routing ;                                           /number of hdbXready callbacks to expect
+  -2 "\nrestart hdb",suffix," ",(string restarting)," servants\n" ; 
+  timerAdd[1000; closeOld; routing] ;
  };
+
+closeOld:{[routing]
+  if[ any 0<count each h routing `h; timerAdd[1000; closeOld; routing]] ; /Wait until any queries on these handles finish
+  -2 "\ndisconnect hdb servants to be restarted\n" ;
+  hclose each 0N!abs routing `h ;                           /close all handles - servants terminate on disconnect
+  h::h _/ (routing `h);                                      /remove handles from h dictionaries.
+  h2addr:: h2addr _/ (routing `h) ;                          /Note: .z.pc does not fire for handles closed locally.
+  h2route:: h2route _/ (routing `h) ;
+  h2idle:: h2idle _/  (routing `h) ;                         
+  timerAdd[1000; doLaunch; routing] ;                       /After 1 second, start new servants
+ };
+
+doLaunch:{[routing]
+  timerAdd[5000; connectAll; launchAll routing] ;          /launch new servers; connect to them after 5 seconds.
+ };                                                                        
 

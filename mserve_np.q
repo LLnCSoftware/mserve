@@ -190,8 +190,10 @@ remotes:([]); /overridden in plugin "tickdemo.q" (handles used to message launch
 /Change location of queries outstanding on the dead servant to master
 .z.pc:{
   -1 "mserve_np.q: disconnected handle ", (string x), " ", " " sv h2addr neg x;
-	update location:`master from `queries where qid in h@neg x; /reassign lost queries to master process (for subsequent re-assignment)
-	h::h _ (neg x); /remove dead servant handle from all "h dictionaries"
+  /reassign lost queries to master process (for subsequent re-assignment)
+	update location:`master from `queries where qid in h@neg x, location=`servant; 
+  /remove dead servant handle from all "h dictionaries"
+	h::h _ (neg x); 
   h2addr:: h2addr _ (neg x) ;
   h2route:: h2route _ (neg x) ;
   h2idle:: h2idle _ (neg x) ;
@@ -208,8 +210,8 @@ purgeCompleted:{lastPurge::.z.P; delete from `queries where location=`client, pu
 
 /new timer facility
 timerSchedule:([] ts:`timestamp$(); cmd:(); arg:()) ; 
-timerNext:{ timerSkip:1b; system "t ", string 10| $[0=count timerSchedule; timerMax; timerMax & tms sched[0;`ts]-.z.P]} ; 
-timerAdd:{[ms;cmd] sched:: `ts xasc sched, `ts`cmd!(.z.P+1000000*ms; cmd); timerNext[]} ;
+timerNext:{ timerSkip:1b; system "t ", string 10| $[0=count timerSchedule; timerMax; timerMax & tms timerSchedule[0;`ts]-.z.P]} ; 
+timerAdd:{[ms;cmd;arg] timerSchedule:: `ts xasc timerSchedule, `ts`cmd`arg!(.z.P+1000000*ms; cmd; arg); timerNext[]} ;
 
 timerSkip:0b ; lastMile:0Np; milestone:0D00:01:00; timerMax:5000;
 .z.ts:{
@@ -218,7 +220,7 @@ timerSkip:0b ; lastMile:0Np; milestone:0D00:01:00; timerMax:5000;
   if[lastPurge<=.z.P-purgeCompletedMs; purgeCompleted[]] ;
 
   t:timerSchedule 0; 
-  if[(.z.P>=t `ts)&(0Np<>t `ts); @[t `cmd; t `arg]; timerSchedule::1_ timerSchedule] ;
+  if[(.z.P>=t `ts)&(0Np<>t `ts); timerSchedule::1_ timerSchedule;  @[t `cmd; t `arg]] ;
   timerNext[] ;
  } ;
 system "t ", string timerMax ;

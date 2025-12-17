@@ -219,9 +219,14 @@ applyChanges:{[pct_increment; per_interval]
 
   /launch and connect "phasein" servers; capture handles
   routing:  select from ed_buffer where address in ed_phasein ;
-  launchAll routing ;
-  hdl: connectServant each routing ;
-  update h:hdl from `ed_buffer where address in routing `address ;
+  if[0=count routing; :applyChanges2[pct_increment; per_interval; ()]];
+
+  routing: launchAll routing ;  /launch servants, setting remote launcher handles in returned routing segment
+  timerAdd[5000; applyChanges2[percent_increment; per_interval]; routing] ;  /call applyChanges2 after 5 seconds on the timer.
+ } ;
+
+applyChanges2:{[pct_increment; per_interval; routing]
+  connectAll routing ;  /connectAll closes (positive) remote launcher handles, then sets real (negative) handles obtained via hopen. 
 
   /set canary parameters
   no_canary: any null (pct_increment; per_interval) ;
