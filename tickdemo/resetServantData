@@ -1,0 +1,2 @@
+#!/bin/bash
+python3 reset_data.py delete /home/servant/mserve/tickdemo/data/hdb/ 2026.08.21 2030.01.01
