@@ -28,6 +28,9 @@ doLaunch:{
   launchQ[x 0; x 1; x 2] ;
  } ;
 
+/Drop disk cache. Called by batchmark xapi (synchronously) when warmup=0 at the start of each new batch trial.
+decache:{0N!"decache";  system "sync ; sudo echo 3 | sudo tee /proc/sys/vm/drop_caches";} ;
+
 /The rsync job runs on the timer, once every 2 minutes
 /To ensure directories are up-to-date as of a given point in time, we provide a "requestSync" command.
 /This always starts a new rsync operation, if one is running already, a new one is started as soon as the old one finishes.
