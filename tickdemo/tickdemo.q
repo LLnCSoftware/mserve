@@ -17,9 +17,9 @@ servantMessage:{[id;cmd;arg]
   msgqueue::msgqueue, (string `long$ (.z.P-eventBaseTime) * .000001),":", (str cmd), ";" ;
   if[cmd~`initdate; nextdate:: currentdate:: arg; :(::)] ;
   if[cmd~`endofday; if[null currentdate; currentdate::arg]; if[nextdate<arg+1; nextdate::arg+1; shutdownA[]; :(::)]] ;
-  if[cmd~`finishSync; hclose remotes[arg]; remotes::remotes _ arg; if[0=count remotes; startupA]; :(::)] ;  
+  if[cmd~`finishSync; hclose remotes[arg]; remotes::remotes _ arg; if[ 0=count remotes; (doLaunch "A")[] ]; :(::)] ;  
   if[(null currentdate)|currentdate=nextdate; :(::)]; 
-  if[cmd~`hdbAready; if[0=0|restarting-::1; restartB[]]; :(::)] ;
+  if[cmd~`hdbAready; if[0=0|restarting-::1; restartB[] ]; :(::)] ;
   if[cmd~`hdbBready; if[0=0|restarting-::1;
     currentdate::nextdate;
     msgqueue::msgqueue, (string `long$ (.z.P-eventBaseTime) * .000001),":startofday;" ; 
@@ -68,7 +68,7 @@ shutdownA:{
 /Wait for all queries on specified routing table rows to finish, then close the corresponding server connections.
 /Invoke the specified function 1 second after closing.
 closeThen:{[fn;routing]
- if[ any 0<count each h routing `h; timerAdd[1000; closeOld; routing]] ; /Wait until any queries on these handles finish
+ if[ any 0<count each h routing `h; timerAdd[1000; closeThen[fn;]; routing]] ; /Wait until any queries on these handles finish
   if[restarting<>0; -2 "Warning: previous hdb restart not completed: ", (string restarting), " missing callbacks"];
   -2 "disconnect hdb servants to be restarted" ;
   hclose each 0N!abs routing `h ;                     /close all handles - servants terminate on disconnect
@@ -76,7 +76,6 @@ closeThen:{[fn;routing]
   h2addr:: h2addr _/ (routing `h) ;                   /Note: .z.pc does not fire for handles closed locally.
   h2route:: h2route _/ (routing `h) ;
   h2idle:: h2idle _/  (routing `h) ;                         
-  -2 "\n " ;
   timerAdd[1000; fn; routing] ;                       /After 1 second, start new servants
  };
 
