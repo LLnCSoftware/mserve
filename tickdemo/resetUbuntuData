@@ -1,7 +1,17 @@
 #!/bin/bash
-python3 reset_data.py delete /home/ubuntu/mserve/tickdemo/data/log/ 2026.08.23 2030.01.01
-python3 reset_data.py delete /home/ubuntu/mserve/tickdemo/data/archive/ 2026.08.23 2030.01.01
+echo "---one---"
+python3 reset_data.py delete /home/ubuntu/mserve/tickdemo/data/log/schema 2026.08.23 2030.01.01
+
+echo ""
+echo "---two---"
+python3 reset_data.py delete /home/ubuntu/mserve/tickdemo/data/archive/schema 2026.08.23 2030.01.01
+
+echo ""
+echo "---three---"
 python3 reset_data.py ../log /home/ubuntu/mserve/tickdemo/data/archive/schema 2026.08.20 2026.08.22
-rm -f /home/ubuntu/tickdemo/data/log/feed.hiw
-cp -f /home/ubuntu/tickdemo/data/archive/feed.hiw.save /home/ubuntu/tickdemo/data/log/feed.hiw
+
+echo ""
+echo "---four---" 
+rm -f /home/ubuntu/mserve/tickdemo/data/log/feed.hiw
+cp -f /home/ubuntu/mserve/tickdemo/data/archive/feed.hiw.save /home/ubuntu/mserve/tickdemo/data/log/feed.hiw
 
