@@ -8,11 +8,16 @@ lastdate: {$[x=-0Wd; 0Nd; x]} max "D"$ -10#/: @[system; "ls ", (.z.x 1),"/", (.z
   t:tables[]; db:$[`dbpath in key `.; `$ last "/" vs dbpath; `rdb] ; 
   ([] db:(count t)#db; table:t) ,' raze {select rows:count date, beg:min date+time, end:max date+time from x} each t
  } ;
+.api.spread:{[d;s]
+  if[0=count d; d: @[;`date] select max date from trade]; if[1=count d; d: raze (d; d)]; d:int2date d;
+  if[s~`; :select quotes:count i, spread:avg ask-bid, excess:(sum asize)-sum bsize by sym from quote where date within d]; 
+  select quotes:count i, spread:avg ask-bid, excess:(sum asize)-sum bsize by sym from quote where date within d, sym in s ;
+ } ; 
 .api.vwap:{[d;s]
   if[0=count d; d: @[;`date] select max date from trade]; if[1=count d; d: raze (d; d)]; d:int2date d;
   if[s~`; :select trades:count i, sum size, vwap:size wavg price by sym from trade where date within d]; 
   select trades:count i, sum size, vwap:size wavg price by sym from trade where date within d, sym in s
- } 
+ } ;
 .api.vwapd:{[d;s;w]
   if[0=count d; d: @[;`date] select max date from trade]; if[1=count d; d: raze (d; d)]; d:int2date d;
   if[s~`; :select trades:count i, sum size, vwap:size wavg price by sym, w xbar date from trade where date within d]; 
