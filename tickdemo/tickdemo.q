@@ -52,7 +52,7 @@ go:{if[null currentdate; {x (`go; 1)} each where h2addr[;2] like "rdb.q *"; :"se
 /This means we need to:
 /When endoday received: shut down the hdbA servers, wait a second, send the requestSync message
 /When finishSync received, launch the hdbA servers, wait 5 seconds, and connect to them.
-/When hdb Aready received, shut down the hdbB servers, wait a second, re-launch them, wait 5 seconds, and connect.
+/When hdbAready received, shut down the hdbB servers, wait a second, re-launch them, wait 5 seconds, and connect.
 /When there are no remote hdb servers,
 /Omit the requestSync/finishSync and relaunch the hdbA servers a second after disconnecting them.
 
@@ -68,7 +68,7 @@ shutdownA:{
 /Wait for all queries on specified routing table rows to finish, then close the corresponding server connections.
 /Invoke the specified function 1 second after closing.
 closeThen:{[fn;routing]
- if[ any 0<count each h routing `h; timerAdd[1000; closeThen[fn;]; routing]] ; /Wait until any queries on these handles finish
+ if[ any 0<count each h routing `h; :timerAdd[1000; closeThen[fn;]; routing]] ; /Wait until any queries on these handles finish
   if[restarting<>0; -2 "Warning: previous hdb restart not completed: ", (string restarting), " missing callbacks"];
   -2 "disconnect hdb servants to be restarted" ;
   hclose each 0N!abs routing `h ;                     /close all handles - servants terminate on disconnect
