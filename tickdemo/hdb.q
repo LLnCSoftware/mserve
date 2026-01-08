@@ -36,7 +36,7 @@ rep[lastday+1; -2] ;
 
 ![`.; (); 0b; tables[]];   /delete the in-memory tables
 system "l ", dbpath  ;     /load the partitioned database on disk
--2 "Database ", dbpath, " opened" ;
+-2 "Database ", dbpath, " opened s=", string system "s" ;
 
 servantof:{[h_servantof]
   /0N!"mserve connect hdb.q: ",dbpath ;
