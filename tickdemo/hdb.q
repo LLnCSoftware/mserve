@@ -12,7 +12,11 @@ if[0=count suffix; '"Usage: q hdb.q schema log database-path suffix"];
 
 /startup
 /Override repDayEnd in tplog.q to append each complete day to database
-repDayEnd:{[date] repDayEndTable[date;] each tables[] ;} 
+repDayEnd:{[date] 
+  repDayEndTable[date;] each tables[] ;
+  if[restore_mode; system "rm ",(.z.x 1),"/",(.z.x 0), string d] ; /when restoring, delete file after use
+ }; 
+
 repDayEndTable:{[d;t]
   /-2 "Write table ", (string t), " to date ", string d ;
   symrows: group t `sym ;                     /get row indexes for each symbol
@@ -22,7 +26,6 @@ repDayEndTable:{[d;t]
   @[directory; `sym; `p#] ;                   /set parted attribute on sym
   @[directory; `id; `u#] ;                    /set unique attribute on id
   t set 0# get t ;                            /clear table for next date
-  if[restore_mode; system "rm ",(.z.x 1),"/",(.z.x 0), string d] ; /when restoring, delete file after use
  };
 
 /locate database - expect it to be partitioned by date.
@@ -49,3 +52,5 @@ servantof:{[h_servantof]
 
 /Decache is normally called in the launcher. Its here for use in manual testing.
 decache:{0N!"decache";  system "sync ; sudo echo 3 | sudo tee /proc/sys/vm/drop_caches";} ;
+if[restore_mode; exit 0] ;
+
