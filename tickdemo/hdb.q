@@ -14,7 +14,7 @@ if[0=count suffix; '"Usage: q hdb.q schema log database-path suffix"];
 /Override repDayEnd in tplog.q to append each complete day to database
 repDayEnd:{[date] 
   repDayEndTable[date;] each tables[] ;
-  if[restore_mode; system "rm ",(.z.x 1),"/",(.z.x 0), string d] ; /when restoring, delete file after use
+  if[restore_mode; system "rm ",(.z.x 1),"/",(.z.x 0), string date] ; /when restoring, delete file after use
  }; 
 
 repDayEndTable:{[d;t]
