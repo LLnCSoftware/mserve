@@ -38,7 +38,11 @@ rep[lastday+1; -2] ;
 system "l ", dbpath  ;     /load the partitioned database on disk
 -2 "Database ", dbpath, " opened s=", string system "s" ;
 
+/called when mserve connects (.z.po in secure_invoction.q, passing .z.w as h_servantof handle back to mserve).
 servantof:{[h_servantof]
   /0N!"mserve connect hdb.q: ",dbpath ;
   (neg h_servantof) (-1; `$ "hdb", (suffix), "ready"); /report `hdbXready to tickdemo.q
- }
+ };
+
+/Decache is normally called in the launcher. Its here for use in manual testing.
+decache:{0N!"decache";  system "sync ; sudo echo 3 | sudo tee /proc/sys/vm/drop_caches";} ;
