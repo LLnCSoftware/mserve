@@ -1,17 +1,17 @@
 #!/bin/bash
-echo "---one---"
-python3 reset_data.py delete /home/ubuntu/mserve/tickdemo/data/log/schema 2026.08.23 2030.01.01
+echo "-- remove dates after 2026.10.01 from the log --"
+python3 reset_data.py delete /home/ubuntu/mserve/tickdemo/data/log/schema 2026.10.01 2030.01.01
 
 echo ""
-echo "---two---"
-python3 reset_data.py delete /home/ubuntu/mserve/tickdemo/data/archive/schema 2026.08.23 2030.01.01
+echo "-- remove dates after 2026.10.01 from the archive --"
+python3 reset_data.py delete /home/ubuntu/mserve/tickdemo/data/archive/schema 2026.10.01 2030.01.01
 
 echo ""
-echo "---three---"
-python3 reset_data.py ../log /home/ubuntu/mserve/tickdemo/data/archive/schema 2026.08.20 2026.08.22
+echo "-- move dates 2026.09.28, 2026.09.29, 2026.09.30 from the archive to the log --"
+python3 reset_data.py ../log /home/ubuntu/mserve/tickdemo/data/archive/schema 2026.09.28 2026.09.30
 
 echo ""
-echo "---four---" 
+echo "-- restore feed.hiw from the backup --" 
 rm -f /home/ubuntu/mserve/tickdemo/data/log/feed.hiw
-cp -f /home/ubuntu/mserve/tickdemo/data/archive/feed.hiw.save /home/ubuntu/mserve/tickdemo/data/log/feed.hiw
+cp -f /home/ubuntu/mserve/tickdemo/data/backup/feed.hiw.save /home/ubuntu/mserve/tickdemo/data/log/feed.hiw
 
