@@ -1,2 +1,4 @@
 #!/bin/bash
-python3 reset_data.py delete /home/servant/mserve/tickdemo/data/hdb/ 2026.08.21 2030.01.01
+# Last date in hdb should be 2026.09.29; log should contain 2026.09.28, 2026.09.29, 2026.09.30.
+# The log is fixed by the rsync job in launcher.q after being reset on dev1.
+python3 reset_data.py delete /home/servant/mserve/tickdemo/data/hdb/ 2026.09.29 2030.01.01

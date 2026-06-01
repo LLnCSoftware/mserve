@@ -4,7 +4,7 @@ Find files and directories whose absolute path matches a prefix followed by a da
 and either delete them or move them to a destination directory.
 
 Usage:
-    python find_dated_files.py <action> <path_prefix> <start_date> [<end_date>]
+    python reset_data.py <action> <path_prefix> <start_date> [<end_date>]
 
 Arguments:
     action:       "list" to print paths, "delete" to remove files/directories, or a destination path (relative to path_prefix directory) to move them
@@ -13,10 +13,10 @@ Arguments:
     end_date:     Optional end date in yyyy.mm.dd format
 
 Examples:
-    python find_dated_files.py list /data/logs_ 2025.12.22
-    python find_dated_files.py delete /data/logs_ 2025.12.22
-    python find_dated_files.py archive /data/logs_ 2025.12.20 2025.12.25
-    python find_dated_files.py ../backup /data/logs_ 2025.12.22
+    python reset_data.py list /data/logs_ 2025.12.22
+    python reset_data.py delete /data/logs_ 2025.12.22
+    python reset_data.py archive /data/logs_ 2025.12.20 2025.12.25
+    python reset_data.py ../backup /data/logs_ 2025.12.22
 """
 
 import sys
